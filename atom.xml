@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-04-06T01:15:49+08:00</updated>
+  <updated>2014-04-06T01:36:52+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -12,5 +12,14 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Test Blog]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/04/06/test-blog/"/>
+    <updated>2014-04-06T00:00:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/04/06/test-blog</id>
+    <content type="html"><![CDATA[<p>Hello World</p>
+]]></content>
+  </entry>
   
 </feed>
