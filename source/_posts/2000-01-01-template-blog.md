@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "test blog"
+title: "blog template"
 date: 2000-01-01 01:27
 comments: true
 categories: 
