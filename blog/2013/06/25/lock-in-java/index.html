@@ -66,7 +66,7 @@
   
   <header>
     
-      <h1 class="entry-title">Lock in Java</h1>
+      <h1 class="entry-title">Java中的锁</h1>
     
     
       <p class="meta">
@@ -102,56 +102,96 @@
 
 <p>让我们从java中的一个同步块开始：</p>
 
-<pre><code>public class Counter{
-    private int count = 0;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">inc</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="kd">synchronized</span><span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">return</span> <span class="o">++</span><span class="n">count</span><span class="o">;</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public int inc(){
-        synchronized(this){
-            return ++count;
-        }
-    }
-}
-</code></pre>
 
 <p>可以看到在inc()方法中有一个synchronized(this)代码块。该代码块可以保证在同一时间只有一个线程可以执行return ++count。虽然在synchronized的同步块中的代码可以更加复杂，但是++count这种简单的操作已经足以表达出线程同步的意思。</p>
 
 <p>以下的Counter类用Lock代替synchronized达到了同样的目的：</p>
 
-<pre><code>public class Counter{
-    private Lock lock = new Lock();
-    private int count = 0;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="n">Lock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Lock</span><span class="o">();</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">inc</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+</span><span class='line'>      <span class="kt">int</span> <span class="n">newCount</span> <span class="o">=</span> <span class="o">++</span><span class="n">count</span><span class="o">;</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">newCount</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public int inc(){
-        lock.lock();
-        int newCount = ++count;
-        lock.unlock();
-        return newCount;
-    }
-}
-</code></pre>
 
 <p>lock()方法会对Lock实例对象进行加锁，因此所有对该对象调用lock()方法的线程都会被阻塞，直到该Lock对象的unlock()方法被调用。</p>
 
 <p>这里有一个Lock类的简单实现：</p>
 
-<pre><code>public class Counter{
-public class Lock{
-    private boolean isLocked = false;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span>
+</span><span class='line'>      <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">unlock</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>      <span class="n">notify</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public synchronized void lock()
-        throws InterruptedException{
-        while(isLocked){
-            wait();
-        }
-        isLocked = true;
-    }
-
-    public synchronized void unlock(){
-        isLocked = false;
-        notify();
-    }
-}
-</code></pre>
 
 <p>注意其中的while(isLocked)循环，它又被叫做“自旋锁”。自旋锁以及wait()和notify()方法在线程通信这篇文章中有更加详细的介绍。当isLocked为true时，调用lock()的线程在wait()调用上阻塞等待。为防止该线程没有收到notify()调用也从wait()中返回（也称作虚假唤醒），这个线程会重新去检查isLocked条件以决定当前是否可以安全地继续执行还是需要重新保持等待，而不是认为线程被唤醒了就可以安全地继续执行了。如果isLocked为false，当前线程会退出while(isLocked)循环，并将isLocked设回true，让其它正在调用lock()方法的线程能够在Lock实例上加锁。</p>
 
@@ -161,90 +201,159 @@ public class Lock{
 
 <p>Java中的synchronized同步块是可重入的。这意味着如果一个java线程进入了代码中的synchronized同步块，并因此获得了该同步块使用的同步对象对应的管程上的锁，那么这个线程可以进入由同一个管程对象所同步的另一个java代码块。下面是一个例子：</p>
 
-<pre><code>public class Reentrant{
-    public synchronized outer(){
-        inner();
-    }
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Reentrant</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">outer</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">inner</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">inner</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">//do something</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public synchronized inner(){
-        //do something
-    }
-}
-</code></pre>
 
 <p>注意outer()和inner()都被声明为synchronized，这在Java中和synchronized(this)块等效。如果一个线程调用了outer()，在outer()里调用inner()就没有什么问题，因为这两个方法（代码块）都由同一个管程对象(&lsquo;this&rsquo;)所同步。如果一个线程已经拥有了一个管程对象上的锁，那么它就有权访问被这个管程对象同步的所有代码块。这就是可重入。线程可以进入任何一个它已经拥有的锁所同步着的代码块。</p>
 
 <p>前面给出的锁实现不是可重入的。如果我们像下面这样重写Reentrant类，当线程调用outer()时，会在inner()方法的lock.lock()处阻塞住。</p>
 
-<pre><code>public class Reentrant2{
-    Lock lock = new Lock();
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Reentrant2</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">Lock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Lock</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="nf">outer</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">inner</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">inner</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+</span><span class='line'>      <span class="c1">//do something</span>
+</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public outer(){
-        lock.lock();
-        inner();
-        lock.unlock();
-    }
-
-    public synchronized inner(){
-        lock.lock();
-        //do something
-        lock.unlock();
-    }
-}
-</code></pre>
 
 <p>调用outer()的线程首先会锁住Lock实例，然后继续调用inner()。inner()方法中该线程将再一次尝试锁住Lock实例，结果该动作会失败（也就是说该线程会被阻塞），因为这个Lock实例已经在outer()方法中被锁住了。</p>
 
 <p>两次lock()之间没有调用unlock()，第二次调用lock就会阻塞，看过lock()实现后，会发现原因很明显：</p>
 
-<pre><code>public class Lock{
-    boolean isLocked = false;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span>
+</span><span class='line'>      <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public synchronized void lock()
-        throws InterruptedException{
-        while(isLocked){
-            wait();
-        }
-        isLocked = true;
-    }
-
-    ...
-}
-</code></pre>
 
 <p>一个线程是否被允许退出lock()方法是由while循环（自旋锁）中的条件决定的。当前的判断条件是只有当isLocked为false时lock操作才被允许，而没有考虑是哪个线程锁住了它。</p>
 
 <p>为了让这个Lock类具有可重入性，我们需要对它做一点小的改动：</p>
 
-<pre><code>public class Lock{
-    boolean isLocked = false;
-    Thread  lockedBy = null;
-    int lockedCount = 0;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">Thread</span>  <span class="n">lockedBy</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">lockedCount</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">Thread</span> <span class="n">callingThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
+</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span> <span class="o">&amp;&amp;</span> <span class="n">lockedBy</span> <span class="o">!=</span> <span class="n">callingThread</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>      <span class="n">lockedCount</span><span class="o">++;</span>
+</span><span class='line'>      <span class="n">lockedBy</span> <span class="o">=</span> <span class="n">callingThread</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">unlock</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">if</span><span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">curentThread</span><span class="o">()</span> <span class="o">==</span> <span class="k">this</span><span class="o">.</span><span class="na">lockedBy</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">lockedCount</span><span class="o">--;</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lockedCount</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>              <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>              <span class="n">notify</span><span class="o">();</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    public synchronized void lock() throws InterruptedException{
-        Thread callingThread = Thread.currentThread();
-        while(isLocked &amp;&amp; lockedBy != callingThread) {
-            wait();
-        }
-        isLocked = true;
-        lockedCount++;
-        lockedBy = callingThread;
-        }
-
-    public synchronized void unlock() {
-        if(Thread.curentThread() == this.lockedBy){
-            lockedCount--;
-
-            if(lockedCount == 0){
-                isLocked = false;
-                notify();
-            }
-        }
-    }
-
-    ...
-}
-</code></pre>
 
 <p>注意到现在的while循环（自旋锁）也考虑到了已锁住该Lock实例的线程。如果当前的锁对象没有被加锁(isLocked = false)，或者当前调用线程已经对该Lock实例加了锁，那么while循环就不会被执行，调用lock()的线程就可以退出该方法。</p>
 
@@ -260,14 +369,22 @@ public class Lock{
 
 <p>如果用Lock来保护临界区，并且临界区有可能会抛出异常，那么在finally语句中调用unlock()就显得非常重要了。这样可以保证这个锁对象可以被解锁以便其它线程能继续对其加锁。以下是一个示例：</p>
 
-<pre><code>lock.lock();
-try{
-    //do critical section code,
-    //which may throw exception
-} finally {
-    lock.unlock();
-}
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+</span><span class='line'><span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">//do critical section code,</span>
+</span><span class='line'>  <span class="c1">//which may throw exception</span>
+</span><span class='line'><span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>这个简单的结构可以保证当临界区抛出异常时Lock对象可以被解锁。如果不是在finally语句中调用的unlock()，当临界区抛出异常时，Lock对象将永远停留在被锁住的状态，这会导致其它所有在该Lock对象上调用lock()的线程一直阻塞。</p>
 </div>
@@ -325,7 +442,7 @@ try{
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2013/06/25/lock-in-java/">Lock in Java</a>
+        <a href="/blog/2013/06/25/lock-in-java/">Java中的锁</a>
       </li>
     
       <li class="post">
