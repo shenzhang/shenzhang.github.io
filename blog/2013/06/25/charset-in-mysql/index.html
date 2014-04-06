@@ -9,12 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="Blog Archive 2013 避免死锁[译]
-Jun 26 2013 死锁[译]
-Jun 26 2013 spring对redis的支持
-Jun 25 2013 java中的四舍五入
-Jun 25 2013 javac的调试选项-g的意义
-Jun 25 2013 &hellip;">
+  <meta name="description" content="在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（ &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -23,7 +18,7 @@ Jun 25 2013 &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io/blog/archives">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -67,124 +62,85 @@ Jun 25 2013 &hellip;">
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Blog Archive</h1>
+    
+      <h1 class="entry-title">Linux下mysql编码设置</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T02:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives">
 
 
+<div class="entry-content"><p>在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（windows下的默认编码是gbk，一般不会有问题），主要有两种方法：</p>
 
-  
-  <h2>2013</h2>
+<p>1.在创建数据库是显示指定编码：<code>create database db1 character set utf8</code>;</p>
 
-<article>
-  
-<h1><a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a></h1>
-<time datetime="2013-06-26T02:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>26</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/26/deadlock/">死锁[译]</a></h1>
-<time datetime="2013-06-26T01:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>26</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/spring-for-redis/">spring对redis的支持</a></h1>
-<time datetime="2013-06-25T07:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/round-mode-in-java/">java中的四舍五入</a></h1>
-<time datetime="2013-06-25T06:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/debug-parameter-in-javac/">javac的调试选项-g的意义</a></h1>
-<time datetime="2013-06-25T05:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/ssh-without-password/">linux下ssh免输入密码方法</a></h1>
-<time datetime="2013-06-25T04:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/can-not-connect-mysql/">mysql远程客户端无法连接的问题</a></h1>
-<time datetime="2013-06-25T03:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/charset-in-mysql/">linux下mysql编码设置</a></h1>
-<time datetime="2013-06-25T02:27:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2013/06/25/lock-in-java/">Java中的锁</a></h1>
-<time datetime="2013-06-25T02:26:00+08:00" pubdate><span class='month'>Jun</span> <span class='day'>25</span> <span class='year'>2013</span></time>
-
-
-</article>
-
-
-
-  
-  <h2>2000</h2>
-
-<article>
-  
-<h1><a href="/blog/2000/01/01/template-blog/">blog template</a></h1>
-<time datetime="2000-01-01T01:27:00+08:00" pubdate><span class='month'>Jan</span> <span class='day'>01</span> <span class='year'>2000</span></time>
-
-
-</article>
-
+<p>2.在/etc/my.cnf中的[mysqld]部分加入<code>character-set-server=utf8</code>,最后在[client]部分加入<code>default-character-set=utf8</code>。
+注：网上部分帖子说在[mysqld]部分加入default-character-set=utf8是不可行的，至少在mysql5.5之后的版本是无法启动的，可以通过mysqld &mdash;verbose &mdash;help查看具体的参数信息，或者mysql在新的版本中将<code>default-character-set</code>换成了<code>character-set-server</code>。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T02:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/06/25/lock-in-java/" title="Previous Post: Java中的锁">&laquo; Java中的锁</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/06/25/can-not-connect-mysql/" title="Next Post: mysql远程客户端无法连接的问题">mysql远程客户端无法连接的问题 &raquo;</a>
+      
+    </p>
+  </footer>
 </article>
 
 </div>
