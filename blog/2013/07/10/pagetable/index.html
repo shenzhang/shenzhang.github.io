@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，原文链接。 页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。 页表的作用 在使用虚拟内存的操作系统中， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/10/pagetable">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">页表(Page Table)[译]</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T01:27:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
+
+<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
+
+<!--more-->
+
+
+<h2>页表的作用</h2>
+
+<p>在使用虚拟内存的操作系统中，每个进程都感觉自己在使用一片很大的并且连续的内存区域。但是实际上，每个进程可能会被分散在物理内存区域上，或者已经被交换到了后备存储中（比如说硬盘）。当一个进程试图请求自己的一个内存地址，操作系统就必须将该进程提交的虚拟内存地址映射成该地址实际存放的物理地址。页表就是用来存储虚拟地址与物理地址之间映射关系的地方。每一个映射就是一个页表项(Page Table Entry，PTE)。</p>
+
+<p><img src="/images/2013/07/vitualaddress.png"></p>
+
+<h2>映射过程</h2>
+
+<p><img src="/images/2013/07/tlb.png"></p>
+
+<p>CPU的内存管理单元(MMU)用一个缓存（cache）来存放最近从页表得到的一些映射项。这又被称为TLB（translation lookaside buffer)，它是一种关联缓冲区，会被优先查找。如果一个匹配项找到（TLB命中），对应的物理地址会立刻返回，并且内存访问操作可以继续了。如果TLB没有命中，那么处理器就会从页表中查找是否这个虚拟内存地址的映射项已经存在。如果在页表中找到了，操作系统还会将该映射项写会到TLB中（这步必须要做，因为虚拟内存系统只能从TLB中返回物理地址），接着就会出发一个中断（可能会并行触发），让后续的操作重新到TLB中查找映射项，这个时候就会TLB命中，返回物理地址，接着就可以真正访问内存了。</p>
+
+<h2>映射失败</h2>
+
+<p>在页表中查找可能会因为两个原因导致失败。首先可能页表中没有这个虚拟地址的映射项，说明这个虚拟地址的内存访问操作是非法的，这通常是一种程序错误，并且操作系统必须能够发现并处理这种错误。在现代操作系统中通常会向该程序发送一个段错误（segmentation fault）。</p>
+
+<p>另外，如果该虚拟地址对应的页不在物理内存中也可能会导致页表查找失败。这通常是因为操作系统为了给其他页腾出物理内存而将该页交换出去了。这样请求的页就会被放在后备存储中，比如硬盘（这里的后备存储通常页被称为“交换区”，一般以磁盘分区或者交换文件的形式存在）。这个时候操作系统就需要将该页从磁盘中加载到内存里。</p>
+
+<p>如果物理内存还有空间，这个操作就很简单：该页直接写回到物理内存里，更新页表和TLB，最后重启映射指令（过程）。但是，如果物理内存已经满了，一个或多个存在于物理内存的页就需要被交换出去以腾出空间来放这个需要加载进来的页。页表需要更新，并且标注出那些被交换出去了的页和被加载进来的页。TLB也会被更新，主要是移除那些被交换出去了的页（已经不在内存中了）。最后重启映射指令。</p>
+
+<h2>页表数据</h2>
+
+<p>最简单的页表系统通常维护了一个帧表和一个页表。帧表记录了哪些帧被映射了，在更高级的系统中，帧表还维护了一个页属于哪个地址空间，统计信息等。</p>
+
+<p>页表维护了一个页的虚拟地址与物理帧的物理地址的对应关系，还会有一些辅助信息，比如存在位、修改位、地址空间、进程ID等等。</p>
+
+<p>后备存储，比如说磁盘，可以被用来扩充内存。页可以在物理内存和磁盘之间来回交换。存在位可以标识出该页是否存在于物理内存中，还是在磁盘上，这会决定不同的后续操作（比如是否需要从物理地址中交换出去一些页，再将该页加载进来）。</p>
+
+<p>更新位可以被用来做性能优化。如果一个页被从磁盘中加载到内存里，然后仅仅被用于读操作，当它需要再一次被交换出去时可以不需要写回磁盘，因为这个页从磁盘加载进来后从来没有被改变过。如果这个页在内存中，并且被更新了，那么页表中对应的页表项就需要将更新位给设置上去，以便下次需要将该页交换出去时告知操作系统该页需要写回磁盘。这种策略要求后备存储（磁盘）一直保存一个页的副本（就算该页已经被载入物理内存），以至于当页没有修改并且需要换出时不用再次写回磁盘。如果不使用更新位，那么后备存储占用的大小就是当时被换出的页的总大小；如果使用了更新位，那么在某些时候一些页就会同时存在于物理内存和磁盘上。</p>
+
+<p>在非单一地址空间的操作系统中，虚拟内存管理系统需要使用地址空间信息或进程ID信息来判断页文件时属于哪个进程。两个进程可以使用两个相同的虚拟内存地址，因此页表需要使用一些额外的方法来为这两个进程提供两个不同的地址映射，比如使用两个进程不同的地址空间映射标识符，或者使用这两个进程的ID信息。将进程ID和虚拟内存页关联起来也有助于改善页换出阶段的页选择过程，比如对于一些主代码页已经被换出的进程，它的其他页通常不会很快就被使用，因此相比一些活跃进程，该进程的页可以优先被选择交换出去。</p>
+
+<p>用进程唯一标识符来标记页表项的另一个方法是，对于不同进程的页表被放在了不同的虚拟内存空间中，进而页表变成了进程上下文的一部分。那么，当一个进程不在活跃时，它的页表就有可能也被交换出去。</p>
+
+<h2>页表类型</h2>
+
+<p>目前有许多种不同类型的页表，他们适用于不同的应用场景。一个最基本的页表需要存储虚拟地址信息，并且在其中又包含了对应的物理地址，或许也会包含一些地址空间信息。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T01:27:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/10/pagetable/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/10/pagetable/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/06/classloader-in-jetty/" title="Previous Post: Jetty中的classloader">&laquo; Jetty中的classloader</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/13/charset-for-jdk7-in-macos/" title="Next Post: mac下jdk7的乱码分析">mac下jdk7的乱码分析 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

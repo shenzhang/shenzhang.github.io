@@ -9,9 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接 在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术： 加锁顺序
-加锁时限
-死锁检测 ">
+  <meta name="description" content="mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -71,7 +69,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a></h1>
     
     
       <p class="meta">
@@ -87,21 +85,103 @@
   
 
 
-<time datetime="2013-06-26T02:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+<time datetime="2013-07-13T01:27:00+08:00" pubdate data-updated="true">Jul 13<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html">原文链接</a></p>
+  <div class="entry-content"><p>mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样，甚至连JAVA_HOME怎么设置都不太确定，看了下官方的介绍大致明白了，也知道了java_home这个工具，确实有点意思。最后打开eclipse，添加了新的jre，配置了src，正准备继续工作时出现了最悲剧的事情，所有以中文命名的文件夹、包和文件都显示不出来了，但是本地却是实际存在的，进一步发现用eclipse新创建的中文名文件可以正常显示，但是在finder中确是？了。在网上粗略搜了下，原来很多同学都遇到了这个情况，所有的建议都是删除1.7，重新使用apple的1.6版本。由于这也不算是长久之计，因此打算自己排查下问题的原因。</p>
 
-<p>在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术：</p>
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T01:27:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
+
+<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/10/pagetable/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-06T01:27:00+08:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
 
 <ol>
-<li>加锁顺序</li>
-<li>加锁时限</li>
-<li>死锁检测</li>
+<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
+<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
+<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
 </ol>
 
 
@@ -109,7 +189,7 @@
   
   
     <footer>
-      <a rel="full-article" href="/blog/2013/06/26/prevent-deadlock/">Read on &rarr;</a>
+      <a rel="full-article" href="/blog/2013/07/06/classloader-in-jetty/">Read on &rarr;</a>
     </footer>
   
 
@@ -121,7 +201,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/06/26/deadlock/">死锁[译]</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a></h1>
     
     
       <p class="meta">
@@ -137,24 +217,26 @@
   
 
 
-<time datetime="2013-06-26T01:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+<time datetime="2013-07-05T02:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html">原文链接</a></p>
+  <div class="entry-content"><p>虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
+1.多个名字对应一个IP地址
+2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名</p>
 
-<p>死锁是两个或更多线程阻塞着等待其它处于死锁状态的线程所持有的锁。死锁通常发生在多个线程同时但以不同的顺序请求同一组锁的时候。</p>
+<p>Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常，只有一个IP地址的机器会配置多个主机名或者域名给这个IP地址，部署在该机器的web应用需要给不同的主机名同时提供服务。另外一种情况是给不同的主机名提供不同的web服务。</p>
 
-<p>例如，如果线程1锁住了A，然后尝试对B进行加锁，同时线程2已经锁住了B，接着尝试对A进行加锁，这时死锁就发生了。线程1永远得不到B，线程2也永远得不到A，并且它们永远也不会知道发生了这样的事情。为了得到彼此的对象（A和B），它们将永远阻塞下去。这种情况就是一个死锁。</p>
+<p>不管使用xml文件还是通过编程的模式给Jetty设置虚拟主机最终实际上都是使用<code>ContextHandler.setVitualHosts</code>方法。</p>
 
 </div>
   
   
     <footer>
-      <a rel="full-article" href="/blog/2013/06/26/deadlock/">Read on &rarr;</a>
+      <a rel="full-article" href="/blog/2013/07/05/config-virtual-host-in-jetty/">Read on &rarr;</a>
     </footer>
   
 
@@ -166,7 +248,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/06/25/spring-for-redis/">Spring对redis的支持</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a></h1>
     
     
       <p class="meta">
@@ -182,21 +264,61 @@
   
 
 
-<time datetime="2013-06-25T07:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-05T01:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>spring-data项目提供了多种数据操作的包，其中spring-data-redis就提供了与redis交互的实现，现在最新的版本是1.0.4。</p>
+  <div class="entry-content"><p>请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如<a href="http://www.webalizer.org/">webalizer</a>.</p>
 
-<p>spring-data-redis提供了对多种redis客户端的集成和抽象，比如jedis, jRedis, RJC, SRP等。并且提供了以下几个方面的支持：</p>
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/05/request-log-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/04/listening-80port-for-non-root-user/">非root用户监听80端口</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
 
 <ol>
-<li>底层抽象：主要封装了配置和连接过程，以及异常的转换和翻译。</li>
-<li>高层抽象：以RedisTemplate的形式提供。</li>
-<li>可复用的工具类。</li>
+<li>ipchains</li>
+<li>iptables</li>
+<li>配置jetty的SetUID</li>
+<li>xinetd</li>
 </ol>
 
 
@@ -204,7 +326,7 @@
   
   
     <footer>
-      <a rel="full-article" href="/blog/2013/06/25/spring-for-redis/">Read on &rarr;</a>
+      <a rel="full-article" href="/blog/2013/07/04/listening-80port-for-non-root-user/">Read on &rarr;</a>
     </footer>
   
 
@@ -216,7 +338,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/06/25/round-mode-in-java/">Java中的四舍五入</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/07/04/config-form-size-for-jetty/">配置jetty的表单大小(Form Size)</a></h1>
     
     
       <p class="meta">
@@ -232,281 +354,20 @@
   
 
 
-<time datetime="2013-06-25T06:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>说四舍五入可能有点不太准确，应该说在精度范围之内的精度调整方法。</p>
-
-<p>主要在java.math.RoundingMode里定义：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UP</span><span class="o">),</span>
-</span><span class='line'><span class="n">DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_DOWN</span><span class="o">),</span>
-</span><span class='line'><span class="n">CEILING</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_CEILING</span><span class="o">),</span>
-</span><span class='line'><span class="n">FLOOR</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_FLOOR</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_UP</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_DOWN</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_EVEN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_EVEN</span><span class="o">),</span>
-</span><span class='line'><span class="n">UNNECESSARY</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UNNECESSARY</span><span class="o">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>UP:</strong>调整的方向是远离0，如：1.1 &ndash;> 2，-1.1 &ndash;> -2</p>
-
-<p><strong>DOWN:</strong>调整的方向是靠近0，如：1.6 &ndash;> 1，-1.6 &ndash;> -1</p>
-
-<p><strong>CEILING:</strong>调整的方向从数字大小的角度讲会变大，也就是说当大于0时等同于UP，当小于0时等同于DOWN，如：1.1->2，-1.1->1</p>
-
-<p><strong>FLOOR:</strong>与CEILING相反</p>
-
-<p><strong>HALF_UP:</strong>当尾数>=5时与UP相同，否则与DOWN相同</p>
-
-<p><strong>HALF_DOWN:</strong>与HALF_UP类似，只是条件是>5，不是>=5</p>
-
-<p><strong>HALF_EVEN:</strong>当尾数的前一位是奇数时，同HALF_UP，否则同HALF_DOWN</p>
-
-<p><strong>UNNECESSARY:</strong>说明该数字不需要四舍五入，如果超出了精度则throw ArithmeticException。</p>
-
-<p>更多例子可参见RoundingMode的javadoc.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/debug-parameter-in-javac/">Javac的调试选项-g的意义</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T05:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>javac的调试选项-g 主要包含了三个子选项：lines, vars, source</p>
-
-<p>如果没有指定-g参数，javac是默认包含了lines和source选项，若指定-g参数则会包含所有三个选项。</p>
-
-<p>下面分别简要解释下三个子选项的意义和效果：</p>
-
-<p><strong>source:</strong> 将该class文件对应的源文件名称写进class中，这样在调试进入这个类时调试器就可以找到指定的源文件。可能有些同学会问：class的类名不就是源文件的名称吗，包命就是从classpath开始的路径。这种情况只是针对访问修饰符为public的类，一个源文件可以定义多个类（甚至是内部类）。如果在调试的过程中说找不到源文件，则很有可能是在编译的时候没有加上该选项。</p>
-
-<p><strong>lines:</strong> 将源文件中的行号和class中字节码的偏移量对应起来，这样当你下断点的时候，调试器就知道该断点对应到class字节码的哪条指令。如果不设置该选项，那么你根本就没办法下断点。抛异常的时候也不会给出行数信息。</p>
-
-<p><strong>vars:</strong> 局部变量的符号表。比如在eclipse调试的时候，可以边调试边看变量的信息，这些都要归功与局部变量的符号表，它可以帮助把运行过程中的变量值和源代码中的变量名对应起来。如果没有它，调试的时候是不能看到局部变量的值的，方法的参数也变成了arg1,arg2&hellip;。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/ssh-without-password/">Linux下ssh免输入密码方法</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T04:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。</p>
-
-<p>若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)，需要以下步骤：</p>
-
-<p>1.登陆A，并切换到zhangsan: <code>su - zhangsan</code>;</p>
-
-<p>2.生成公钥和私钥：<code>ssh-keygen -t dsa</code>。其中-t参数后面可以为dsa或rsa，具体类型根据机器环境决定，现在大部分应该是dsa。接下来一路回车后会在~zhangsan/.ssh/目录下生成id_dsa和id_dsa.pub文件，其中id_dsa.pub文件就是公钥文件，需要拷贝到目标及其B上的。</p>
-
-<p>3.拷贝公钥到目标机器:
-<code>scp id_dsa.pub zhangsan@B:/home/zhangsan/.ssh/id_dsa.pub.A</code></p>
-
-<p>4.追加到目标机器~/.ssh/authorized_keys中: <code>~/.ssh/cat id_dsa.pub.A &gt;&gt; ~/.ssh/authorized_keys</code></p>
-
-<p>5.Done</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/can-not-connect-mysql/">Mysql远程客户端无法连接的问题</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
-
-<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
-
-<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/charset-in-mysql/">Linux下mysql编码设置</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T02:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（windows下的默认编码是gbk，一般不会有问题），主要有两种方法：</p>
-
-<p>1.在创建数据库是显示指定编码：<code>create database db1 character set utf8</code>;</p>
-
-<p>2.在/etc/my.cnf中的[mysqld]部分加入<code>character-set-server=utf8</code>,最后在[client]部分加入<code>default-character-set=utf8</code>。
-注：网上部分帖子说在[mysqld]部分加入default-character-set=utf8是不可行的，至少在mysql5.5之后的版本是无法启动的，可以通过mysqld &mdash;verbose &mdash;help查看具体的参数信息，或者mysql在新的版本中将<code>default-character-set</code>换成了<code>character-set-server</code>。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/lock-in-java/">Java中的锁</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T02:26:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/locks.html">原文链接</a></p>
-
-<p>锁像synchronized同步块一样，是一种线程同步机制，但比Java中的synchronized同步块更复杂。因为锁（以及其它更高级的线程同步机制）是由synchronized同步块的方式实现的，所以我们还不能完全摆脱synchronized关键字。</p>
-
-<p>自Java 5开始，java.util.concurrent.locks包中包含了一些锁的实现，因此你不用去实现自己的锁了。但是你仍然需要去了解怎样使用这些锁，且了解这些实现背后的理论也是很有用处的。可以参考我对java.util.concurrent.locks.Lock的介绍，以了解更多关于锁的信息。</p>
+  <div class="entry-content"><p>Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。</p>
 
 </div>
   
   
     <footer>
-      <a rel="full-article" href="/blog/2013/06/25/lock-in-java/">Read on &rarr;</a>
+      <a rel="full-article" href="/blog/2013/07/04/config-form-size-for-jetty/">Read on &rarr;</a>
     </footer>
   
 
@@ -518,7 +379,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2000/01/01/template-blog/">Blog Template</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/07/04/customize-error-page-in-jetty/">Jetty自定义错误页面</a></h1>
     
     
       <p class="meta">
@@ -534,22 +395,131 @@
   
 
 
-<time datetime="2000-01-01T01:27:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
+<time datetime="2013-07-04T01:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>This is a template file</p>
+  <div class="entry-content"><p>以下方法可以用来配置自定义错误页面：</p>
+
+<ol>
+<li>在web.xml中定义错误页面</li>
+<li>在context文件中定义错误页面</li>
+<li>实现自定义的错误处理handler</li>
+</ol>
+
+
 </div>
   
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/04/customize-error-page-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/connectors-in-jetty/">Jetty的连接器(Connectors)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
+
+<h2>连接器的类型</h2>
+
+<ul>
+<li>SelectChannelConnector</li>
+<li>SocketConnector</li>
+<li>SslSelectChannelConnector</li>
+<li>SslSocketConnector</li>
+<li>Ajp13SocketConnector</li>
+</ul>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/03/connectors-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/autovaccum-in-postgresql/">Postgresql中的autovaccum</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T02:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用<code>/dt+ table_name</code> 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。</p>
+
+<p>问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/03/autovaccum-in-postgresql/">Read on &rarr;</a>
+    </footer>
   
 
 
     </article>
   
   <div class="pagination">
+    
+      <a class="prev" href="/blog/page/2/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -562,23 +532,23 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a>
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/06/26/deadlock/">死锁[译]</a>
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/06/25/spring-for-redis/">Spring对redis的支持</a>
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/06/25/round-mode-in-java/">Java中的四舍五入</a>
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/06/25/debug-parameter-in-javac/">Javac的调试选项-g的意义</a>
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
       </li>
     
   </ul>

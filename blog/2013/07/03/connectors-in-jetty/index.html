@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。 连接器的类型 SelectChannelConnector
+SocketConnector
+SslSelectChannelConnector
+SslSocketConnector
+Ajp13SocketConnector &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Jetty的连接器(Connectors)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
+
+<h2>连接器的类型</h2>
+
+<ul>
+<li>SelectChannelConnector</li>
+<li>SocketConnector</li>
+<li>SslSelectChannelConnector</li>
+<li>SslSocketConnector</li>
+<li>Ajp13SocketConnector</li>
+</ul>
+
+
+<!--more-->
+
+
+<h2>SelectChannelConnector</h2>
+
+<p>使用了NIO技术和非阻塞的线程模型。Jetty使用了Direct NIO buffers，并且仅给每个连接器接收到的请求分配线程。这种连接器非常适用于同时有多个连接，并且每个连接都有一定cpu空闲期，也就是说每个连接不是一直都在进行cpu运算。</p>
+
+<p>当使用Continuations技术时，还支持不占用线程的等待。当一个filter或servlet调用Continuation上的getEvent方法，会产生一个RuntimeException，并且会让当前request停止处理。Jetty捕获这个RuntimeException但是不会向客户端返回响应，而是释放当前线程并将该Continuation放入一个带有超时的队列中。如果一个Continuation超时或者它的resume方法被调用，Jetty会重新分配一个线程来重新处理这个请求。但是唯一的缺陷就是在重新处理该请求时，上次从request取出的内容会不可用，需要重新读取，或者将它们以attribute的形式保存到request里，或者保存到Continuation对象中，以便复用。</p>
+
+<h2>SocketConnector</h2>
+
+<p>采用了传统的阻塞式的IO和线程模型。Jetty使用传统的socket，并且给每一个连接分配一个线程。一般来说不应该使用该连接器，除非NIO不可用。</p>
+
+<h2>SslSelectChannelConnector</h2>
+
+<p>提供SSL协议，并且使用NIO的模型。</p>
+
+<h2>SslSocketConnector</h2>
+
+<p>提供SSL协议，使用阻塞IO模型。</p>
+
+<h2>Ajp13SocketConnector</h2>
+
+<p>实现了Ajp13协议，更多Ajp13协议的信息可以参考<a href="http://tomcat.apache.org/connectors-doc-archive/jk2/common/AJPv13.html">这里</a></p>
+
+<h2>配置选项</h2>
+
+<p>acceptors:用来接收客户端连接的acceptor的线程数。</p>
+
+<p>acceptQueueSize:如果系统无法及时accept，连接请求的最大排队等待数量，超出这个数量操作系统会直接拒绝。</p>
+
+<p>acceptorPriority:用于接收连接请求(accept线程)的线程的优先级。</p>
+
+<p>confidentialPort:</p>
+
+<p>confidentialScheme:默认是https</p>
+
+<p>forwarded:如果是true，那么就会使用hostReader或者其他的手段来检查requet头(header)来从源请求中搜集信息，以便确定ServletRequest.getServerName(),ServletRequest.getServerPort(),ServletRequest.getRemoteAddr()的返回值信息。默认是false。</p>
+
+<p>forwardedHostReader:用于确定被转发的Host头。默认是X-Forwarded-Host。该选项只有在forwared=true时才有效。</p>
+
+<p>forwardedServerHeader:用于确定被转发的Server Name头。默认是X-Forwared-Server.该选项只有在forwared=true时才有效。</p>
+
+<p>forwardedForHeader:</p>
+
+<p>hostHeader:</p>
+
+<p>host:Jetty监听的ip地址，默认是0.0.0.0,会在所有网络接口上监听。</p>
+
+<p>integralPort:</p>
+
+<p>lowResourcesConnections:设置一个数值类型，若当前的连接数超过这个值，那么就将该连接器设置成低资源状态。当前连接数不是一个精确的数字，仅仅是通过NIO的selected set计算出来的平均值。如果进入低资源状态，那么连接器将采用不同的空闲超时时间。</p>
+
+<p>lowResourcesMaxIdleTime:在的资源状态(lowResourcesConnections)下的每个connection可以空闲(idle)的最大时间(单位:ms)。配置这个参数可以让jetty快速的关闭空闲的连接以应对高负载。</p>
+
+<p>maxIdleTime:设置一个连接的空闲时间，它会被直接用于Socket.setSoTimeout(int)，或者在NIO的模型下用于一些技术的超时时间。maxIdleTime会被用于：在一个连接(conntection)上等待一个新的请求时间；从request读取header和body的等待时间；将header或body写入response的等待时间。如果一个字节被读入或者写入，那么超时时间会重置。但是，大多数情况下，读写操作都是交给JVM执行的，因此只能计算单次读写操作的时间（不能精确到一个字节）。另外，jetty支持内存映射文件，因此将一个很大的内容写入一个慢速设备时可能会花费数10秒的时间。</p>
+
+<p>name:连接器的名字。可以使WebAppContext只响应通过WebAppContext.setConntectorNames(String[])所指定的名字的连接器。</p>
+
+<p>port:连接器的监听端口。</p>
+
+<p>requestBufferSize:设置用于接收请求(request)内容(body)的缓冲区。如果当前活跃的连接在接收数据的时候，如果body数据不能装在header缓冲区，那么就会被分配一个requestBuffer。默认是8K。</p>
+
+<p>requestHeaderSize:用于接收请求头的缓冲区大小。空闲的连接最多只会被分配一个这样大小的缓冲期。默认是6K。</p>
+
+<p>responseBufferSize:设置响应(response)内容的缓冲区(buffer)大小。如果当前活跃的连接在发送body数据时，如果body数据不能装在header缓冲区中，那么就会被分配responseBuffer。默认是32K。</p>
+
+<p>responseHeaderSize:设置响应头缓冲(buffer)的大小，默认是6K。</p>
+
+<p>resolveNames:如果是true，那么请求的IP地址将会被被解析成主机名。</p>
+
+<p>reuseAddress:配置jetty的监听socket是否启用SO_REUSEADDR选项。</p>
+
+<p>soLingerTime:配置是否在连接的socket上启用<a href="http://blog.csdn.net/huang_xw/article/details/7338612" target="_blank">SO_LINGER</a>选项，默认不启用。</p>
+
+<p>statsOn:配置是否启用连接的状态搜集。</p>
+
+<p>useDirectBuffers:对于NIO的连接器，配置是否采用Direct Byte Buffer，默认采用(true)。</p>
+
+<p>threadPool:设置一个线程池对象。默认采用的线程池就是设置给org.eclipse.jetty.server.Server的线程池对象，默认是org.eclipse.jetty.util.thread.QueuedThreadPool类型的线程池。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/03/autovaccum-in-postgresql/" title="Previous Post: postgresql中的autovaccum">&laquo; postgresql中的autovaccum</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/04/customize-error-page-in-jetty/" title="Next Post: Jetty自定义错误页面">Jetty自定义错误页面 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

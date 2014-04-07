@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-04-06T13:58:57+08:00</updated>
+  <updated>2014-04-07T15:11:36+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -12,6 +12,2199 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[mac下jdk7的乱码分析]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/13/charset-for-jdk7-in-macos/"/>
+    <updated>2013-07-13T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/13/charset-for-jdk7-in-macos</id>
+    <content type="html"><![CDATA[<p>mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样，甚至连JAVA_HOME怎么设置都不太确定，看了下官方的介绍大致明白了，也知道了java_home这个工具，确实有点意思。最后打开eclipse，添加了新的jre，配置了src，正准备继续工作时出现了最悲剧的事情，所有以中文命名的文件夹、包和文件都显示不出来了，但是本地却是实际存在的，进一步发现用eclipse新创建的中文名文件可以正常显示，但是在finder中确是？了。在网上粗略搜了下，原来很多同学都遇到了这个情况，所有的建议都是删除1.7，重新使用apple的1.6版本。由于这也不算是长久之计，因此打算自己排查下问题的原因。</p>
+
+<!--more-->
+
+
+<p>首先，出现乱码肯定是编码不一致的问题，因此可以说是eclipse使用的编码和系统使用的编码不一致，而mac系统使用的编码是UTF-8，因此只能说明是eclipse启动之后使用了其他编码。那是不是eclipse本身的问题呢？</p>
+
+<p>随后简单写了个小程序，内容是在文件系统上创建一个中文文件，接着将该程序打成jar，设置了Main-Class，丢到了finder中。然后在Finder中双击执行(没有使用java -jar，是想让运行环境和eclipse的启动方式保持一致），发现同样在finder中生成了带有？的文件，看来问题的根源不是eclipse，而是jre本身。</p>
+
+<p>java执行环境中所涉及到和编码相关的属性目前我就知道一个file.encoding，该属性是在jvm启动的时候就确定了，官方对该属性的描述较少，但是基本上会参考系统的语言和编码，以及运行文件的本身编码。比如说在windows下你的java文件是UTF-8的，那么运行后file.encoding=UTF-8，如果把文件格式改为GBK的，那么运行后的file.encoding=GBK，虽然windows的默认编码是GBK的，但是file.encoding不完全按照系统的编码来设定。可是在该问题中应该也不存在问题啊，系统是UTF-8的，文件也是UTF-8的，不管那么多了，还是把之前写的小程序改了下，直接输出System.getProperty(&ldquo;file.encoding&rdquo;)，运行后发现是US_ASCI，接着又使用jvisualvm来了下eclipse当前进程的jvm系统参数，里面的file.encoding果然也是US_ASCI，这应该确实是jdk7在MAC下的一个bug。</p>
+
+<p>好了，既然这是个BUG，那么就想想怎么去弥补它，比如显示告诉java我要使用utf-8格式。首先，不可能我要运行程序都使用java -Dfile.encoding=&hellip; 这种命令行式的方式来启动吧，我需要的是一个全局设置的地方。找了老半天，终于找到了JAVA_TOOL_OPTIONS这个系统属性，该属性设置的值会在jvm启动时当作jvm的参数来运行。OK，那我把这个属性设置到哪里呢，~/.profile肯定不行，这个是个人的环境文件，也就是说只有在使用或登陆终端的时候才会被执行，但是GUI的程序显然是不会通过终端来执行的，我需要的一个更加全局范围内的。我立刻想到了/etc/.profile, /etc/rc.local这些文件，但是发现MAC中都是没有的，找了许久才在<a href="http://www.digitaledgesw.com/node/31">这里</a>找到了方法：/etc/launchd.conf。随后在该文件里写入：</p>
+
+<pre><code>setenv JAVA_HOME_OPTIONS -Dfile.encoding=UTF-8
+</code></pre>
+
+<p>重启系统，发现确实该环境变量确实有效，之前那个jar包小程序也顺利输出了UTF-8，jvisualvm里也看到了eclipse进程的file.encoding=UTF-8，但是问题依然没有解决。随后索性将jvisualvm里的所有系统属性copy出来排查了下，发现和编码相关的属性除了file.encoding之外还有一个sun.jnu.encoding，而且该属性还是US_ASCII的。查阅了相关资料，发现该属性才是真正控制文件及路径的编码的，包括读写操作，并且默认是file.encoding，看来需要也将该属性也给改下了。但是，在/etc/launchd.conf中写下了：<code>setenv JAVA_HOME_OPTIONS "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"</code>后发现JAVA_HOME_OPTIONS都没能设置成功，试了很多种方法都不行，也许是语法错了吧。</p>
+
+<p>上面的分析都已经很到位了，但是还是未能成功，接着想了下，虽说这个是JDK7的bug，但是它也会根据一些系统环境了做判断，最和这个相关的系统环境变量就是LANG系列的变量了，抱着试一试的态度在/etc/launchd.conf中设置了：
+setenv LC_ALL zh_CN.UTF-8
+重启后，发现成功了，file.encoding和sun.jnu.encoding都是UTF-8的了，另外又试了下en_US.UTF-8发现竟然不行，其原因还不太清楚。</p>
+
+<p>历时三个小时，终于还是解决了该问题，觉得该方案应该是目前最完美的解决方案，随后在oracle官网上发现已经有人提交了该问题的bug，期待oracle官方的更新吧。据说早期版本的jdk7在mac中运行的编码是MacRoman，出现了乱码问题，随即有人提交了该问题的，结果oracle在后续版本中的确做了修改，把默认编码改成了US_ASCII&hellip;，一直延续到了现在。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[页表(Page Table)[译]]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/10/pagetable/"/>
+    <updated>2013-07-10T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/10/pagetable</id>
+    <content type="html"><![CDATA[<p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
+
+<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
+
+<!--more-->
+
+
+<h2>页表的作用</h2>
+
+<p>在使用虚拟内存的操作系统中，每个进程都感觉自己在使用一片很大的并且连续的内存区域。但是实际上，每个进程可能会被分散在物理内存区域上，或者已经被交换到了后备存储中（比如说硬盘）。当一个进程试图请求自己的一个内存地址，操作系统就必须将该进程提交的虚拟内存地址映射成该地址实际存放的物理地址。页表就是用来存储虚拟地址与物理地址之间映射关系的地方。每一个映射就是一个页表项(Page Table Entry，PTE)。</p>
+
+<p><img src="http://shenzhang.github.io/images/2013/07/vitualaddress.png"></p>
+
+<h2>映射过程</h2>
+
+<p><img src="http://shenzhang.github.io/images/2013/07/tlb.png"></p>
+
+<p>CPU的内存管理单元(MMU)用一个缓存（cache）来存放最近从页表得到的一些映射项。这又被称为TLB（translation lookaside buffer)，它是一种关联缓冲区，会被优先查找。如果一个匹配项找到（TLB命中），对应的物理地址会立刻返回，并且内存访问操作可以继续了。如果TLB没有命中，那么处理器就会从页表中查找是否这个虚拟内存地址的映射项已经存在。如果在页表中找到了，操作系统还会将该映射项写会到TLB中（这步必须要做，因为虚拟内存系统只能从TLB中返回物理地址），接着就会出发一个中断（可能会并行触发），让后续的操作重新到TLB中查找映射项，这个时候就会TLB命中，返回物理地址，接着就可以真正访问内存了。</p>
+
+<h2>映射失败</h2>
+
+<p>在页表中查找可能会因为两个原因导致失败。首先可能页表中没有这个虚拟地址的映射项，说明这个虚拟地址的内存访问操作是非法的，这通常是一种程序错误，并且操作系统必须能够发现并处理这种错误。在现代操作系统中通常会向该程序发送一个段错误（segmentation fault）。</p>
+
+<p>另外，如果该虚拟地址对应的页不在物理内存中也可能会导致页表查找失败。这通常是因为操作系统为了给其他页腾出物理内存而将该页交换出去了。这样请求的页就会被放在后备存储中，比如硬盘（这里的后备存储通常页被称为“交换区”，一般以磁盘分区或者交换文件的形式存在）。这个时候操作系统就需要将该页从磁盘中加载到内存里。</p>
+
+<p>如果物理内存还有空间，这个操作就很简单：该页直接写回到物理内存里，更新页表和TLB，最后重启映射指令（过程）。但是，如果物理内存已经满了，一个或多个存在于物理内存的页就需要被交换出去以腾出空间来放这个需要加载进来的页。页表需要更新，并且标注出那些被交换出去了的页和被加载进来的页。TLB也会被更新，主要是移除那些被交换出去了的页（已经不在内存中了）。最后重启映射指令。</p>
+
+<h2>页表数据</h2>
+
+<p>最简单的页表系统通常维护了一个帧表和一个页表。帧表记录了哪些帧被映射了，在更高级的系统中，帧表还维护了一个页属于哪个地址空间，统计信息等。</p>
+
+<p>页表维护了一个页的虚拟地址与物理帧的物理地址的对应关系，还会有一些辅助信息，比如存在位、修改位、地址空间、进程ID等等。</p>
+
+<p>后备存储，比如说磁盘，可以被用来扩充内存。页可以在物理内存和磁盘之间来回交换。存在位可以标识出该页是否存在于物理内存中，还是在磁盘上，这会决定不同的后续操作（比如是否需要从物理地址中交换出去一些页，再将该页加载进来）。</p>
+
+<p>更新位可以被用来做性能优化。如果一个页被从磁盘中加载到内存里，然后仅仅被用于读操作，当它需要再一次被交换出去时可以不需要写回磁盘，因为这个页从磁盘加载进来后从来没有被改变过。如果这个页在内存中，并且被更新了，那么页表中对应的页表项就需要将更新位给设置上去，以便下次需要将该页交换出去时告知操作系统该页需要写回磁盘。这种策略要求后备存储（磁盘）一直保存一个页的副本（就算该页已经被载入物理内存），以至于当页没有修改并且需要换出时不用再次写回磁盘。如果不使用更新位，那么后备存储占用的大小就是当时被换出的页的总大小；如果使用了更新位，那么在某些时候一些页就会同时存在于物理内存和磁盘上。</p>
+
+<p>在非单一地址空间的操作系统中，虚拟内存管理系统需要使用地址空间信息或进程ID信息来判断页文件时属于哪个进程。两个进程可以使用两个相同的虚拟内存地址，因此页表需要使用一些额外的方法来为这两个进程提供两个不同的地址映射，比如使用两个进程不同的地址空间映射标识符，或者使用这两个进程的ID信息。将进程ID和虚拟内存页关联起来也有助于改善页换出阶段的页选择过程，比如对于一些主代码页已经被换出的进程，它的其他页通常不会很快就被使用，因此相比一些活跃进程，该进程的页可以优先被选择交换出去。</p>
+
+<p>用进程唯一标识符来标记页表项的另一个方法是，对于不同进程的页表被放在了不同的虚拟内存空间中，进而页表变成了进程上下文的一部分。那么，当一个进程不在活跃时，它的页表就有可能也被交换出去。</p>
+
+<h2>页表类型</h2>
+
+<p>目前有许多种不同类型的页表，他们适用于不同的应用场景。一个最基本的页表需要存储虚拟地址信息，并且在其中又包含了对应的物理地址，或许也会包含一些地址空间信息。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty中的classloader]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty/"/>
+    <updated>2013-07-06T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty</id>
+    <content type="html"><![CDATA[<p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
+
+<ol>
+<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
+<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
+<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
+</ol>
+
+
+<!--more-->
+
+
+<p>Jetty针对上面提到的三种情况都分别提供了对应的配置项。你可以通过调用org.eclipse.jetty.webapp.WebAppContext中的一些方法来配置webapp类加载的细节。但是不能在jetty-web.xml,因为类加载的配置是限于该文件执行的。</p>
+
+<h2>控制webapp类加载的优先级</h2>
+
+<p><code>org.eclipse.jetty.webapp.WebAppContext.setParentLoaderPriority(boolean)</code>方法可以控制webapp class和system class谁的优先级更高。如果你设置为false（默认），那么jetty会认为webapp中的class的优先级更高。如果webapp中的一些类被一些有parent classloader加载的class所引用，那么可能就会有问题，因为系统对同一个类可能会出现两个版本（一个是由父classloader加载，一个由webapp classloader加载）。</p>
+
+<p>如果设置为true，那么jetty将会采用JavaSE中通常的双亲优先委派模型。这可以避免上面提到的多版本的问题，但是由父classloader加载的类版本需要适合所有的webapp（webapp自己配置的class不能优先得到加载，因此很有可能都会使用parent加载的类，因此parent提供的类一定要满足所有app的要求）。</p>
+
+<h2>设置系统类</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setSystemClasses(String Array)</code>或<code>org.eclipse.jetty.webapp.WebAppContext.addSystemClass(String)</code>来更好的控制哪些类是属于系统类：</p>
+
+<ol>
+<li>webapp可以使用系统类</li>
+<li>webapp不能替换系统类</li>
+</ol>
+
+
+<p>默认的系统类有：java., javax., org.xml., org.w3c., org.apache.commons.logging., org.eclipse.jetty.continuation., org.eclipse.jetty.jndi., org.eclipse.jetty.plus.jaas., org.eclipse.jetty.websocket., org.eclipse.jetty.servlet.DefaultServlet</p>
+
+<h2>设置server类</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setServerClasses(String Array)</code>或<code>org.eclipse.jetty.webapp.WebAppContext.addServerClass(String)</code>来主动设置哪些类会被当成server类：</p>
+
+<ol>
+<li>webapp不能访问这些类</li>
+<li>webapp可以替换这些类</li>
+</ol>
+
+
+<p>默认的server类配置有：-org.eclipse.jetty.continuation., -org.eclipse.jetty.jndi., -org.eclipse.jetty.plus.jaas., -org.eclipse.jetty.websocket., -org.eclipse.jetty.servlet.DefaultServlet, org.eclipse.jetty.
+前面加了减号(&ndash;)的代表排除（不隐藏）。</p>
+
+<h2>配置额外的classpath(start.jar)</h2>
+
+<p>如果使用start.jar来启动jetty，那么jetty会从$jetty.home/lib(不包含子目录)中自动的加载jars。默认的配置包括：</p>
+
+<ol>
+<li>将$jetty.home/lib/ext配置到classpath中。因此可以在该目录中放置额外的jar。</li>
+<li>将$jetty.home/resources配置到classpath中。可以在该目录防止额外的类或者资源。</li>
+<li>添加path参数中指定的路径到classpath中。</li>
+</ol>
+
+
+<h2>extraClasspath()方法</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setExtraClasspath(String)</code>来给webapp classloader设置额外的classpath，当有多个路径时需要用逗号分隔。</p>
+
+<pre><code>&lt;Configure class="org.eclipse.jetty.webapp.WebAppContext"&gt;
+ ...
+ &lt;Set name="extraClasspath&gt;../my/classes,../my/jars/special.jar,../my/jars/other.jar&gt;
+ &lt;/Set&gt;
+ ...
+</code></pre>
+
+<h2>使用自定义的WebAppClassLoader</h2>
+
+<p>如果上述方法还是不能满足需求，就可以从WebAppClassLoader继承以实现自定义的classloader，并将该classloader设置给WebAppContext就可以了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">MyCleverClassLoader</span> <span class="n">myCleverClassLoader</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MyCleverClassLoader</span><span class="o">();</span>
+</span><span class='line'> <span class="o">...</span>
+</span><span class='line'><span class="n">WebAppContext</span> <span class="n">webapp</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebAppContext</span><span class="o">();</span>
+</span><span class='line'> <span class="o">...</span>
+</span><span class='line'><span class="n">webapp</span><span class="o">.</span><span class="na">setClassLoader</span><span class="o">(</span><span class="n">myCleverClassLoader</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty配置虚拟主机]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/05/config-virtual-host-in-jetty/"/>
+    <updated>2013-07-05T02:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/05/config-virtual-host-in-jetty</id>
+    <content type="html"><![CDATA[<p>虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
+1.多个名字对应一个IP地址
+2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名</p>
+
+<p>Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常，只有一个IP地址的机器会配置多个主机名或者域名给这个IP地址，部署在该机器的web应用需要给不同的主机名同时提供服务。另外一种情况是给不同的主机名提供不同的web服务。</p>
+
+<p>不管使用xml文件还是通过编程的模式给Jetty设置虚拟主机最终实际上都是使用<code>ContextHandler.setVitualHosts</code>方法。</p>
+
+<!--more-->
+
+
+<h2>配置虚拟主机</h2>
+
+<p>比如说有一台机器的IP地址和DNS域名如下：</p>
+
+<pre><code>333.444.555.666
+127.0.0.1
+www.blah.com
+www.blah.net
+www.blah.org
+</code></pre>
+
+<p>有一个webapp，xxx.war，你希望所有上述的IP地址和域名都能够正常访问，那么可以这样配置：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/xxx<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span><span class="nt">/&gt;</span>/webapps/xxx.war<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;virtualHosts&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;java.lang.String&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>333.444.555.666<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>127.0.0.1<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.com<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.net<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.org<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如果对应的链接器(connector)正在监听8080端口，那么可以通过如下地址访问系统：</p>
+
+<pre><code>http://333.444.555.666:8080/xxx
+http://127.0.0.1:8080/xxx
+http://www.blah.com:8080/xxx
+http://www.blah.net:8080/xxx
+http://www.blah.org:8080/xxx
+</code></pre>
+
+<p>需要注意的是，除了上述地址之外的其他地址是无法访问系统的，关于虚拟主机的源代码请参见<code>org.eclipse.jetty.server.handler.ContextHandler::checkContext()</code>方法。</p>
+
+<h2>为不同的app配置不同的虚拟主机</h2>
+
+<p>比如说你的机器有下面的IP地址和DNS域名：</p>
+
+<pre><code>333.444.555.666
+127.0.0.1
+www.blah.com
+www.blah.net
+www.blah.org
+777.888.888.111
+www.other.com
+www.other.net
+www.other.org
+</code></pre>
+
+<p>你希望除了xxx.war之外，zzz.war可以被777.888.888.111, www.other.com, www.other.net和www.other.org访问，那么可以这样配置：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="c">&lt;!-- webapp xxx.war --&gt;</span>
+</span><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/xxx<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span><span class="nt">/&gt;</span>/webapps/xxx.war<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;virtualHosts&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;java.lang.String&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>333.444.555.666<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>127.0.0.1<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.com<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.net<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.org<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="c">&lt;!-- webapp zzz.war --&gt;</span>
+</span><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/zzz<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span><span class="nt">/&gt;</span>/webapps/zzz.war<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;virtualHosts&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;java.lang.String&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>777.888.888.111<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.com<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.net<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.org<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个时候zzz.war就可以被下面的地址访问了：</p>
+
+<pre><code>http://777.888.888.111:8080/zzz
+http://www.other.com:8080/zzz
+http://www.other.net:8080/zzz
+http://www.other.org:8080/zzz
+</code></pre>
+
+<p>实际上xxx.war和zzz.war是分别用了两个WebAppContext来配置的，也就是说jetty在将请求发送到实际的handler之前会根据context来找到对应的WebAppContext，最后再通过对应的WebAppContext来进行虚拟主机的判断。</p>
+
+<h2>给相同context的不同app配置不同的虚拟主机</h2>
+
+<p>上一个例子很容易理解，这个例子更具有一般性，两个app的context都在根目录下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span><span class="nt">/&gt;</span>/webapps/xxx.war<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;virtualHosts&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;java.lang.String&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>333.444.555.666<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>127.0.0.1<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.com<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.net<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.blah.org<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span><span class="nt">/&gt;</span>/webapps/zzz.war<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;virtualHosts&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;java.lang.String&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>777.888.888.111<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.com<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.net<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>www.other.org<span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>现在xxx.war可以这样访问：</p>
+
+<pre><code>http://333.444.555.666:8080/
+http://127.0.0.1:8080/
+http://www.blah.com:8080/
+http://www.blah.net:8080/
+http://www.blah.org:8080/
+</code></pre>
+
+<p>zzz.war可以这样访问：</p>
+
+<pre><code>http://777.888.888.111:8080/
+http://www.other.com:8080/
+http://www.other.net:8080/
+http://www.other.org:8080/
+</code></pre>
+
+<p>对于该部分的jetty处理逻辑可以参见：<code>org.eclipse.jetty.server.handler.ContextHandlerCollection::handler()</code>方法。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty的RequestLog(请求日志)]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/05/request-log-in-jetty/"/>
+    <updated>2013-07-05T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/05/request-log-in-jetty</id>
+    <content type="html"><![CDATA[<p>请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如<a href="http://www.webalizer.org/">webalizer</a>.</p>
+
+<!--more-->
+
+
+<p>一条标准的请求日志包括客户端IP，时间，请求方法(get,post&hellip;),url,请求大小,响应状态码,referer头,userAgent等。比如：</p>
+
+<pre><code> 123.4.5.6 - - [27/Aug/2004:10:16:17 +0000]
+  "GET /jetty/tut/XmlConfiguration.html HTTP/1.1"
+  200 76793 "http://localhost:8080/jetty/tut/logging.html"
+  "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.6) Gecko/20040614 Firefox/0.8"
+</code></pre>
+
+<h2>实现方法</h2>
+
+<p>Jetty提供了一个实现NCSARequestLog，它支持NCSA格式，并且日志文件每天都会创建新的日志文件(roll over)。</p>
+
+<p>如果觉得默认的实现不能满足要求，还可以实现RequestLog.java来自定义logger，然后将该logger配置到server中。</p>
+
+<h2>配置request log</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;handler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;Handlers&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.HandlerCollection&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;handlers&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;org.eclipse.jetty.server.Handler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Item&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;Contexts&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.ContextHandlerCollection&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Item&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;DefaultHandler&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.DefaultHandler&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Item&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;RequestLog&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.RequestLogHandler&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;Ref</span> <span class="na">id=</span><span class="s">&quot;RequestLog&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;requestLog&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;RequestLogImpl&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.NCSARequestLog&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.logs&quot;</span> <span class="na">default=</span><span class="s">&quot;./logs&quot;</span><span class="nt">/&gt;</span>/yyyy_mm_dd.request.log<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;retainDays&quot;</span><span class="nt">&gt;</span>90<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;append&quot;</span><span class="nt">&gt;</span>true<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;extended&quot;</span><span class="nt">&gt;</span>false<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;LogTimeZone&quot;</span><span class="nt">&gt;</span>GMT<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Ref&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>对应的java代码为：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">HandlerCollection</span> <span class="n">handlers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HandlerCollection</span><span class="o">();</span>
+</span><span class='line'><span class="n">ContextHandlerCollection</span> <span class="n">contexts</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ContextHandlerCollection</span><span class="o">();</span>
+</span><span class='line'><span class="n">RequestLogHandler</span> <span class="n">requestLogHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RequestLogHandler</span><span class="o">();</span>
+</span><span class='line'><span class="n">handlers</span><span class="o">.</span><span class="na">setHandlers</span><span class="o">(</span><span class="k">new</span> <span class="n">Handler</span><span class="o">[]{</span><span class="n">contexts</span><span class="o">,</span><span class="k">new</span> <span class="n">DefaultHandler</span><span class="o">(),</span><span class="n">requestLogHandler</span><span class="o">});</span>
+</span><span class='line'><span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">handlers</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">NCSARequestLog</span> <span class="n">requestLog</span> <span class="o">=</span> <span class="k">new</span> <span class="n">NCSARequestLog</span><span class="o">(</span><span class="s">&quot;./logs/jetty-yyyy_mm_dd.request.log&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="n">requestLog</span><span class="o">.</span><span class="na">setRetainDays</span><span class="o">(</span><span class="mi">90</span><span class="o">);</span>
+</span><span class='line'><span class="n">requestLog</span><span class="o">.</span><span class="na">setAppend</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'><span class="n">requestLog</span><span class="o">.</span><span class="na">setExtended</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+</span><span class='line'><span class="n">requestLog</span><span class="o">.</span><span class="na">setLogTimeZone</span><span class="o">(</span><span class="s">&quot;GMT&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="n">requestLogHandler</span><span class="o">.</span><span class="na">setRequestLog</span><span class="o">(</span><span class="n">requestLog</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>默认的日志会记录在<code>$JETTY_HOME/logs</code>下，日志的文件名包含了日志记录的时间。老的日志文件最多会只保存90天，然后会被删除。</p>
+
+<h2>针对不同的context配置requestlog</h2>
+
+<p>下面的代码需要被放在context.xml文件中，以便针对单个webapp配置独立的requestlog：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  ...
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;handler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;RequestLog&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.RequestLogHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;requestLog&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;New</span> <span class="na">id=</span><span class="s">&quot;RequestLogImpl&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.NCSARequestLog&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;filename&quot;</span><span class="nt">&gt;&lt;Property</span> <span class="na">name=</span><span class="s">&quot;jetty.logs&quot;</span> <span class="na">default=</span><span class="s">&quot;./logs&quot;</span><span class="nt">/&gt;</span>/test-yyyy_mm_dd.request.log<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;filenameDateFormat&quot;</span><span class="nt">&gt;</span>yyyy_MM_dd<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;LogTimeZone&quot;</span><span class="nt">&gt;</span>GMT<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;retainDays&quot;</span><span class="nt">&gt;</span>90<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;append&quot;</span><span class="nt">&gt;</span>true<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  ...
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[非root用户监听80端口]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user/"/>
+    <updated>2013-07-04T03:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user</id>
+    <content type="html"><![CDATA[<p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
+
+<ol>
+<li>ipchains</li>
+<li>iptables</li>
+<li>配置jetty的SetUID</li>
+<li>xinetd</li>
+</ol>
+
+
+<!--more-->
+
+
+<h2>ipchains</h2>
+
+<p>在一些较老版本的linux中，可以使用ipchains的REDIRECT机制来将一个端口的数据包转发到另外一个端口上，而且该过程是在内核态中完成的。（如果ipchains不可用，则可以试试iptables）。</p>
+
+<pre><code>/sbin/ipchains -I input --proto TCP --dport 80 -j REDIRECT 8080
+</code></pre>
+
+<p>这条命令会告诉操作系统，在有数据包到来时，如果这个数据包是基于tcp协议的，并且目的端口是80端口，那么将该数据包重定向到8080端口。请确保内核在编译的时候是支持ipchians的，比如看看在系统中ipchians命令是否可以使用。</p>
+
+<h2>iptables</h2>
+
+<p>使用iptables的REDIRECT机制来将一个端口的数据包转发到另外一个端口上，而且该过程是在内核态中完成的。现在大部分的linux内核版本都是支持iptables的。</p>
+
+<pre><code>/sbin/iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+</code></pre>
+
+<p>要想上面的重定向规则起作用，首先要确保发往80端口的包在该规则之前不被拒绝，iptables处理包的流程如下图：</p>
+
+<p><img src="http://shenzhang.github.io/images/2013/07/iptables.gif"></p>
+
+<h2>配置SetUID</h2>
+
+<p>使用linux的setuid特性，让jetty以更高权限来执行。但是由于jetty的配置略微复杂，并且仍然有安全隐患，因此不建议使用。</p>
+
+<h2>xinetd</h2>
+
+<p>在现代linux系统中，xinetd作为inetd的更强大的兄弟可以帮你转发网络请求。因为xinetd仅仅由文本文件来配置，因此非常方便。</p>
+
+<p>有两种方法配置xinetd：</p>
+
+<ol>
+<li>在/etc/xinetd.conf中添加一个新的服务</li>
+<li>在/etc/xintd.d中添加新的配置文件</li>
+</ol>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">service</span> <span class="n">my_redirector</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'> <span class="n">type</span> <span class="o">=</span> <span class="n">UNLISTED</span>
+</span><span class='line'> <span class="n">disable</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">socket_type</span> <span class="o">=</span> <span class="n">stream</span>
+</span><span class='line'> <span class="n">protocol</span> <span class="o">=</span> <span class="n">tcp</span>
+</span><span class='line'> <span class="n">user</span> <span class="o">=</span> <span class="n">root</span>
+</span><span class='line'> <span class="n">wait</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">port</span> <span class="o">=</span> <span class="mi">80</span>
+</span><span class='line'> <span class="n">redirect</span> <span class="o">=</span> <span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span> <span class="mi">8888</span>
+</span><span class='line'> <span class="n">log_type</span> <span class="o">=</span> <span class="n">FILE</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">somefile</span><span class="o">.</span><span class="na">log</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>等号两边的空格可以省略。type = UNLISTED说明服务的名字没有在/etc/services中列出，但是需要在配置中指明端口和协议。如果你需要使用一个存在服务名称，比如http：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">service</span> <span class="n">http</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'> <span class="n">disable</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">socket_type</span> <span class="o">=</span> <span class="n">stream</span>
+</span><span class='line'> <span class="n">user</span> <span class="o">=</span> <span class="n">root</span>
+</span><span class='line'> <span class="n">wait</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">redirect</span> <span class="o">=</span> <span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span> <span class="mi">8888</span>
+</span><span class='line'> <span class="n">log_type</span> <span class="o">=</span> <span class="n">FILE</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">somefile</span><span class="o">.</span><span class="na">log</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以查看/etc/services就更加了解所有已经注册的服务了。</p>
+
+<p>注：</p>
+
+<ol>
+<li>日志的主要目的是出于安全性的考虑，因此也可以不配置</li>
+<li>RHEL5默认不带有xinetd，因此可以通过yum install xinetd来进行安装</li>
+</ol>
+
+
+<p>xinetd是一个非常强大和高可配置的系统，因此建议好好<a href="http://www.xinetd.org/">阅读</a>下。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[配置jetty的表单大小(Form Size)]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty/"/>
+    <updated>2013-07-04T03:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty</id>
+    <content type="html"><![CDATA[<p>Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。</p>
+
+<!--more-->
+
+
+<h2>改变单个app的最大值</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ContextHandler</span><span class="o">.</span><span class="na">setMaxFormContentSize</span><span class="o">(</span><span class="kt">int</span> <span class="n">maxSize</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>或者使用xml配置文件：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- Max Form Size                                                   --&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;maxFormContentSize&quot;</span><span class="nt">&gt;</span>200000<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>改变同一个Server中的所有app</h2>
+
+<p>直接在Server对象上设置org.eclipse.jetty.server.Request.maxFormContentSize属性就可以了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.Server&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;setAttribute&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>org.eclipse.jetty.server.Request.maxFormContentSize<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>200000<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'><span class="nt">&lt;/configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>改变一个jvm中的所有app(server)</h2>
+
+<p>设置系统属性org.eclipse.jetty.server.Request.maxFormContentSize。</p>
+
+<pre><code>-Dorg.eclipse.jetty.server.Request.maxFormContentSize=200000.
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty自定义错误页面]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/04/customize-error-page-in-jetty/"/>
+    <updated>2013-07-04T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/04/customize-error-page-in-jetty</id>
+    <content type="html"><![CDATA[<p>以下方法可以用来配置自定义错误页面：</p>
+
+<ol>
+<li>在web.xml中定义错误页面</li>
+<li>在context文件中定义错误页面</li>
+<li>实现自定义的错误处理handler</li>
+</ol>
+
+
+<!--more-->
+
+
+<h2>在web.xml中定义错误页面</h2>
+
+<p>标准的web应用的配置文件是放在<webapp>/WEB-INF/web.xml中，可以在其中配置&lt;error-page>来映射出错的url。&lt;error-page>可以将错误代码或者是异常类型映射到指定的资源上(错误页面)。其中：</p>
+
+<ul>
+<li>error-code:是整数类型</li>
+<li>exception-type:Java的异常类型(full name)</li>
+<li>location:相对于webapp根目录的页面url，必须要以/开头。</li>
+</ul>
+
+
+<p>如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>[xml]
+</span><span class='line'><span class="nt">&lt;error-page&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;error-code&gt;</span>404<span class="nt">&lt;/error-code&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;location&gt;</span>/jspsnoop/ERROR/404<span class="nt">&lt;/location&gt;</span>
+</span><span class='line'><span class="nt">&lt;/error-page&gt;</span>
+</span><span class='line'>[/xml]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>或：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>[xml]
+</span><span class='line'><span class="nt">&lt;error-page&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;exception-type&gt;</span>java.io.IOException<span class="nt">&lt;/exception-type&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;location&gt;</span>/jspsnoop/IOException<span class="nt">&lt;/location&gt;</span>
+</span><span class='line'><span class="nt">&lt;/error-page&gt;</span>
+</span><span class='line'>[/xml]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>在context文件中定义错误页面</h2>
+
+<p>context文件通常位于<code>&lt;jetty.home&gt;/contexts/</code>下。context文件可以比web.xml更加灵活的配置错误处理handler，比如可以对error-code指定范围。(但是web.xml更加移植性更好)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot;  encoding=&quot;ISO-8859-1&quot;?&gt;</span>
+</span><span class='line'><span class="cp">&lt;!DOCTYPE Configure PUBLIC &quot;-//Mort Bay Consulting//DTD Configure//EN&quot; &quot;http://jetty.mortbay.org/configure.dtd&quot;&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;contextPath&quot;</span><span class="nt">&gt;</span>/test<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;war&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;SystemProperty</span> <span class="na">name=</span><span class="s">&quot;jetty.home&quot;</span> <span class="na">default=</span><span class="s">&quot;.&quot;</span><span class="nt">/&gt;</span>/webapps/test
+</span><span class='line'>  <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c">&lt;!-- by Code --&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Get</span> <span class="na">name=</span><span class="s">&quot;errorHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;addErrorPage&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;int&quot;</span><span class="nt">&gt;</span>404<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;String&quot;</span><span class="nt">&gt;</span>/jspsnoop/ERROR/404<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Get&gt;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c">&lt;!-- by Exception --&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Get</span> <span class="na">name=</span><span class="s">&quot;errorHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;addErrorPage&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Call</span> <span class="na">class=</span><span class="s">&quot;java.lang.Class&quot;</span> <span class="na">name=</span><span class="s">&quot;forName&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;String&quot;</span><span class="nt">&gt;</span>java.io.IOException<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;String&quot;</span><span class="nt">&gt;</span>/jspsnoop/IOException<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Get&gt;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c">&lt;!-- by Code Range --&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Get</span> <span class="na">name=</span><span class="s">&quot;errorHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;addErrorPage&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;int&quot;</span><span class="nt">&gt;</span>500<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;int&quot;</span><span class="nt">&gt;</span>599<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg</span> <span class="na">type=</span><span class="s">&quot;String&quot;</span><span class="nt">&gt;</span>/dump/errorCodeRangeMapping<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/Get&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>自定义错误处理handler</h2>
+
+<p>自定义错误处理器可以从ErrorHandler或者是ErrorPageErrorHandler继承。要想控制输出的错误页面，以下方法需要实现：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kt">void</span> <span class="nf">handle</span><span class="o">(</span><span class="n">String</span> <span class="n">target</span><span class="o">,</span> <span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">HttpServletResponse</span> <span class="n">response</span><span class="o">,</span> <span class="kt">int</span> <span class="n">dispatch</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">handleErrorPage</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">,</span> <span class="kt">int</span> <span class="n">code</span><span class="o">,</span> <span class="n">String</span> <span class="n">message</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">writeErrorPage</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">,</span> <span class="kt">int</span> <span class="n">code</span><span class="o">,</span> <span class="n">String</span> <span class="n">message</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">showStacks</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">writeErrorPageHead</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">,</span> <span class="kt">int</span> <span class="n">code</span><span class="o">,</span> <span class="n">String</span> <span class="n">message</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">writeErrorPageBody</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">,</span> <span class="kt">int</span> <span class="n">code</span><span class="o">,</span> <span class="n">String</span> <span class="n">message</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">showStacks</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">writeErrorPageMessage</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">,</span> <span class="kt">int</span> <span class="n">code</span><span class="o">,</span> <span class="n">String</span> <span class="n">message</span><span class="o">,</span> <span class="n">String</span> <span class="n">uri</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">writeErrorPageStacks</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Writer</span> <span class="n">writer</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如果是ErrorPageErrorHandler还可以通过调用setShowStacks(false)来禁止堆栈跟踪。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty的连接器(Connectors)]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty/"/>
+    <updated>2013-07-03T04:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty</id>
+    <content type="html"><![CDATA[<p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
+
+<h2>连接器的类型</h2>
+
+<ul>
+<li>SelectChannelConnector</li>
+<li>SocketConnector</li>
+<li>SslSelectChannelConnector</li>
+<li>SslSocketConnector</li>
+<li>Ajp13SocketConnector</li>
+</ul>
+
+
+<!--more-->
+
+
+<h2>SelectChannelConnector</h2>
+
+<p>使用了NIO技术和非阻塞的线程模型。Jetty使用了Direct NIO buffers，并且仅给每个连接器接收到的请求分配线程。这种连接器非常适用于同时有多个连接，并且每个连接都有一定cpu空闲期，也就是说每个连接不是一直都在进行cpu运算。</p>
+
+<p>当使用Continuations技术时，还支持不占用线程的等待。当一个filter或servlet调用Continuation上的getEvent方法，会产生一个RuntimeException，并且会让当前request停止处理。Jetty捕获这个RuntimeException但是不会向客户端返回响应，而是释放当前线程并将该Continuation放入一个带有超时的队列中。如果一个Continuation超时或者它的resume方法被调用，Jetty会重新分配一个线程来重新处理这个请求。但是唯一的缺陷就是在重新处理该请求时，上次从request取出的内容会不可用，需要重新读取，或者将它们以attribute的形式保存到request里，或者保存到Continuation对象中，以便复用。</p>
+
+<h2>SocketConnector</h2>
+
+<p>采用了传统的阻塞式的IO和线程模型。Jetty使用传统的socket，并且给每一个连接分配一个线程。一般来说不应该使用该连接器，除非NIO不可用。</p>
+
+<h2>SslSelectChannelConnector</h2>
+
+<p>提供SSL协议，并且使用NIO的模型。</p>
+
+<h2>SslSocketConnector</h2>
+
+<p>提供SSL协议，使用阻塞IO模型。</p>
+
+<h2>Ajp13SocketConnector</h2>
+
+<p>实现了Ajp13协议，更多Ajp13协议的信息可以参考<a href="http://tomcat.apache.org/connectors-doc-archive/jk2/common/AJPv13.html">这里</a></p>
+
+<h2>配置选项</h2>
+
+<p>acceptors:用来接收客户端连接的acceptor的线程数。</p>
+
+<p>acceptQueueSize:如果系统无法及时accept，连接请求的最大排队等待数量，超出这个数量操作系统会直接拒绝。</p>
+
+<p>acceptorPriority:用于接收连接请求(accept线程)的线程的优先级。</p>
+
+<p>confidentialPort:</p>
+
+<p>confidentialScheme:默认是https</p>
+
+<p>forwarded:如果是true，那么就会使用hostReader或者其他的手段来检查requet头(header)来从源请求中搜集信息，以便确定ServletRequest.getServerName(),ServletRequest.getServerPort(),ServletRequest.getRemoteAddr()的返回值信息。默认是false。</p>
+
+<p>forwardedHostReader:用于确定被转发的Host头。默认是X-Forwarded-Host。该选项只有在forwared=true时才有效。</p>
+
+<p>forwardedServerHeader:用于确定被转发的Server Name头。默认是X-Forwared-Server.该选项只有在forwared=true时才有效。</p>
+
+<p>forwardedForHeader:</p>
+
+<p>hostHeader:</p>
+
+<p>host:Jetty监听的ip地址，默认是0.0.0.0,会在所有网络接口上监听。</p>
+
+<p>integralPort:</p>
+
+<p>lowResourcesConnections:设置一个数值类型，若当前的连接数超过这个值，那么就将该连接器设置成低资源状态。当前连接数不是一个精确的数字，仅仅是通过NIO的selected set计算出来的平均值。如果进入低资源状态，那么连接器将采用不同的空闲超时时间。</p>
+
+<p>lowResourcesMaxIdleTime:在的资源状态(lowResourcesConnections)下的每个connection可以空闲(idle)的最大时间(单位:ms)。配置这个参数可以让jetty快速的关闭空闲的连接以应对高负载。</p>
+
+<p>maxIdleTime:设置一个连接的空闲时间，它会被直接用于Socket.setSoTimeout(int)，或者在NIO的模型下用于一些技术的超时时间。maxIdleTime会被用于：在一个连接(conntection)上等待一个新的请求时间；从request读取header和body的等待时间；将header或body写入response的等待时间。如果一个字节被读入或者写入，那么超时时间会重置。但是，大多数情况下，读写操作都是交给JVM执行的，因此只能计算单次读写操作的时间（不能精确到一个字节）。另外，jetty支持内存映射文件，因此将一个很大的内容写入一个慢速设备时可能会花费数10秒的时间。</p>
+
+<p>name:连接器的名字。可以使WebAppContext只响应通过WebAppContext.setConntectorNames(String[])所指定的名字的连接器。</p>
+
+<p>port:连接器的监听端口。</p>
+
+<p>requestBufferSize:设置用于接收请求(request)内容(body)的缓冲区。如果当前活跃的连接在接收数据的时候，如果body数据不能装在header缓冲区，那么就会被分配一个requestBuffer。默认是8K。</p>
+
+<p>requestHeaderSize:用于接收请求头的缓冲区大小。空闲的连接最多只会被分配一个这样大小的缓冲期。默认是6K。</p>
+
+<p>responseBufferSize:设置响应(response)内容的缓冲区(buffer)大小。如果当前活跃的连接在发送body数据时，如果body数据不能装在header缓冲区中，那么就会被分配responseBuffer。默认是32K。</p>
+
+<p>responseHeaderSize:设置响应头缓冲(buffer)的大小，默认是6K。</p>
+
+<p>resolveNames:如果是true，那么请求的IP地址将会被被解析成主机名。</p>
+
+<p>reuseAddress:配置jetty的监听socket是否启用SO_REUSEADDR选项。</p>
+
+<p>soLingerTime:配置是否在连接的socket上启用<a href="http://blog.csdn.net/huang_xw/article/details/7338612" target="_blank">SO_LINGER</a>选项，默认不启用。</p>
+
+<p>statsOn:配置是否启用连接的状态搜集。</p>
+
+<p>useDirectBuffers:对于NIO的连接器，配置是否采用Direct Byte Buffer，默认采用(true)。</p>
+
+<p>threadPool:设置一个线程池对象。默认采用的线程池就是设置给org.eclipse.jetty.server.Server的线程池对象，默认是org.eclipse.jetty.util.thread.QueuedThreadPool类型的线程池。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[postgresql中的autovaccum]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/03/autovaccum-in-postgresql/"/>
+    <updated>2013-07-03T02:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/03/autovaccum-in-postgresql</id>
+    <content type="html"><![CDATA[<p>今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用<code>/dt+ table_name</code> 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。</p>
+
+<p>问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。</p>
+
+<!--more-->
+
+
+<p>postgresql如何解决这个问题呢。首先postgresql提供的vaccum的功能对数据表和文件进行整理，普通vaccum会扫描数据文件，将不会再用到的记录(当前的所有事务不会再访问到的)打上标记，以便下次在分配版本数据时可以重用这部分空间，以不至于数据文件会不断膨胀。该操作不会对表加锁，但是同样也不会对数据文件做紧凑操作(同jvm的cms垃圾收集)会产生碎片，并且数据文件不会减少。</p>
+
+<p>vaccum加上full参数除了基本的vaccum操作外，还会对数据文件进行紧凑，释放掉过期的版本数据，并且将当前版本的数据记录放在一起，这个时候肯定是反映了真实的数据大小。但是该操作会对表加锁，影响系统访问。一般可以在凌晨定时对数据库做full vaccum操作。</p>
+
+<p>这样看起来是不是觉得postgresql很傻。其实postgresql提供了autovaccum的功能，也就是在运行期使用autovaccum进程自动的对自己做普通vaccum操作(没有full参数)，那么什么时候postgresql会出发vaccum呢？看下postgresql.conf配置文件，其中专门有一节是对autovaccum的参数配置，其中比较重要的以下几个参数：</p>
+
+<pre><code>autovacuum_naptime = 1min #两次autovaccum的间隔
+autovacuum_vacuum_threshold = 50 #最小的记录更新数
+autovacuum_vacuum_scale_factor = 0.2 #表大小的改动因子
+</code></pre>
+
+<p>后面两个参数说明了autovaccum执行的条件，但是实际上并不是说记录被改变了50条就会出发autovaccum。实际上postgresql执行autovaccum的先决条件是autovacuum_naptime时间到了，从默认配置上说就是每隔1分钟会准备执行一次autovaccum，但是具体哪个表会被执行vaccum会参考后面两个参数，如果后面两个参数的阈值没有达到，那么该表就不会被vaccum。</p>
+
+<p>OK，回到之前线上出现的问题，经过我们的分析由于postgresql默认配置的autovaccum间隔是1分钟，那么在这一分钟内如果执行大量的更新操作（删除和插入同理）就会导致数据文件一直膨胀，直到1分钟后autovaccum执行，那么就算执行后文件大小也不会再被减小并紧凑。因此目前一个简单的解决方案就是减小autovacuum_naptime的时间，我们缩小到了2s，目前还没有看到有什么副作用。当然也可以在业务逻辑里根据条件定期主动执行vaccum。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[linux下搭建subversion]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/07/03/subversion-setup-in-linux/"/>
+    <updated>2013-07-03T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/07/03/subversion-setup-in-linux</id>
+    <content type="html"><![CDATA[<p>由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。</p>
+
+<h2>1.安装</h2>
+
+<p>在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。</p>
+
+<h2>2.创建资源库</h2>
+
+<p>在linux中先创建一个用于资源库的目录</p>
+
+<pre><code>mkdir ***/svn
+</code></pre>
+
+<p>使用svnadmin创建资源库</p>
+
+<pre><code>svnadmin create ***/svn
+</code></pre>
+
+<p>创建完毕后svn目录就具有了svn资源库的布局，比如conf, db, hooks目录等等</p>
+
+<h2>3.启动服务</h2>
+
+<p>subversion可以提供的服务方式有多种，比如：</p>
+
+<ol>
+<li>与apache结合使用http协议</li>
+<li>使用svnserve提供的独立服务，使用svn协议</li>
+<li>直接委托给xinet，当xinet转发的时候需要使用svnserve的-i参数，具体的看下svnserve的帮助</li>
+</ol>
+
+
+<p>我由于没什么特殊要求，就直接使用了svnserve提供的独立服务模式：<code>svnserve -d -r ***/svn</code>启动服务,这样就svnserve就开始监听3690的默认端口</p>
+
+<h2>4.配置用户和权限</h2>
+
+<p>a.修改***/svn/conf/svnserve.conf文件，将auth-access, password-db, authz-db的注释取消掉。具体各选项什么意思，在文件中都有说明。(虽然注释中说明了注释的样子就是svnserve的默认选项，但是发现只有取消了注释才生效的，反正保险点还是显示注明吧)</p>
+
+<p>b.在passwd中添加用户和密码:</p>
+
+<pre><code>[users]
+fish = 123
+</code></pre>
+
+<p>c.在authz中修改用户权限:</p>
+
+<pre><code>[/]
+fish = rw
+</code></pre>
+
+<p>说明fish可以访问根目录下的所有文件(读写)</p>
+
+<p>Done.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty中的Start.jar]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/06/27/start-jar-in-jetty/"/>
+    <updated>2013-06-27T03:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/06/27/start-jar-in-jetty</id>
+    <content type="html"><![CDATA[<p>Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。</p>
+
+<p>但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的。如果用了maven，那么maven会自动帮你管理这些jar的依赖关系，但是如果是用控制台或者shell来运行jetty，仍然需要设置classpath。</p>
+
+<p>start.jar是一个可执行的jar文件，它可以帮助你配置好运行jetty所需要的classpath，然后运行jetty的主程序。start.jar中包含了一个start.config文件，并且它可以用来控制start.jar的行为，因此你可以直接这样运行start.jar:</p>
+
+<pre><code>java -jar start.jar
+</code></pre>
+
+<p>可以加上&mdash;dry-run参数来让start.jar输出配置好的java运行命令，其中就包括了classpath的配置，该参数仅仅是用于输出命令行，不会真正启动jetty：</p>
+
+<pre><code>java -jar start.jar --dry-run
+</code></pre>
+
+<p>会产生类似的输出：</p>
+
+<pre><code>/usr/lib/jvm/java-1.5.0-sun-1.5.0.19/jre/bin/java \
+-Djetty.home=/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution \
+-cp /home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/resources:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-xml-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/servlet-api-2.5.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-http-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-continuation-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-server-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-security-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlet-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-webapp-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-deploy-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlets-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-util-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-io-7.0.0.RC6-SNAPSHOT.jar \
+org.eclipse.jetty.xml.XmlConfiguration \
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/etc/jetty.xml
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[将jetty嵌入到应用中]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/06/27/embed-jetty/"/>
+    <updated>2013-06-27T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/06/27/embed-jetty</id>
+    <content type="html"><![CDATA[<p>Jetty有一个口号：“不要将你的应用部署到Jetty中，而是将Jetty部署到你的应用中”。Jetty提供了另一种开发和部署web应用的思维，使用jetty的嵌入式模式就是将一个http模块放入到你的应用中，而不需要将你的应用放入到http服务器中。</p>
+
+<p>将Jetty嵌入到应用中通常需要下面的步骤：</p>
+
+<ol>
+<li>创建一个server</li>
+<li>添加/配置Connectors</li>
+<li>添加/配置Handlers</li>
+<li>给Handlers添加/配置Servlets/Webapps</li>
+<li>启动server</li>
+<li>join(让主线程阻塞，防止退出)</li>
+</ol>
+
+
+<!--more-->
+
+
+<h2>创建一个Server</h2>
+
+<p>下面的代码可以创建一个最简单的Jetty服务器：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SimplestServer</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>它会启动一个Http服务器并且监听8080端口。但是由于没有配置任何handlers，随意对于任意的请求都会返回404错误。</p>
+
+<h2>配置handlers</h2>
+
+<p>为了让Jetty能够正常输出响应给客户端，需要给Jetty配置一个handler，这个handler可以：</p>
+
+<ol>
+<li>检测和修改http request</li>
+<li>生成http response</li>
+<li>调用另外一个handler(HandlerWrapper)</li>
+<li>继续调用一个或多个handler(HandlerCollection)</li>
+</ol>
+
+
+<p>下面这个例子展示了一个可以输出hello world的handler：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HelloHandler</span> <span class="kd">extends</span> <span class="n">AbstractHandler</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">handle</span><span class="o">(</span><span class="n">String</span> <span class="n">target</span><span class="o">,</span><span class="n">Request</span> <span class="n">baseRequest</span><span class="o">,</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span><span class="n">HttpServletResponse</span> <span class="n">response</span><span class="o">)</span>
+</span><span class='line'>        <span class="kd">throws</span> <span class="n">IOException</span><span class="o">,</span> <span class="n">ServletException</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">setContentType</span><span class="o">(</span><span class="s">&quot;text/html;charset=utf-8&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">setStatus</span><span class="o">(</span><span class="n">HttpServletResponse</span><span class="o">.</span><span class="na">SC_OK</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">baseRequest</span><span class="o">.</span><span class="na">setHandled</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">getWriter</span><span class="o">().</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;&lt;h1&gt;Hello World&lt;/h1&gt;&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>使用这个handler来配置server：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloHandler</span><span class="o">());</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这就是配置一个server的全部过程，虽然复杂的请求处理需要多个handler相互配合，更加复杂的handler会在后面做介绍。</p>
+
+<h2>配置Connectors</h2>
+
+<p>可以给jetty server配置一个或多个connector，甚至可以对每一个connector做详细的配置，比如监听端口、缓存大小、超时等等。</p>
+
+<p>下面的代码展示了在前面这个例子的基础上给server做connector的配置：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ManyConnectors</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">SelectChannelConnector</span> <span class="n">connector0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SelectChannelConnector</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">connector0</span><span class="o">.</span><span class="na">setPort</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">connector0</span><span class="o">.</span><span class="na">setMaxIdleTime</span><span class="o">(</span><span class="mi">30000</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">connector0</span><span class="o">.</span><span class="na">setRequestHeaderSize</span><span class="o">(</span><span class="mi">8192</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">SelectChannelConnector</span> <span class="n">connector1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SelectChannelConnector</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">connector1</span><span class="o">.</span><span class="na">setHost</span><span class="o">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">connector1</span><span class="o">.</span><span class="na">setPort</span><span class="o">(</span><span class="mi">8888</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">connector1</span><span class="o">.</span><span class="na">setThreadPool</span><span class="o">(</span><span class="k">new</span> <span class="n">QueuedThreadPool</span><span class="o">(</span><span class="mi">20</span><span class="o">));</span>
+</span><span class='line'>        <span class="n">connector1</span><span class="o">.</span><span class="na">setName</span><span class="o">(</span><span class="s">&quot;admin&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">SslSelectChannelConnector</span> <span class="n">ssl_connector</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SslSelectChannelConnector</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">String</span> <span class="n">jetty_home</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">getProperty</span><span class="o">(</span><span class="s">&quot;jetty.home&quot;</span><span class="o">,</span><span class="s">&quot;../jetty-distribution/target/distribution&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">setProperty</span><span class="o">(</span><span class="s">&quot;jetty.home&quot;</span><span class="o">,</span><span class="n">jetty_home</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">ssl_connector</span><span class="o">.</span><span class="na">setPort</span><span class="o">(</span><span class="mi">8443</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">SslContextFactory</span> <span class="n">cf</span> <span class="o">=</span> <span class="n">ssl_connector</span><span class="o">.</span><span class="na">getSslContextFactory</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">cf</span><span class="o">.</span><span class="na">setKeyStore</span><span class="o">(</span><span class="n">jetty_home</span> <span class="o">+</span> <span class="s">&quot;/etc/keystore&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">cf</span><span class="o">.</span><span class="na">setKeyStorePassword</span><span class="o">(</span><span class="s">&quot;OBF:1vny1zlo1x8e1vnw1vn61x8g1zlu1vn4&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">cf</span><span class="o">.</span><span class="na">setKeyManagerPassword</span><span class="o">(</span><span class="s">&quot;OBF:1u2u1wml1z7s1z7a1wnl1u2g&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setConnectors</span><span class="o">(</span><span class="k">new</span> <span class="n">Connector</span><span class="o">[]{</span> <span class="n">connector0</span><span class="o">,</span> <span class="n">connector1</span><span class="o">,</span> <span class="n">ssl_connector</span> <span class="o">});</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloHandler</span><span class="o">());</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>理解handler collections, wrappers和scopes</h2>
+
+<p>复杂的请求处理尝尝需要多个handler协同处理，这些handler通过以下方式组织在一起：</p>
+
+<ol>
+<li>HandlerCollection:可以将多个handler组装起来，并且按顺序挨个调用他们。这常常用来将统计handler、日志handler和真正的生成response的handler组装在一起。</li>
+<li>HandlerList:将多个handler组装起来，并且按顺序调用，直到其中一个handler抛出异常，或者reponse被提交(commit)，或者handler.isHandled()返回true。它常常用来组合多个条件性的(conditionally)的handler。</li>
+<li>HandlerWrapper:通常是一个handler的基类。提供了一种装饰模式的handler，可以实现面向切面的handler处理机制。</li>
+<li>ConetextHandlerCollection:被jetty server内部使用，一般不会用到。实际上是一个HandlerCollection，里面组装了多个ContextHandler，并且对于每个request请求，会根据request的URI(contextPath)并根据最长前缀的匹配模式选择一个ContextHandler来执行。</li>
+</ol>
+
+
+<h2>配置一个文件服务器</h2>
+
+<p>下面的代码使用HandlerList联合ResourceHandler和DefaultHandler：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">FileServer</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">SelectChannelConnector</span> <span class="n">connector</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SelectChannelConnector</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">connector</span><span class="o">.</span><span class="na">setPort</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">addConnector</span><span class="o">(</span><span class="n">connector</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ResourceHandler</span> <span class="n">resource_handler</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ResourceHandler</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">resource_handler</span><span class="o">.</span><span class="na">setDirectoriesListed</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">resource_handler</span><span class="o">.</span><span class="na">setWelcomeFiles</span><span class="o">(</span><span class="k">new</span> <span class="n">String</span><span class="o">[]{</span> <span class="s">&quot;index.html&quot;</span> <span class="o">});</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">resource_handler</span><span class="o">.</span><span class="na">setResourceBase</span><span class="o">(</span><span class="s">&quot;.&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">HandlerList</span> <span class="n">handlers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HandlerList</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">handlers</span><span class="o">.</span><span class="na">setHandlers</span><span class="o">(</span><span class="k">new</span> <span class="n">Handler</span><span class="o">[]</span> <span class="o">{</span> <span class="n">resource_handler</span><span class="o">,</span> <span class="k">new</span> <span class="n">DefaultHandler</span><span class="o">()</span> <span class="o">});</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">handlers</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>resourcehandler首先根据request检查本地文件系统上匹配的文件，如果没有找到匹配的文件，则交给defaulthandler继续处理，它会直接返回404错误。</p>
+
+<h2>使用xml来配置文件服务器</h2>
+
+<p>Jetty XML配置可以将java代码使用xml来配置，前面的文件服务器可以用下面的xml类进行配置：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+</span><span class='line'><span class="cp">&lt;!DOCTYPE Configure PUBLIC &quot;-//Jetty//Configure//EN&quot; &quot;http://www.eclipse.org/jetty/configure.dtd&quot;&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nt">&lt;Configure</span> <span class="na">id=</span><span class="s">&quot;FileServer&quot;</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.Server&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;addConnector&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;New</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.nio.SelectChannelConnector&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>            <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;port&quot;</span><span class="nt">&gt;</span>8080<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;handler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;New</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.HandlerList&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;handlers&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;org.eclipse.jetty.server.Handler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;New</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.ResourceHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;directoriesListed&quot;</span><span class="nt">&gt;</span>true<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;welcomeFiles&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Array</span> <span class="na">type=</span><span class="s">&quot;String&quot;</span><span class="nt">&gt;&lt;Item&gt;</span>index.html<span class="nt">&lt;/Item&gt;&lt;/Array&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;resourceBase&quot;</span><span class="nt">&gt;</span>.<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Item&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;New</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.handler.DefaultHandler&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/Item&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Array&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/New&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以使用下面的代码来让这个xml文件运行起来：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">FileServerXml</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Resource</span> <span class="n">fileserver_xml</span> <span class="o">=</span> <span class="n">Resource</span><span class="o">.</span><span class="na">newSystemResource</span><span class="o">(</span><span class="s">&quot;fileserver.xml&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">XmlConfiguration</span> <span class="n">configuration</span> <span class="o">=</span> <span class="k">new</span> <span class="n">XmlConfiguration</span><span class="o">(</span><span class="n">fileserver_xml</span><span class="o">.</span><span class="na">getInputStream</span><span class="o">());</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="o">(</span><span class="n">Server</span><span class="o">)</span><span class="n">configuration</span><span class="o">.</span><span class="na">configure</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>配置contexts</h2>
+
+<p>ContextHandler实际上是一个HandlerWrapper，它仅仅负责那些与它的contextPath相匹配的request请求。</p>
+
+<p>匹配这个context的request请求的path属性被同时更新，比如contextPath，pathInfo(同一个requst uri在不同的context下面，path属性被截取的不一样)。下面的参数都可以有选择性的设置给context：</p>
+
+<ol>
+<li>context的thread classloader</li>
+<li>一些属性(attributes)</li>
+<li>一些init参数</li>
+<li>resource base</li>
+<li>一些虚拟主机的名字</li>
+</ol>
+
+
+<p>下面就是一个设置context的例子：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OneContext</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ContextHandler</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ContextHandler</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/hello&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setResourceBase</span><span class="o">(</span><span class="s">&quot;.&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setClassLoader</span><span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">getContextClassLoader</span><span class="o">());</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloHandler</span><span class="o">());</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>创建servlets</h2>
+
+<p>下面是一个servlet：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HelloServlet</span> <span class="kd">extends</span> <span class="n">HttpServlet</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">String</span> <span class="n">greeting</span><span class="o">=</span><span class="s">&quot;Hello World&quot;</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">HelloServlet</span><span class="o">(){}</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">HelloServlet</span><span class="o">(</span><span class="n">String</span> <span class="n">greeting</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">greeting</span><span class="o">=</span><span class="n">greeting</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doGet</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">HttpServletResponse</span> <span class="n">response</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">ServletException</span><span class="o">,</span> <span class="n">IOException</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">setContentType</span><span class="o">(</span><span class="s">&quot;text/html&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">setStatus</span><span class="o">(</span><span class="n">HttpServletResponse</span><span class="o">.</span><span class="na">SC_OK</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">getWriter</span><span class="o">().</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;&lt;h1&gt;&quot;</span><span class="o">+</span><span class="n">greeting</span><span class="o">+</span><span class="s">&quot;&lt;/h1&gt;&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">response</span><span class="o">.</span><span class="na">getWriter</span><span class="o">().</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;session=&quot;</span> <span class="o">+</span> <span class="n">request</span><span class="o">.</span><span class="na">getSession</span><span class="o">(</span><span class="kc">true</span><span class="o">).</span><span class="na">getId</span><span class="o">());</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>配置ServletContext</h2>
+
+<p>ServletContextHandler是一个特殊的ContextHandler，它可以支持标准的servlet，下面是一个使用ServletContextHandler的例子：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OneServletContext</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ServletContextHandler</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ServletContextHandler</span><span class="o">(</span><span class="n">ServletContextHandler</span><span class="o">.</span><span class="na">SESSIONS</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">()),</span><span class="s">&quot;/*&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">(</span><span class="s">&quot;Buongiorno Mondo&quot;</span><span class="o">)),</span><span class="s">&quot;/it/*&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">(</span><span class="s">&quot;Bonjour le Monde&quot;</span><span class="o">)),</span><span class="s">&quot;/fr/*&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>配置WebAppContext</h2>
+
+<p>WebAppContext是一个ServletContextHandler的变种，准确的说WebAppContext继承于ServletContextHandler，它用标准的webapp文件组织布局和web.xml来配置servlets、filters和其他特性。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OneWebApp</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">String</span> <span class="n">jetty_home</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">getProperty</span><span class="o">(</span><span class="s">&quot;jetty.home&quot;</span><span class="o">,</span><span class="s">&quot;..&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">WebAppContext</span> <span class="n">webapp</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebAppContext</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">webapp</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">webapp</span><span class="o">.</span><span class="na">setWar</span><span class="o">(</span><span class="n">jetty_home</span><span class="o">+</span><span class="s">&quot;/webapps/test.war&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">webapp</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如果webapp没有打包成war文件，那么可以指定webapp的根目录：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OneWebAppUnassembled</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">WebAppContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebAppContext</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setDescriptor</span><span class="o">(</span><span class="n">webapp</span><span class="o">+</span><span class="s">&quot;/WEB-INF/web.xml&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setResourceBase</span><span class="o">(</span><span class="s">&quot;../test-jetty-webapp/src/main/webapp&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="na">setParentLoaderPriority</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>配置ContextHandlerCollection</h2>
+
+<p>ContextHandlerCollection可以使用request的uri来根据最长前缀的模式匹配对应的context，下面的例子就是同时安装两个context：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ManyContexts</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="n">Server</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Server</span><span class="o">(</span><span class="mi">8080</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ServletContextHandler</span> <span class="n">context0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ServletContextHandler</span><span class="o">(</span><span class="n">ServletContextHandler</span><span class="o">.</span><span class="na">SESSIONS</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context0</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/ctx0&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context0</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">()),</span><span class="s">&quot;/*&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context0</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">(</span><span class="s">&quot;Buongiorno Mondo&quot;</span><span class="o">)),</span><span class="s">&quot;/it/*&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">context0</span><span class="o">.</span><span class="na">addServlet</span><span class="o">(</span><span class="k">new</span> <span class="n">ServletHolder</span><span class="o">(</span><span class="k">new</span> <span class="n">HelloServlet</span><span class="o">(</span><span class="s">&quot;Bonjour le Monde&quot;</span><span class="o">)),</span><span class="s">&quot;/fr/*&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">WebAppContext</span> <span class="n">webapp</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebAppContext</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">webapp</span><span class="o">.</span><span class="na">setContextPath</span><span class="o">(</span><span class="s">&quot;/ctx1&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">webapp</span><span class="o">.</span><span class="na">setWar</span><span class="o">(</span><span class="n">jetty_home</span><span class="o">+</span><span class="s">&quot;/webapps/test.war&quot;</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ContextHandlerCollection</span> <span class="n">contexts</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ContextHandlerCollection</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">contexts</span><span class="o">.</span><span class="na">setHandlers</span><span class="o">(</span><span class="k">new</span> <span class="n">Handler</span><span class="o">[]</span> <span class="o">{</span> <span class="n">context0</span><span class="o">,</span> <span class="n">webapp</span> <span class="o">});</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">setHandler</span><span class="o">(</span><span class="n">contexts</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">server</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ContextHandlerCollection中可以添加多个ContextHandler，这个例子里就存放了一个ServletContextHandler和一个WebAppContext。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[jsp的编译过程和热部署原理]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp/"/>
+    <updated>2013-06-26T06:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp</id>
+    <content type="html"><![CDATA[<p>我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。</p>
+
+<p>首先简要说明下jsp文件的响应过程：</p>
+
+<ol>
+<li>client发起http请求，如index.jsp</li>
+<li>servlet容器将这个请求交给JspServlet处理</li>
+<li>JspServlet根据request的目标文件index.jsp，对其进行翻译，生成对应的符合servlet规范的源文件index_jsp.java</li>
+<li>使用一个java编译器对index_jsp.java进行编译，并生成index_jsp.class文件</li>
+<li>使用一个特殊的classload装载这个index_jsp.class文件，并通过反射创建对应的servlet对象</li>
+<li>调用这个servlet对象的service方法</li>
+<li>完成response的输出</li>
+</ol>
+
+
+<!--more-->
+
+
+<p>我们使用glassfish的jsp实现(jsp-2.1-glassfish.jar)来看看jsp是如何进行热部署的。</p>
+
+<p><code>org.apache.jasper.servlet.JspServlet.service</code>做为入口函数的关键代码为：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// 条件预编译</span>
+</span><span class='line'><span class="kt">boolean</span> <span class="n">precompile</span> <span class="o">=</span> <span class="n">preCompile</span><span class="o">(</span><span class="n">request</span><span class="o">);</span>
+</span><span class='line'><span class="c1">// 请求jsp文件</span>
+</span><span class='line'><span class="n">serviceJspFile</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">,</span> <span class="n">jspUri</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">precompile</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>serviceJspFile:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// 将请求封装到一个wrapper中，逻辑上隔离和状态复用</span>
+</span><span class='line'><span class="n">wrapper</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">,</span> <span class="n">precompile</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>wrapper.service:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// (1) Compile</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(!</span><span class="n">options</span><span class="o">.</span><span class="na">getUsePrecompiled</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">options</span><span class="o">.</span><span class="na">getDevelopment</span><span class="o">()</span> <span class="o">||</span> <span class="n">firstTime</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">firstTime</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">ctxt</span><span class="o">.</span><span class="na">compile</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">compileException</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">throw</span> <span class="n">compileException</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// (2) (Re)load servlet class file</span>
+</span><span class='line'><span class="n">getServlet</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// If a page is to be precompiled only, return.</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">precompile</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">return</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// (3) Service request</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">theServlet</span> <span class="k">instanceof</span> <span class="n">SingleThreadModel</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">theServlet</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">theServlet</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从上可以看到在wrapper的service方法中实现了编译、加载和服务三个逻辑，从后面可以看到编译过程是有选择的进行的。</p>
+
+<h3>JspCompilationContext.compile:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">compile</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">JasperException</span><span class="o">,</span> <span class="n">FileNotFoundException</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">createCompiler</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>     <span class="k">if</span> <span class="o">(</span><span class="n">isPackagedTagFile</span> <span class="o">||</span> <span class="n">jspCompiler</span><span class="o">.</span><span class="na">isOutDated</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">jspCompiler</span><span class="o">.</span><span class="na">compile</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>     <span class="n">jsw</span><span class="o">.</span><span class="na">setReload</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>     <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">JasperException</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Cache compilation exception</span>
+</span><span class='line'>      <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="n">ex</span><span class="o">);</span>
+</span><span class='line'>      <span class="k">throw</span> <span class="n">ex</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">ex</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">JasperException</span> <span class="n">je</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JasperException</span><span class="o">(</span><span class="n">Localizer</span><span class="o">.</span><span class="na">getMessage</span><span class="o">(</span><span class="s">&quot;jsp.error.unable.compile&quot;</span><span class="o">),</span> <span class="n">ex</span><span class="o">);</span>
+</span><span class='line'>      <span class="c1">// Cache compilation exception</span>
+</span><span class='line'>      <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="n">je</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="n">je</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>compile过程被委托给了jspCompile.compile方法，其中又有这么两段代码：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">generateJava</span><span class="o">();</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">compileClass</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">generateClass</span><span class="o">();</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从上可以看出generateJava生产了java源文件，generateClass对该源文件进行编译生成class文件。</p>
+
+<p>在对源文件进行编译的过程中，涉及到一个编译器的问题，jsp会在当前环境中按照一定的优先级选择一个可以使用的java编译器：</p>
+
+<ol>
+<li>如果是jdk1.6+，那么看看系统中是否有org.apache.jasper.compiler.Jsr199JavaCompiler</li>
+<li>系统中是否有eclipse的jdt编译器</li>
+<li>使用Ant的java编译器</li>
+</ol>
+
+
+<p>在JspCompilationContext.compile中可以看到会检查jspCompiler.isOutDated()是否成立，从字面上看就知道是在检查该jsp文件是否过期了，如果过期了则会走重新编译的流程。其中的逻辑大致如下：</p>
+
+<ol>
+<li>如果JspServlet的初始化参数中设置了modificationTestInterval，那么jsp编译器只会在检查时间到了后才去做文件时间对比和检查，否则直接进入第二步开始检查。</li>
+<li>对比之前生成的class文件和当前的jsp文件的修改时间，如果当前文件更新，那么就会走编译逻辑，否则保持不变，之前编译后的class对象会被复用。</li>
+</ol>
+
+
+<p>因此如果发现修改了的jsp需要很长时间才能热部署，可以检查是否jspservlet设置了modificationTestInterval，并且该参数过大，但是设置该参数可以减轻jsp对文件检查的没必要的开销。</p>
+
+<p>到此为止大概理清了jsp文件的更新检查、翻译、编译流程，接下来就需要考虑jsp类文件的加载和热部署问题了。</p>
+
+<p>先大致说明下要实现热部署需要解决的几个问题:</p>
+
+<ol>
+<li>由于java的classloader的类加载机制，一个类被加载后会缓存到真正加载它的classloader中，因此当这个类被改变并且需要重新加载时不能使用之前加载它的classloader，也就是说每次reload的时候都需要使用一个全新的classloader。</li>
+<li>servlet容器在重复reload后需要考虑过期jsp class及jsp class(本质上是servlet)实例的gc问题，否则会导致heap的OOM甚至是perm区的OOM，因此需要容器不能直接引用jsp文件的class类型及其对应的实例，除此之外用于每次加载jsp class的classloader也需要及时释放，否则同样会造成OOM。</li>
+</ol>
+
+
+<p>jsp的实现中处理load的过程在<code>JspServletWrapper.getServlet</code>中：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">servletClass</span> <span class="o">=</span> <span class="n">ctxt</span><span class="o">.</span><span class="na">load</span><span class="o">();</span>
+</span><span class='line'><span class="n">theServlet</span> <span class="o">=</span> <span class="o">(</span><span class="n">Servlet</span><span class="o">)</span> <span class="n">servletClass</span><span class="o">.</span><span class="na">newInstance</span><span class="o">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到类加载是在ctxt.load中完成，最后的servlet实例是通过反射生成theServlet，但是这里需要注意的是theServlet的类型声明是Servlet类型，也就是说这里没有直接引用jsp class的真正类型，因此保证了没有对其class类型的引用(虽然从classpath的角度讲也没有办法引用)，可以让过期的class类型和实例被正常gc。</p>
+
+<p>在看看ctxt.load的类加载逻辑：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">servletClass</span> <span class="o">=</span> <span class="n">getJspLoader</span><span class="o">().</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>getJspLoader:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="n">ClassLoader</span> <span class="nf">getJspLoader</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>     <span class="k">return</span> <span class="k">new</span> <span class="nf">JasperLoader</span><span class="o">(</span><span class="k">new</span> <span class="n">URL</span><span class="o">[]</span> <span class="o">{</span><span class="n">baseUrl</span><span class="o">},</span>
+</span><span class='line'>                                <span class="n">getClassLoader</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getPermissionCollection</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getCodeSource</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getBytecodes</span><span class="o">());</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到每次load的时候都会创建一个新的classloader(父classloader是webappclassloader)，这样就满足了前面提到的热部署的条件1，并且也同样没有对新的classloader进行引用，保证对应的class和classloader实例可以正常gc。</p>
+
+<p>从上面一些列的逻辑可以看出，对于每个jsp class及其实例的引用只有两个地方:</p>
+
+<ol>
+<li>加载这个class的JasperLoader</li>
+<li>最后生成的theServlet</li>
+</ol>
+
+
+<p>其中JasperLoader没有被容器直接保持应用；theServlet在新的class被load进来并创建后也失去了引用。因此过期的jsp class和jsp class的servlet都可以被正常gc了。</p>
+
+<p>这样就完成了整个jsp热部署的逻辑，通过对jsp热部署原理的分析很容易归纳和总结一套让任意系统支持热部署的机制，但是在其中包含了很多约束和限制，因此不是任何系统都适合热部署，要分析其利弊，有机会再专门整理一篇文章对这个做分析吧。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[使用Jetty Runner来运行jetty]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/06/26/jetty-runner/"/>
+    <updated>2013-06-26T04:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/06/26/jetty-runner</id>
+    <content type="html"><![CDATA[<p>如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试<a href="http://repo2.maven.org/maven2/org/mortbay/jetty/jetty-runner/">Jetty Runner</a>.</p>
+
+<p>Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等），当然还有最重要的jetty的基本功能的模块，并且Jetty Runner提供了很多默认的jetty参数，然后接收用户的输入参数并启动一个嵌入式的jetty。</p>
+
+<p><em>最好使用8.1+的版本，否则并不包含el的依赖</em></p>
+
+<!--more-->
+
+
+<p>Jetty Runner的设计目标就是让运行一个webapp变得更简单，因为它提供了很多默认参数，并且一般不需要额外的依赖包。</p>
+
+<pre><code>java -jar jetty-runner.jar my.war
+</code></pre>
+
+<p>Jetty会默认监听8080端口，并且不是my.war。</p>
+
+<p>也可以同时部署多个app，可以是war包格式的，也可以是没有打包的文件夹:</p>
+
+<pre><code>java -jar jetty-runner.jar --path /one my1.war --path /two my2
+</code></pre>
+
+<p>这样my1这个引用可以通过<code>http://localhost:8080/one</code>来访问；my2这个应用可以通过<code>http://localhost:8080/two</code>来访问。</p>
+
+<p>如果应用需要使用配置文件做一点很少的配置，那么可以：</p>
+
+<pre><code>java -jar jetty-runner.jar contexts/my.xml
+</code></pre>
+
+<p>如果需要使用一些常用的配置，比如自定义端口、设置request log，可以：</p>
+
+<pre><code>java -jar jetty-runner.jar --port 9090 --log my/request/log/goes/here my.war
+</code></pre>
+
+<p>如果需要使用jetty.xml对jetty做全方位的配置，那么可以：</p>
+
+<pre><code>java -jar jetty-runner.jar --config my/jetty.xml my.war
+</code></pre>
+
+<p>最后，可以通过&mdash;help参数来查看Jetty Runner的使用方法：</p>
+
+<pre><code>java -jar jetty-runner.jar --help
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Jetty的目录结构]]></title>
+    <link href="http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty/"/>
+    <updated>2013-06-26T03:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty</id>
+    <content type="html"><![CDATA[<p>本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。</p>
+
+<!--more-->
+
+
+<p>在使用jetty之前需要先在jetty的官网上<a href="ttp://download.eclipse.org/jetty/">下载</a>发行包，解压后会看到如下的目录结构：</p>
+
+<p><img src="http://shenzhang.github.io/images/2013/06/jetty-dir.jpg"></p>
+
+<p>这里对其中较为重要的文件及目录做下说明：</p>
+
+<h2>README.txt</h2>
+
+<p>其中对一些简单的启动方法进行了说明，比如：</p>
+
+<blockquote><p>To run with the default options:</p>
+
+<p>  java -jar start.jar</p>
+
+<p>To see the available options and the default arguments
+provided by the start.ini file:</p>
+
+<p>  java -jar start.jar &mdash;help</p>
+
+<p>To run with extra configuration file(s) appended, eg SSL</p>
+
+<p>  java -jar start.jar etc/jetty-ssl.xml</p>
+
+<p>To run with properties</p>
+
+<p>  java -jar start.jar jetty.port=8081</p>
+
+<p>To run with extra configuration file(s) prepended, eg logging &amp; jmx</p>
+
+<p>  java -jar start.jar &mdash;pre=etc/jetty-logging.xml &mdash;pre=etc/jetty-jmx.xml</p>
+
+<p>To run without the args from start.ini</p>
+
+<p>  java -jar start.jar &mdash;ini OPTIONS=Server,websocket etc/jetty.xml etc/jetty-deploy.xml etc/jetty-ssl.xml</p>
+
+<p>to list the know OPTIONS:</p>
+
+<p>  java -jar start.jar &mdash;list-options</p></blockquote>
+
+<h2>bin</h2>
+
+<p>其中包含了一些可以在unix/linux上运行jetty的shell脚本</p>
+
+<h2>context</h2>
+
+<p>可以热部署的context目录</p>
+
+<h2>etc</h2>
+
+<p>包含了jetty所使用的配置文件</p>
+
+<h2>javadoc</h2>
+
+<p>jetty自己的java实现的javadoc，因为很多时候需要用java编程的思维来配置jetty，因此在不清除一个类怎么配置的时候，可以直接看源代码或者从这些javadoc中找找信息。</p>
+
+<h2>lib</h2>
+
+<p>jetty运行所需的jar包所在目录，其中各模块都被打成了不同的jar包，jetty在实际运行的时候根据配置会把需要的jar包加入到classpath中。当然如果需要可以根据实际情况进行裁剪。</p>
+
+<h2>logs</h2>
+
+<p>jetty的日志目录</p>
+
+<h2>resources</h2>
+
+<p>该目录也会作被加入到jetty的classpath中，因此如果有一些附加的公共资源需要加入到jetty类路径中，可以考虑放在这个地方。该文件夹下默认放了一个log4j配置文件，为jetty的log4j提供配置。</p>
+
+<h2>start.ini</h2>
+
+<p>jetty默认的启动参数文件</p>
+
+<h2>start.jar</h2>
+
+<p>jetty启动的入口jar，其入口类为org.eclipse.jetty.start.Main，要想深入了解jetty的启动过程可以从这里开始。</p>
+
+<h2>webapps</h2>
+
+<p>jetty在启动的时候需要初始化的webapp，这些webapp都会使用jetty的启动配置。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[避免死锁[译]]]></title>
@@ -496,395 +2689,6 @@ Transaction 2, request 2, tries to lock record 1 for update.
 <p><strong>UNNECESSARY:</strong>说明该数字不需要四舍五入，如果超出了精度则throw ArithmeticException。</p>
 
 <p>更多例子可参见RoundingMode的javadoc.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[javac的调试选项-g的意义]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/06/25/debug-parameter-in-javac/"/>
-    <updated>2013-06-25T05:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/06/25/debug-parameter-in-javac</id>
-    <content type="html"><![CDATA[<p>javac的调试选项-g 主要包含了三个子选项：lines, vars, source</p>
-
-<p>如果没有指定-g参数，javac是默认包含了lines和source选项，若指定-g参数则会包含所有三个选项。</p>
-
-<p>下面分别简要解释下三个子选项的意义和效果：</p>
-
-<p><strong>source:</strong> 将该class文件对应的源文件名称写进class中，这样在调试进入这个类时调试器就可以找到指定的源文件。可能有些同学会问：class的类名不就是源文件的名称吗，包命就是从classpath开始的路径。这种情况只是针对访问修饰符为public的类，一个源文件可以定义多个类（甚至是内部类）。如果在调试的过程中说找不到源文件，则很有可能是在编译的时候没有加上该选项。</p>
-
-<p><strong>lines:</strong> 将源文件中的行号和class中字节码的偏移量对应起来，这样当你下断点的时候，调试器就知道该断点对应到class字节码的哪条指令。如果不设置该选项，那么你根本就没办法下断点。抛异常的时候也不会给出行数信息。</p>
-
-<p><strong>vars:</strong> 局部变量的符号表。比如在eclipse调试的时候，可以边调试边看变量的信息，这些都要归功与局部变量的符号表，它可以帮助把运行过程中的变量值和源代码中的变量名对应起来。如果没有它，调试的时候是不能看到局部变量的值的，方法的参数也变成了arg1,arg2&hellip;。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[linux下ssh免输入密码方法]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/06/25/ssh-without-password/"/>
-    <updated>2013-06-25T04:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/06/25/ssh-without-password</id>
-    <content type="html"><![CDATA[<p>我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。</p>
-
-<p>若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)，需要以下步骤：</p>
-
-<p>1.登陆A，并切换到zhangsan: <code>su - zhangsan</code>;</p>
-
-<p>2.生成公钥和私钥：<code>ssh-keygen -t dsa</code>。其中-t参数后面可以为dsa或rsa，具体类型根据机器环境决定，现在大部分应该是dsa。接下来一路回车后会在~zhangsan/.ssh/目录下生成id_dsa和id_dsa.pub文件，其中id_dsa.pub文件就是公钥文件，需要拷贝到目标及其B上的。</p>
-
-<p>3.拷贝公钥到目标机器:
-<code>scp id_dsa.pub zhangsan@B:/home/zhangsan/.ssh/id_dsa.pub.A</code></p>
-
-<p>4.追加到目标机器~/.ssh/authorized_keys中: <code>~/.ssh/cat id_dsa.pub.A &gt;&gt; ~/.ssh/authorized_keys</code></p>
-
-<p>5.Done</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[mysql远程客户端无法连接的问题]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/"/>
-    <updated>2013-06-25T03:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql</id>
-    <content type="html"><![CDATA[<p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
-
-<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
-
-<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[linux下mysql编码设置]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql/"/>
-    <updated>2013-06-25T02:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql</id>
-    <content type="html"><![CDATA[<p>在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（windows下的默认编码是gbk，一般不会有问题），主要有两种方法：</p>
-
-<p>1.在创建数据库是显示指定编码：<code>create database db1 character set utf8</code>;</p>
-
-<p>2.在/etc/my.cnf中的[mysqld]部分加入<code>character-set-server=utf8</code>,最后在[client]部分加入<code>default-character-set=utf8</code>。
-注：网上部分帖子说在[mysqld]部分加入default-character-set=utf8是不可行的，至少在mysql5.5之后的版本是无法启动的，可以通过mysqld &mdash;verbose &mdash;help查看具体的参数信息，或者mysql在新的版本中将<code>default-character-set</code>换成了<code>character-set-server</code>。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Java中的锁]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/06/25/lock-in-java/"/>
-    <updated>2013-06-25T02:26:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/06/25/lock-in-java</id>
-    <content type="html"><![CDATA[<p><a href="http://tutorials.jenkov.com/java-concurrency/locks.html">原文链接</a></p>
-
-<p>锁像synchronized同步块一样，是一种线程同步机制，但比Java中的synchronized同步块更复杂。因为锁（以及其它更高级的线程同步机制）是由synchronized同步块的方式实现的，所以我们还不能完全摆脱synchronized关键字。</p>
-
-<p>自Java 5开始，java.util.concurrent.locks包中包含了一些锁的实现，因此你不用去实现自己的锁了。但是你仍然需要去了解怎样使用这些锁，且了解这些实现背后的理论也是很有用处的。可以参考我对java.util.concurrent.locks.Lock的介绍，以了解更多关于锁的信息。</p>
-
-<!--more-->
-
-
-<h2>一个简单的锁</h2>
-
-<p>让我们从java中的一个同步块开始：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">inc</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="kd">synchronized</span><span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="k">return</span> <span class="o">++</span><span class="n">count</span><span class="o">;</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>可以看到在inc()方法中有一个synchronized(this)代码块。该代码块可以保证在同一时间只有一个线程可以执行return ++count。虽然在synchronized的同步块中的代码可以更加复杂，但是++count这种简单的操作已经足以表达出线程同步的意思。</p>
-
-<p>以下的Counter类用Lock代替synchronized达到了同样的目的：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">private</span> <span class="n">Lock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Lock</span><span class="o">();</span>
-</span><span class='line'>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">inc</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
-</span><span class='line'>      <span class="kt">int</span> <span class="n">newCount</span> <span class="o">=</span> <span class="o">++</span><span class="n">count</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
-</span><span class='line'>      <span class="k">return</span> <span class="n">newCount</span><span class="o">;</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>lock()方法会对Lock实例对象进行加锁，因此所有对该对象调用lock()方法的线程都会被阻塞，直到该Lock对象的unlock()方法被调用。</p>
-
-<p>这里有一个Lock类的简单实现：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Counter</span> <span class="o">{</span>
-</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span>
-</span><span class='line'>      <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">unlock</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">notify</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>注意其中的while(isLocked)循环，它又被叫做“自旋锁”。自旋锁以及wait()和notify()方法在线程通信这篇文章中有更加详细的介绍。当isLocked为true时，调用lock()的线程在wait()调用上阻塞等待。为防止该线程没有收到notify()调用也从wait()中返回（也称作虚假唤醒），这个线程会重新去检查isLocked条件以决定当前是否可以安全地继续执行还是需要重新保持等待，而不是认为线程被唤醒了就可以安全地继续执行了。如果isLocked为false，当前线程会退出while(isLocked)循环，并将isLocked设回true，让其它正在调用lock()方法的线程能够在Lock实例上加锁。</p>
-
-<p>当线程完成了临界区（位于lock()和unlock()之间）中的代码，就会调用unlock()。执行unlock()会重新将isLocked设置为false，并且通知（唤醒）其中一个（若有的话）在lock()方法中调用了wait()函数而处于等待状态的线程。</p>
-
-<h2>锁的可重入性</h2>
-
-<p>Java中的synchronized同步块是可重入的。这意味着如果一个java线程进入了代码中的synchronized同步块，并因此获得了该同步块使用的同步对象对应的管程上的锁，那么这个线程可以进入由同一个管程对象所同步的另一个java代码块。下面是一个例子：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Reentrant</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">outer</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">inner</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">inner</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="c1">//do something</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>注意outer()和inner()都被声明为synchronized，这在Java中和synchronized(this)块等效。如果一个线程调用了outer()，在outer()里调用inner()就没有什么问题，因为这两个方法（代码块）都由同一个管程对象(&lsquo;this&rsquo;)所同步。如果一个线程已经拥有了一个管程对象上的锁，那么它就有权访问被这个管程对象同步的所有代码块。这就是可重入。线程可以进入任何一个它已经拥有的锁所同步着的代码块。</p>
-
-<p>前面给出的锁实现不是可重入的。如果我们像下面这样重写Reentrant类，当线程调用outer()时，会在inner()方法的lock.lock()处阻塞住。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Reentrant2</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">Lock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Lock</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="nf">outer</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">inner</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="nf">inner</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
-</span><span class='line'>      <span class="c1">//do something</span>
-</span><span class='line'>      <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>调用outer()的线程首先会锁住Lock实例，然后继续调用inner()。inner()方法中该线程将再一次尝试锁住Lock实例，结果该动作会失败（也就是说该线程会被阻塞），因为这个Lock实例已经在outer()方法中被锁住了。</p>
-
-<p>两次lock()之间没有调用unlock()，第二次调用lock就会阻塞，看过lock()实现后，会发现原因很明显：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span>
-</span><span class='line'>      <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="o">...</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>一个线程是否被允许退出lock()方法是由while循环（自旋锁）中的条件决定的。当前的判断条件是只有当isLocked为false时lock操作才被允许，而没有考虑是哪个线程锁住了它。</p>
-
-<p>为了让这个Lock类具有可重入性，我们需要对它做一点小的改动：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lock</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kt">boolean</span> <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">Thread</span>  <span class="n">lockedBy</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>  <span class="kt">int</span> <span class="n">lockedCount</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">lock</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">Thread</span> <span class="n">callingThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
-</span><span class='line'>      <span class="k">while</span><span class="o">(</span><span class="n">isLocked</span> <span class="o">&amp;&amp;</span> <span class="n">lockedBy</span> <span class="o">!=</span> <span class="n">callingThread</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">wait</span><span class="o">();</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">lockedCount</span><span class="o">++;</span>
-</span><span class='line'>      <span class="n">lockedBy</span> <span class="o">=</span> <span class="n">callingThread</span><span class="o">;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">unlock</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">if</span><span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">curentThread</span><span class="o">()</span> <span class="o">==</span> <span class="k">this</span><span class="o">.</span><span class="na">lockedBy</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">lockedCount</span><span class="o">--;</span>
-</span><span class='line'>
-</span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lockedCount</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>              <span class="n">isLocked</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>              <span class="n">notify</span><span class="o">();</span>
-</span><span class='line'>          <span class="o">}</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="o">...</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>注意到现在的while循环（自旋锁）也考虑到了已锁住该Lock实例的线程。如果当前的锁对象没有被加锁(isLocked = false)，或者当前调用线程已经对该Lock实例加了锁，那么while循环就不会被执行，调用lock()的线程就可以退出该方法。</p>
-
-<p>除此之外，我们需要记录同一个线程重复对一个锁对象加锁的次数。否则，一次unblock()调用就会解除整个锁，即使当前锁已经被加锁过多次。在unlock()调用没有达到对应lock()调用的次数之前，我们不希望锁被解除。</p>
-
-<p>现在这个Lock类就是可重入的了。</p>
-
-<h2>锁的公平性</h2>
-
-<p>Java的synchronized块并不保证尝试进入它们的线程的顺序。因此，如果多个线程不断竞争访问相同的synchronized同步块，就存在一种风险，其中一个或多个线程永远也得不到访问权 —— 也就是说访问权总是分配给了其它线程。这种情况被称作线程饥饿。为了避免这种问题，锁需要实现公平性。本文所展现的锁在内部是用synchronized同步块实现的，因此它们也不保证公平性。<a href="http://tutorials.jenkov.com/java-concurrency/starvation-and-fairness.html">饥饿和公平</a>中有更多关于该内容的讨论。</p>
-
-<h2>在finally语句中调用unlock()</h2>
-
-<p>如果用Lock来保护临界区，并且临界区有可能会抛出异常，那么在finally语句中调用unlock()就显得非常重要了。这样可以保证这个锁对象可以被解锁以便其它线程能继续对其加锁。以下是一个示例：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
-</span><span class='line'><span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>  <span class="c1">//do critical section code,</span>
-</span><span class='line'>  <span class="c1">//which may throw exception</span>
-</span><span class='line'><span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这个简单的结构可以保证当临界区抛出异常时Lock对象可以被解锁。如果不是在finally语句中调用的unlock()，当临界区抛出异常时，Lock对象将永远停留在被锁住的状态，这会导致其它所有在该Lock对象上调用lock()的线程一直阻塞。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[blog template]]></title>
-    <link href="http://shenzhang.github.io/blog/2000/01/01/template-blog/"/>
-    <updated>2000-01-01T01:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2000/01/01/template-blog</id>
-    <content type="html"><![CDATA[<p>This is a template file</p>
 ]]></content>
   </entry>
   

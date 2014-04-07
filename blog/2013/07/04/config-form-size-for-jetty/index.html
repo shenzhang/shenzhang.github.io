@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。 改变单个app的最大值 1
+ContextHandler &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">配置jetty的表单大小(Form Size)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。</p>
+
+<!--more-->
+
+
+<h2>改变单个app的最大值</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ContextHandler</span><span class="o">.</span><span class="na">setMaxFormContentSize</span><span class="o">(</span><span class="kt">int</span> <span class="n">maxSize</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>或者使用xml配置文件：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.webapp.WebAppContext&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- Max Form Size                                                   --&gt;</span>
+</span><span class='line'>  <span class="c">&lt;!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;Set</span> <span class="na">name=</span><span class="s">&quot;maxFormContentSize&quot;</span><span class="nt">&gt;</span>200000<span class="nt">&lt;/Set&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>改变同一个Server中的所有app</h2>
+
+<p>直接在Server对象上设置org.eclipse.jetty.server.Request.maxFormContentSize属性就可以了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;configure</span> <span class="na">class=</span><span class="s">&quot;org.eclipse.jetty.server.Server&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Call</span> <span class="na">name=</span><span class="s">&quot;setAttribute&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>org.eclipse.jetty.server.Request.maxFormContentSize<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;Arg&gt;</span>200000<span class="nt">&lt;/Arg&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/Call&gt;</span>
+</span><span class='line'><span class="nt">&lt;/configure&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>改变一个jvm中的所有app(server)</h2>
+
+<p>设置系统属性org.eclipse.jetty.server.Request.maxFormContentSize。</p>
+
+<pre><code>-Dorg.eclipse.jetty.server.Request.maxFormContentSize=200000.
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/04/customize-error-page-in-jetty/" title="Previous Post: Jetty自定义错误页面">&laquo; Jetty自定义错误页面</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/04/listening-80port-for-non-root-user/" title="Next Post: 非root用户监听80端口">非root用户监听80端口 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

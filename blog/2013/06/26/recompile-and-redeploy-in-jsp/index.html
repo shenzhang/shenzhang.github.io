@@ -1,0 +1,458 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Jsp的编译过程和热部署原理</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T06:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。</p>
+
+<p>首先简要说明下jsp文件的响应过程：</p>
+
+<ol>
+<li>client发起http请求，如index.jsp</li>
+<li>servlet容器将这个请求交给JspServlet处理</li>
+<li>JspServlet根据request的目标文件index.jsp，对其进行翻译，生成对应的符合servlet规范的源文件index_jsp.java</li>
+<li>使用一个java编译器对index_jsp.java进行编译，并生成index_jsp.class文件</li>
+<li>使用一个特殊的classload装载这个index_jsp.class文件，并通过反射创建对应的servlet对象</li>
+<li>调用这个servlet对象的service方法</li>
+<li>完成response的输出</li>
+</ol>
+
+
+<!--more-->
+
+
+<p>我们使用glassfish的jsp实现(jsp-2.1-glassfish.jar)来看看jsp是如何进行热部署的。</p>
+
+<p><code>org.apache.jasper.servlet.JspServlet.service</code>做为入口函数的关键代码为：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// 条件预编译</span>
+</span><span class='line'><span class="kt">boolean</span> <span class="n">precompile</span> <span class="o">=</span> <span class="n">preCompile</span><span class="o">(</span><span class="n">request</span><span class="o">);</span>
+</span><span class='line'><span class="c1">// 请求jsp文件</span>
+</span><span class='line'><span class="n">serviceJspFile</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">,</span> <span class="n">jspUri</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">precompile</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>serviceJspFile:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// 将请求封装到一个wrapper中，逻辑上隔离和状态复用</span>
+</span><span class='line'><span class="n">wrapper</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">,</span> <span class="n">precompile</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>wrapper.service:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="c1">// (1) Compile</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(!</span><span class="n">options</span><span class="o">.</span><span class="na">getUsePrecompiled</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">options</span><span class="o">.</span><span class="na">getDevelopment</span><span class="o">()</span> <span class="o">||</span> <span class="n">firstTime</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">firstTime</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">ctxt</span><span class="o">.</span><span class="na">compile</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">compileException</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">throw</span> <span class="n">compileException</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// (2) (Re)load servlet class file</span>
+</span><span class='line'><span class="n">getServlet</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// If a page is to be precompiled only, return.</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">precompile</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">return</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// (3) Service request</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">theServlet</span> <span class="k">instanceof</span> <span class="n">SingleThreadModel</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">theServlet</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">theServlet</span><span class="o">.</span><span class="na">service</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从上可以看到在wrapper的service方法中实现了编译、加载和服务三个逻辑，从后面可以看到编译过程是有选择的进行的。</p>
+
+<h3>JspCompilationContext.compile:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">compile</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">JasperException</span><span class="o">,</span> <span class="n">FileNotFoundException</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">createCompiler</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>     <span class="k">if</span> <span class="o">(</span><span class="n">isPackagedTagFile</span> <span class="o">||</span> <span class="n">jspCompiler</span><span class="o">.</span><span class="na">isOutDated</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">jspCompiler</span><span class="o">.</span><span class="na">compile</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>     <span class="n">jsw</span><span class="o">.</span><span class="na">setReload</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>     <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">JasperException</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Cache compilation exception</span>
+</span><span class='line'>      <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="n">ex</span><span class="o">);</span>
+</span><span class='line'>      <span class="k">throw</span> <span class="n">ex</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">ex</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">JasperException</span> <span class="n">je</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JasperException</span><span class="o">(</span><span class="n">Localizer</span><span class="o">.</span><span class="na">getMessage</span><span class="o">(</span><span class="s">&quot;jsp.error.unable.compile&quot;</span><span class="o">),</span> <span class="n">ex</span><span class="o">);</span>
+</span><span class='line'>      <span class="c1">// Cache compilation exception</span>
+</span><span class='line'>      <span class="n">jsw</span><span class="o">.</span><span class="na">setCompilationException</span><span class="o">(</span><span class="n">je</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="n">je</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>compile过程被委托给了jspCompile.compile方法，其中又有这么两段代码：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">generateJava</span><span class="o">();</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">compileClass</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">generateClass</span><span class="o">();</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从上可以看出generateJava生产了java源文件，generateClass对该源文件进行编译生成class文件。</p>
+
+<p>在对源文件进行编译的过程中，涉及到一个编译器的问题，jsp会在当前环境中按照一定的优先级选择一个可以使用的java编译器：</p>
+
+<ol>
+<li>如果是jdk1.6+，那么看看系统中是否有org.apache.jasper.compiler.Jsr199JavaCompiler</li>
+<li>系统中是否有eclipse的jdt编译器</li>
+<li>使用Ant的java编译器</li>
+</ol>
+
+
+<p>在JspCompilationContext.compile中可以看到会检查jspCompiler.isOutDated()是否成立，从字面上看就知道是在检查该jsp文件是否过期了，如果过期了则会走重新编译的流程。其中的逻辑大致如下：</p>
+
+<ol>
+<li>如果JspServlet的初始化参数中设置了modificationTestInterval，那么jsp编译器只会在检查时间到了后才去做文件时间对比和检查，否则直接进入第二步开始检查。</li>
+<li>对比之前生成的class文件和当前的jsp文件的修改时间，如果当前文件更新，那么就会走编译逻辑，否则保持不变，之前编译后的class对象会被复用。</li>
+</ol>
+
+
+<p>因此如果发现修改了的jsp需要很长时间才能热部署，可以检查是否jspservlet设置了modificationTestInterval，并且该参数过大，但是设置该参数可以减轻jsp对文件检查的没必要的开销。</p>
+
+<p>到此为止大概理清了jsp文件的更新检查、翻译、编译流程，接下来就需要考虑jsp类文件的加载和热部署问题了。</p>
+
+<p>先大致说明下要实现热部署需要解决的几个问题:</p>
+
+<ol>
+<li>由于java的classloader的类加载机制，一个类被加载后会缓存到真正加载它的classloader中，因此当这个类被改变并且需要重新加载时不能使用之前加载它的classloader，也就是说每次reload的时候都需要使用一个全新的classloader。</li>
+<li>servlet容器在重复reload后需要考虑过期jsp class及jsp class(本质上是servlet)实例的gc问题，否则会导致heap的OOM甚至是perm区的OOM，因此需要容器不能直接引用jsp文件的class类型及其对应的实例，除此之外用于每次加载jsp class的classloader也需要及时释放，否则同样会造成OOM。</li>
+</ol>
+
+
+<p>jsp的实现中处理load的过程在<code>JspServletWrapper.getServlet</code>中：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">servletClass</span> <span class="o">=</span> <span class="n">ctxt</span><span class="o">.</span><span class="na">load</span><span class="o">();</span>
+</span><span class='line'><span class="n">theServlet</span> <span class="o">=</span> <span class="o">(</span><span class="n">Servlet</span><span class="o">)</span> <span class="n">servletClass</span><span class="o">.</span><span class="na">newInstance</span><span class="o">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到类加载是在ctxt.load中完成，最后的servlet实例是通过反射生成theServlet，但是这里需要注意的是theServlet的类型声明是Servlet类型，也就是说这里没有直接引用jsp class的真正类型，因此保证了没有对其class类型的引用(虽然从classpath的角度讲也没有办法引用)，可以让过期的class类型和实例被正常gc。</p>
+
+<p>在看看ctxt.load的类加载逻辑：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">servletClass</span> <span class="o">=</span> <span class="n">getJspLoader</span><span class="o">().</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>getJspLoader:</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="n">ClassLoader</span> <span class="nf">getJspLoader</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>     <span class="k">return</span> <span class="k">new</span> <span class="nf">JasperLoader</span><span class="o">(</span><span class="k">new</span> <span class="n">URL</span><span class="o">[]</span> <span class="o">{</span><span class="n">baseUrl</span><span class="o">},</span>
+</span><span class='line'>                                <span class="n">getClassLoader</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getPermissionCollection</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getCodeSource</span><span class="o">(),</span>
+</span><span class='line'>                                <span class="n">rctxt</span><span class="o">.</span><span class="na">getBytecodes</span><span class="o">());</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到每次load的时候都会创建一个新的classloader(父classloader是webappclassloader)，这样就满足了前面提到的热部署的条件1，并且也同样没有对新的classloader进行引用，保证对应的class和classloader实例可以正常gc。</p>
+
+<p>从上面一些列的逻辑可以看出，对于每个jsp class及其实例的引用只有两个地方:</p>
+
+<ol>
+<li>加载这个class的JasperLoader</li>
+<li>最后生成的theServlet</li>
+</ol>
+
+
+<p>其中JasperLoader没有被容器直接保持应用；theServlet在新的class被load进来并创建后也失去了引用。因此过期的jsp class和jsp class的servlet都可以被正常gc了。</p>
+
+<p>这样就完成了整个jsp热部署的逻辑，通过对jsp热部署原理的分析很容易归纳和总结一套让任意系统支持热部署的机制，但是在其中包含了很多约束和限制，因此不是任何系统都适合热部署，要分析其利弊，有机会再专门整理一篇文章对这个做分析吧。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T06:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/06/26/jetty-runner/" title="Previous Post: 使用Jetty Runner来运行jetty">&laquo; 使用Jetty Runner来运行jetty</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/06/27/embed-jetty/" title="Next Post: 将jetty嵌入到应用中">将jetty嵌入到应用中 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

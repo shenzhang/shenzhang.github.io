@@ -1,0 +1,713 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。 1.安装 在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。 2.创建资源库 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/page/2">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/subversion-setup-in-linux/">Linux下搭建subversion</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T01:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。</p>
+
+<h2>1.安装</h2>
+
+<p>在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。</p>
+
+<h2>2.创建资源库</h2>
+
+<p>在linux中先创建一个用于资源库的目录</p>
+
+<pre><code>mkdir ***/svn
+</code></pre>
+
+<p>使用svnadmin创建资源库</p>
+
+<pre><code>svnadmin create ***/svn
+</code></pre>
+
+<p>创建完毕后svn目录就具有了svn资源库的布局，比如conf, db, hooks目录等等</p>
+
+<h2>3.启动服务</h2>
+
+<p>subversion可以提供的服务方式有多种，比如：</p>
+
+<ol>
+<li>与apache结合使用http协议</li>
+<li>使用svnserve提供的独立服务，使用svn协议</li>
+<li>直接委托给xinet，当xinet转发的时候需要使用svnserve的-i参数，具体的看下svnserve的帮助</li>
+</ol>
+
+
+<p>我由于没什么特殊要求，就直接使用了svnserve提供的独立服务模式：<code>svnserve -d -r ***/svn</code>启动服务,这样就svnserve就开始监听3690的默认端口</p>
+
+<h2>4.配置用户和权限</h2>
+
+<p>a.修改***/svn/conf/svnserve.conf文件，将auth-access, password-db, authz-db的注释取消掉。具体各选项什么意思，在文件中都有说明。(虽然注释中说明了注释的样子就是svnserve的默认选项，但是发现只有取消了注释才生效的，反正保险点还是显示注明吧)</p>
+
+<p>b.在passwd中添加用户和密码:</p>
+
+<pre><code>[users]
+fish = 123
+</code></pre>
+
+<p>c.在authz中修改用户权限:</p>
+
+<pre><code>[/]
+fish = rw
+</code></pre>
+
+<p>说明fish可以访问根目录下的所有文件(读写)</p>
+
+<p>Done.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/27/start-jar-in-jetty/">Jetty中的Start.jar</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-27T03:27:00+08:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。</p>
+
+<p>但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的。如果用了maven，那么maven会自动帮你管理这些jar的依赖关系，但是如果是用控制台或者shell来运行jetty，仍然需要设置classpath。</p>
+
+<p>start.jar是一个可执行的jar文件，它可以帮助你配置好运行jetty所需要的classpath，然后运行jetty的主程序。start.jar中包含了一个start.config文件，并且它可以用来控制start.jar的行为，因此你可以直接这样运行start.jar:</p>
+
+<pre><code>java -jar start.jar
+</code></pre>
+
+<p>可以加上&mdash;dry-run参数来让start.jar输出配置好的java运行命令，其中就包括了classpath的配置，该参数仅仅是用于输出命令行，不会真正启动jetty：</p>
+
+<pre><code>java -jar start.jar --dry-run
+</code></pre>
+
+<p>会产生类似的输出：</p>
+
+<pre><code>/usr/lib/jvm/java-1.5.0-sun-1.5.0.19/jre/bin/java \
+-Djetty.home=/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution \
+-cp /home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/resources:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-xml-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/servlet-api-2.5.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-http-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-continuation-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-server-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-security-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlet-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-webapp-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-deploy-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlets-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-util-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-io-7.0.0.RC6-SNAPSHOT.jar \
+org.eclipse.jetty.xml.XmlConfiguration \
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/etc/jetty.xml
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/27/embed-jetty/">将jetty嵌入到应用中</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-27T01:27:00+08:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Jetty有一个口号：“不要将你的应用部署到Jetty中，而是将Jetty部署到你的应用中”。Jetty提供了另一种开发和部署web应用的思维，使用jetty的嵌入式模式就是将一个http模块放入到你的应用中，而不需要将你的应用放入到http服务器中。</p>
+
+<p>将Jetty嵌入到应用中通常需要下面的步骤：</p>
+
+<ol>
+<li>创建一个server</li>
+<li>添加/配置Connectors</li>
+<li>添加/配置Handlers</li>
+<li>给Handlers添加/配置Servlets/Webapps</li>
+<li>启动server</li>
+<li>join(让主线程阻塞，防止退出)</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/27/embed-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Jsp的编译过程和热部署原理</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T06:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。</p>
+
+<p>首先简要说明下jsp文件的响应过程：</p>
+
+<ol>
+<li>client发起http请求，如index.jsp</li>
+<li>servlet容器将这个请求交给JspServlet处理</li>
+<li>JspServlet根据request的目标文件index.jsp，对其进行翻译，生成对应的符合servlet规范的源文件index_jsp.java</li>
+<li>使用一个java编译器对index_jsp.java进行编译，并生成index_jsp.class文件</li>
+<li>使用一个特殊的classload装载这个index_jsp.class文件，并通过反射创建对应的servlet对象</li>
+<li>调用这个servlet对象的service方法</li>
+<li>完成response的输出</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/jetty-runner/">使用Jetty Runner来运行jetty</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T04:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试<a href="http://repo2.maven.org/maven2/org/mortbay/jetty/jetty-runner/">Jetty Runner</a>.</p>
+
+<p>Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等），当然还有最重要的jetty的基本功能的模块，并且Jetty Runner提供了很多默认的jetty参数，然后接收用户的输入参数并启动一个嵌入式的jetty。</p>
+
+<p><em>最好使用8.1+的版本，否则并不包含el的依赖</em></p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/jetty-runner/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/dir-structure-of-jetty/">Jetty的目录结构</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T03:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/dir-structure-of-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T02:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html">原文链接</a></p>
+
+<p>在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术：</p>
+
+<ol>
+<li>加锁顺序</li>
+<li>加锁时限</li>
+<li>死锁检测</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/prevent-deadlock/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/deadlock/">死锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T01:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html">原文链接</a></p>
+
+<p>死锁是两个或更多线程阻塞着等待其它处于死锁状态的线程所持有的锁。死锁通常发生在多个线程同时但以不同的顺序请求同一组锁的时候。</p>
+
+<p>例如，如果线程1锁住了A，然后尝试对B进行加锁，同时线程2已经锁住了B，接着尝试对A进行加锁，这时死锁就发生了。线程1永远得不到B，线程2也永远得不到A，并且它们永远也不会知道发生了这样的事情。为了得到彼此的对象（A和B），它们将永远阻塞下去。这种情况就是一个死锁。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/deadlock/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/25/spring-for-redis/">Spring对redis的支持</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T07:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>spring-data项目提供了多种数据操作的包，其中spring-data-redis就提供了与redis交互的实现，现在最新的版本是1.0.4。</p>
+
+<p>spring-data-redis提供了对多种redis客户端的集成和抽象，比如jedis, jRedis, RJC, SRP等。并且提供了以下几个方面的支持：</p>
+
+<ol>
+<li>底层抽象：主要封装了配置和连接过程，以及异常的转换和翻译。</li>
+<li>高层抽象：以RedisTemplate的形式提供。</li>
+<li>可复用的工具类。</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/25/spring-for-redis/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/25/round-mode-in-java/">Java中的四舍五入</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T06:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>说四舍五入可能有点不太准确，应该说在精度范围之内的精度调整方法。</p>
+
+<p>主要在java.math.RoundingMode里定义：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UP</span><span class="o">),</span>
+</span><span class='line'><span class="n">DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_DOWN</span><span class="o">),</span>
+</span><span class='line'><span class="n">CEILING</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_CEILING</span><span class="o">),</span>
+</span><span class='line'><span class="n">FLOOR</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_FLOOR</span><span class="o">),</span>
+</span><span class='line'><span class="n">HALF_UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_UP</span><span class="o">),</span>
+</span><span class='line'><span class="n">HALF_DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_DOWN</span><span class="o">),</span>
+</span><span class='line'><span class="n">HALF_EVEN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_EVEN</span><span class="o">),</span>
+</span><span class='line'><span class="n">UNNECESSARY</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UNNECESSARY</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>UP:</strong>调整的方向是远离0，如：1.1 &ndash;> 2，-1.1 &ndash;> -2</p>
+
+<p><strong>DOWN:</strong>调整的方向是靠近0，如：1.6 &ndash;> 1，-1.6 &ndash;> -1</p>
+
+<p><strong>CEILING:</strong>调整的方向从数字大小的角度讲会变大，也就是说当大于0时等同于UP，当小于0时等同于DOWN，如：1.1->2，-1.1->1</p>
+
+<p><strong>FLOOR:</strong>与CEILING相反</p>
+
+<p><strong>HALF_UP:</strong>当尾数>=5时与UP相同，否则与DOWN相同</p>
+
+<p><strong>HALF_DOWN:</strong>与HALF_UP类似，只是条件是>5，不是>=5</p>
+
+<p><strong>HALF_EVEN:</strong>当尾数的前一位是奇数时，同HALF_UP，否则同HALF_DOWN</p>
+
+<p><strong>UNNECESSARY:</strong>说明该数字不需要四舍五入，如果超出了精度则throw ArithmeticException。</p>
+
+<p>更多例子可参见RoundingMode的javadoc.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/3/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

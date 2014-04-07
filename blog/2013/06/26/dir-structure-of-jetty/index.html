@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。 在使用jetty之前需要先在jetty的官网上下载发行包，解压后会看到如下的目录结构： 这里对其中较为重要的文件及目录做下说明： README.txt 其中对一些简单的启动方法进行了说明，比如： To run &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Jetty的目录结构</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T03:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。</p>
+
+<!--more-->
+
+
+<p>在使用jetty之前需要先在jetty的官网上<a href="ttp://download.eclipse.org/jetty/">下载</a>发行包，解压后会看到如下的目录结构：</p>
+
+<p><img src="/images/2013/06/jetty-dir.jpg"></p>
+
+<p>这里对其中较为重要的文件及目录做下说明：</p>
+
+<h2>README.txt</h2>
+
+<p>其中对一些简单的启动方法进行了说明，比如：</p>
+
+<blockquote><p>To run with the default options:</p>
+
+<p>  java -jar start.jar</p>
+
+<p>To see the available options and the default arguments
+provided by the start.ini file:</p>
+
+<p>  java -jar start.jar &mdash;help</p>
+
+<p>To run with extra configuration file(s) appended, eg SSL</p>
+
+<p>  java -jar start.jar etc/jetty-ssl.xml</p>
+
+<p>To run with properties</p>
+
+<p>  java -jar start.jar jetty.port=8081</p>
+
+<p>To run with extra configuration file(s) prepended, eg logging &amp; jmx</p>
+
+<p>  java -jar start.jar &mdash;pre=etc/jetty-logging.xml &mdash;pre=etc/jetty-jmx.xml</p>
+
+<p>To run without the args from start.ini</p>
+
+<p>  java -jar start.jar &mdash;ini OPTIONS=Server,websocket etc/jetty.xml etc/jetty-deploy.xml etc/jetty-ssl.xml</p>
+
+<p>to list the know OPTIONS:</p>
+
+<p>  java -jar start.jar &mdash;list-options</p></blockquote>
+
+<h2>bin</h2>
+
+<p>其中包含了一些可以在unix/linux上运行jetty的shell脚本</p>
+
+<h2>context</h2>
+
+<p>可以热部署的context目录</p>
+
+<h2>etc</h2>
+
+<p>包含了jetty所使用的配置文件</p>
+
+<h2>javadoc</h2>
+
+<p>jetty自己的java实现的javadoc，因为很多时候需要用java编程的思维来配置jetty，因此在不清除一个类怎么配置的时候，可以直接看源代码或者从这些javadoc中找找信息。</p>
+
+<h2>lib</h2>
+
+<p>jetty运行所需的jar包所在目录，其中各模块都被打成了不同的jar包，jetty在实际运行的时候根据配置会把需要的jar包加入到classpath中。当然如果需要可以根据实际情况进行裁剪。</p>
+
+<h2>logs</h2>
+
+<p>jetty的日志目录</p>
+
+<h2>resources</h2>
+
+<p>该目录也会作被加入到jetty的classpath中，因此如果有一些附加的公共资源需要加入到jetty类路径中，可以考虑放在这个地方。该文件夹下默认放了一个log4j配置文件，为jetty的log4j提供配置。</p>
+
+<h2>start.ini</h2>
+
+<p>jetty默认的启动参数文件</p>
+
+<h2>start.jar</h2>
+
+<p>jetty启动的入口jar，其入口类为org.eclipse.jetty.start.Main，要想深入了解jetty的启动过程可以从这里开始。</p>
+
+<h2>webapps</h2>
+
+<p>jetty在启动的时候需要初始化的webapp，这些webapp都会使用jetty的启动配置。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T03:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/06/26/prevent-deadlock/" title="Previous Post: 避免死锁[译]">&laquo; 避免死锁[译]</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/06/26/jetty-runner/" title="Next Post: 使用Jetty Runner来运行jetty">使用Jetty Runner来运行jetty &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

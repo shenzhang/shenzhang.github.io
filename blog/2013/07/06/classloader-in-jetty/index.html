@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)： 位于WEB- &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Jetty中的classloader</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-06T01:27:00+08:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
+
+<ol>
+<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
+<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
+<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
+</ol>
+
+
+<!--more-->
+
+
+<p>Jetty针对上面提到的三种情况都分别提供了对应的配置项。你可以通过调用org.eclipse.jetty.webapp.WebAppContext中的一些方法来配置webapp类加载的细节。但是不能在jetty-web.xml,因为类加载的配置是限于该文件执行的。</p>
+
+<h2>控制webapp类加载的优先级</h2>
+
+<p><code>org.eclipse.jetty.webapp.WebAppContext.setParentLoaderPriority(boolean)</code>方法可以控制webapp class和system class谁的优先级更高。如果你设置为false（默认），那么jetty会认为webapp中的class的优先级更高。如果webapp中的一些类被一些有parent classloader加载的class所引用，那么可能就会有问题，因为系统对同一个类可能会出现两个版本（一个是由父classloader加载，一个由webapp classloader加载）。</p>
+
+<p>如果设置为true，那么jetty将会采用JavaSE中通常的双亲优先委派模型。这可以避免上面提到的多版本的问题，但是由父classloader加载的类版本需要适合所有的webapp（webapp自己配置的class不能优先得到加载，因此很有可能都会使用parent加载的类，因此parent提供的类一定要满足所有app的要求）。</p>
+
+<h2>设置系统类</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setSystemClasses(String Array)</code>或<code>org.eclipse.jetty.webapp.WebAppContext.addSystemClass(String)</code>来更好的控制哪些类是属于系统类：</p>
+
+<ol>
+<li>webapp可以使用系统类</li>
+<li>webapp不能替换系统类</li>
+</ol>
+
+
+<p>默认的系统类有：java., javax., org.xml., org.w3c., org.apache.commons.logging., org.eclipse.jetty.continuation., org.eclipse.jetty.jndi., org.eclipse.jetty.plus.jaas., org.eclipse.jetty.websocket., org.eclipse.jetty.servlet.DefaultServlet</p>
+
+<h2>设置server类</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setServerClasses(String Array)</code>或<code>org.eclipse.jetty.webapp.WebAppContext.addServerClass(String)</code>来主动设置哪些类会被当成server类：</p>
+
+<ol>
+<li>webapp不能访问这些类</li>
+<li>webapp可以替换这些类</li>
+</ol>
+
+
+<p>默认的server类配置有：-org.eclipse.jetty.continuation., -org.eclipse.jetty.jndi., -org.eclipse.jetty.plus.jaas., -org.eclipse.jetty.websocket., -org.eclipse.jetty.servlet.DefaultServlet, org.eclipse.jetty.
+前面加了减号(&ndash;)的代表排除（不隐藏）。</p>
+
+<h2>配置额外的classpath(start.jar)</h2>
+
+<p>如果使用start.jar来启动jetty，那么jetty会从$jetty.home/lib(不包含子目录)中自动的加载jars。默认的配置包括：</p>
+
+<ol>
+<li>将$jetty.home/lib/ext配置到classpath中。因此可以在该目录中放置额外的jar。</li>
+<li>将$jetty.home/resources配置到classpath中。可以在该目录防止额外的类或者资源。</li>
+<li>添加path参数中指定的路径到classpath中。</li>
+</ol>
+
+
+<h2>extraClasspath()方法</h2>
+
+<p>可以通过调用<code>org.eclipse.jetty.webapp.WebAppContext.setExtraClasspath(String)</code>来给webapp classloader设置额外的classpath，当有多个路径时需要用逗号分隔。</p>
+
+<pre><code>&lt;Configure class="org.eclipse.jetty.webapp.WebAppContext"&gt;
+ ...
+ &lt;Set name="extraClasspath&gt;../my/classes,../my/jars/special.jar,../my/jars/other.jar&gt;
+ &lt;/Set&gt;
+ ...
+</code></pre>
+
+<h2>使用自定义的WebAppClassLoader</h2>
+
+<p>如果上述方法还是不能满足需求，就可以从WebAppClassLoader继承以实现自定义的classloader，并将该classloader设置给WebAppContext就可以了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">MyCleverClassLoader</span> <span class="n">myCleverClassLoader</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MyCleverClassLoader</span><span class="o">();</span>
+</span><span class='line'> <span class="o">...</span>
+</span><span class='line'><span class="n">WebAppContext</span> <span class="n">webapp</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebAppContext</span><span class="o">();</span>
+</span><span class='line'> <span class="o">...</span>
+</span><span class='line'><span class="n">webapp</span><span class="o">.</span><span class="na">setClassLoader</span><span class="o">(</span><span class="n">myCleverClassLoader</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-06T01:27:00+08:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/05/config-virtual-host-in-jetty/" title="Previous Post: Jetty配置虚拟主机">&laquo; Jetty配置虚拟主机</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/10/pagetable/" title="Next Post: 页表(Page Table)[译]">页表(Page Table)[译] &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

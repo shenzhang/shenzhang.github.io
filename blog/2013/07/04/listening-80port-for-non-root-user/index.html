@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">非root用户监听80端口</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
+
+<ol>
+<li>ipchains</li>
+<li>iptables</li>
+<li>配置jetty的SetUID</li>
+<li>xinetd</li>
+</ol>
+
+
+<!--more-->
+
+
+<h2>ipchains</h2>
+
+<p>在一些较老版本的linux中，可以使用ipchains的REDIRECT机制来将一个端口的数据包转发到另外一个端口上，而且该过程是在内核态中完成的。（如果ipchains不可用，则可以试试iptables）。</p>
+
+<pre><code>/sbin/ipchains -I input --proto TCP --dport 80 -j REDIRECT 8080
+</code></pre>
+
+<p>这条命令会告诉操作系统，在有数据包到来时，如果这个数据包是基于tcp协议的，并且目的端口是80端口，那么将该数据包重定向到8080端口。请确保内核在编译的时候是支持ipchians的，比如看看在系统中ipchians命令是否可以使用。</p>
+
+<h2>iptables</h2>
+
+<p>使用iptables的REDIRECT机制来将一个端口的数据包转发到另外一个端口上，而且该过程是在内核态中完成的。现在大部分的linux内核版本都是支持iptables的。</p>
+
+<pre><code>/sbin/iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+</code></pre>
+
+<p>要想上面的重定向规则起作用，首先要确保发往80端口的包在该规则之前不被拒绝，iptables处理包的流程如下图：</p>
+
+<p><img src="/images/2013/07/iptables.gif"></p>
+
+<h2>配置SetUID</h2>
+
+<p>使用linux的setuid特性，让jetty以更高权限来执行。但是由于jetty的配置略微复杂，并且仍然有安全隐患，因此不建议使用。</p>
+
+<h2>xinetd</h2>
+
+<p>在现代linux系统中，xinetd作为inetd的更强大的兄弟可以帮你转发网络请求。因为xinetd仅仅由文本文件来配置，因此非常方便。</p>
+
+<p>有两种方法配置xinetd：</p>
+
+<ol>
+<li>在/etc/xinetd.conf中添加一个新的服务</li>
+<li>在/etc/xintd.d中添加新的配置文件</li>
+</ol>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">service</span> <span class="n">my_redirector</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'> <span class="n">type</span> <span class="o">=</span> <span class="n">UNLISTED</span>
+</span><span class='line'> <span class="n">disable</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">socket_type</span> <span class="o">=</span> <span class="n">stream</span>
+</span><span class='line'> <span class="n">protocol</span> <span class="o">=</span> <span class="n">tcp</span>
+</span><span class='line'> <span class="n">user</span> <span class="o">=</span> <span class="n">root</span>
+</span><span class='line'> <span class="n">wait</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">port</span> <span class="o">=</span> <span class="mi">80</span>
+</span><span class='line'> <span class="n">redirect</span> <span class="o">=</span> <span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span> <span class="mi">8888</span>
+</span><span class='line'> <span class="n">log_type</span> <span class="o">=</span> <span class="n">FILE</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">somefile</span><span class="o">.</span><span class="na">log</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>等号两边的空格可以省略。type = UNLISTED说明服务的名字没有在/etc/services中列出，但是需要在配置中指明端口和协议。如果你需要使用一个存在服务名称，比如http：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">service</span> <span class="n">http</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'> <span class="n">disable</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">socket_type</span> <span class="o">=</span> <span class="n">stream</span>
+</span><span class='line'> <span class="n">user</span> <span class="o">=</span> <span class="n">root</span>
+</span><span class='line'> <span class="n">wait</span> <span class="o">=</span> <span class="n">no</span>
+</span><span class='line'> <span class="n">redirect</span> <span class="o">=</span> <span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span> <span class="mi">8888</span>
+</span><span class='line'> <span class="n">log_type</span> <span class="o">=</span> <span class="n">FILE</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">somefile</span><span class="o">.</span><span class="na">log</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以查看/etc/services就更加了解所有已经注册的服务了。</p>
+
+<p>注：</p>
+
+<ol>
+<li>日志的主要目的是出于安全性的考虑，因此也可以不配置</li>
+<li>RHEL5默认不带有xinetd，因此可以通过yum install xinetd来进行安装</li>
+</ol>
+
+
+<p>xinetd是一个非常强大和高可配置的系统，因此建议好好<a href="http://www.xinetd.org/">阅读</a>下。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/04/config-form-size-for-jetty/" title="Previous Post: 配置jetty的表单大小(Form Size)">&laquo; 配置jetty的表单大小(Form Size)</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/05/request-log-in-jetty/" title="Next Post: Jetty的RequestLog(请求日志)">Jetty的RequestLog(请求日志) &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
