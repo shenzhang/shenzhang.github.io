@@ -1,0 +1,26 @@
+---
+layout: post
+title: "postgresql中的autovaccum"
+date: 2013-07-03 02:27
+comments: true
+categories: 
+---
+
+今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用`/dt+ table_name` 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。
+
+问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。
+<!--more-->
+
+postgresql如何解决这个问题呢。首先postgresql提供的vaccum的功能对数据表和文件进行整理，普通vaccum会扫描数据文件，将不会再用到的记录(当前的所有事务不会再访问到的)打上标记，以便下次在分配版本数据时可以重用这部分空间，以不至于数据文件会不断膨胀。该操作不会对表加锁，但是同样也不会对数据文件做紧凑操作(同jvm的cms垃圾收集)会产生碎片，并且数据文件不会减少。
+
+vaccum加上full参数除了基本的vaccum操作外，还会对数据文件进行紧凑，释放掉过期的版本数据，并且将当前版本的数据记录放在一起，这个时候肯定是反映了真实的数据大小。但是该操作会对表加锁，影响系统访问。一般可以在凌晨定时对数据库做full vaccum操作。
+
+这样看起来是不是觉得postgresql很傻。其实postgresql提供了autovaccum的功能，也就是在运行期使用autovaccum进程自动的对自己做普通vaccum操作(没有full参数)，那么什么时候postgresql会出发vaccum呢？看下postgresql.conf配置文件，其中专门有一节是对autovaccum的参数配置，其中比较重要的以下几个参数：
+
+	autovacuum_naptime = 1min #两次autovaccum的间隔
+	autovacuum_vacuum_threshold = 50 #最小的记录更新数
+	autovacuum_vacuum_scale_factor = 0.2 #表大小的改动因子
+
+后面两个参数说明了autovaccum执行的条件，但是实际上并不是说记录被改变了50条就会出发autovaccum。实际上postgresql执行autovaccum的先决条件是autovacuum_naptime时间到了，从默认配置上说就是每隔1分钟会准备执行一次autovaccum，但是具体哪个表会被执行vaccum会参考后面两个参数，如果后面两个参数的阈值没有达到，那么该表就不会被vaccum。
+
+OK，回到之前线上出现的问题，经过我们的分析由于postgresql默认配置的autovaccum间隔是1分钟，那么在这一分钟内如果执行大量的更新操作（删除和插入同理）就会导致数据文件一直膨胀，直到1分钟后autovaccum执行，那么就算执行后文件大小也不会再被减小并紧凑。因此目前一个简单的解决方案就是减小autovacuum_naptime的时间，我们缩小到了2s，目前还没有看到有什么副作用。当然也可以在业务逻辑里根据条件定期主动执行vaccum。
