@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。 -XX:+UseSerialGC 串行垃圾搜集算法，具体表现为： 新生代： [DefNew: 34944K-& &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/23/gc-in-hotspot">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">hotspot中的不同GC算法</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。</p>
+
+<h2>-XX:+UseSerialGC</h2>
+
+<p>串行垃圾搜集算法，具体表现为：</p>
+
+<p>新生代：</p>
+
+<pre><code>[DefNew: 34944K-&gt;3031K(39296K), 0.0264555 secs] 34944K-&gt;3031K(126720K), 0.0265033 secs] [Times: user=0.03 sys=0.00, real=0.03 secs] 
+</code></pre>
+
+<p>老年代：</p>
+
+<pre><code>[GC [DefNew: 37824K-&gt;37824K(39296K), 0.0000274 secs][Tenured: 84770K-&gt;87423K(87424K), 0.6707186 secs] 122594K-&gt;90531K(126720K), [Perm : 2963K-&gt;2963K(12288K)], 0.6708503 secs] [Times: user=0.67 sys=0.00, real=0.67 secs] 
+</code></pre>
+
+<p>Full:</p>
+
+<pre><code>[Full GC [Tenured: 87423K-&gt;87423K(87424K), 0.9254085 secs] 126719K-&gt;106207K(126720K), [Perm : 2962K-&gt;2962K(12288K)], 0.9254837 secs] [Times: user=0.92 sys=0.00, real=0.92 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelGC</h2>
+
+<p>并行垃圾搜集算法，新生代使用并行，老年代使用Mark-Sweep-Compact(标记，清除，压缩）</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 35680K-&gt;5432K(38208K)] 35680K-&gt;5636K(125632K), 0.0153779 secs] [Times: user=0.01 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;7374K(38080K)] [PSOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;94798K(125504K) [PSPermGen: 2963K-&gt;2963K(12288K)], 0.4979593 secs] [Times: user=0.50 sys=0.00, real=0.50 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelOldGC</h2>
+
+<p>并行垃圾搜集，老年代和新生代都是并行垃圾搜集</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 27552K-&gt;2144K(34432K)] 74201K-&gt;50809K(121856K), 0.0170400 secs] [Times: user=0.06 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;18745K(38080K)] [ParOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;106169K(125504K) [PSPermGen: 2962K-&gt;2962K(12288K)], 0.9138238 secs] [Times: user=3.13 sys=0.00, real=0.92 secs] 
+</code></pre>
+
+<h2>-XX:+UseConcMarkSweepGC</h2>
+
+<p>标记清除算法，每次只清除一部分死亡对象，基本不会造成stop the world，但是会有内存碎片可以配合以下选项来对碎片问题进行优化：</p>
+
+<pre><code>-XX:+UseCMSCompactAtFullCollection:让full gc的时候，顺便对内存进行整理
+-XX:+CMSFullGCsBeforeCompact: 多少次full gc后，再执行full gc时就进行内存整理
+</code></pre>
+
+<p>从算法行为上来说有4种类型：</p>
+
+<ol>
+<li>Mark-sweep:标记清除，缺点是会有大量内存碎片</li>
+<li>复制算法(copying)：简单高效，把存货的对象从一个区域复制到另一个区域，但是在存活率较高的情况下效率会变低（某个对象总是存活，那么自然就要来回复制，如果这些对象生命周期都很短，那么在GC的时候直接就不用复制到另一个区域了）</li>
+<li>标记整理（Mark-compact)：同标记清除类似，但是后续操作不是清除死亡的对象，而是把所有存活的对象往内存一边移动，将另外以便的内存所有都清理掉。</li>
+<li>分代搜集(具体到每一代又采用了上述三种算法）。</li>
+</ol>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/23/gc-in-hotspot/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/23/gc-in-hotspot/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/18/launchd-in-macos/" title="Previous Post: launchd in MacOS">&laquo; launchd in MacOS</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/23/stop-suspend-resume-of-thread/" title="Next Post: Thread中的stop, suspend, resume方法">Thread中的stop, suspend, resume方法 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成： 1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services &hellip;">
+  <meta name="description" content="hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。 当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置-XX: &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/24/jit-in-hotspot">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -67,7 +66,7 @@
   
   <header>
     
-      <h1 class="entry-title">Mysql远程客户端无法连接的问题</h1>
+      <h1 class="entry-title">hotspot中的JIT</h1>
     
     
       <p class="meta">
@@ -83,24 +82,22 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
+<div class="entry-content"><p>hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。</p>
 
-<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
+<p>当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置<code>-XX:CompileThreshold=10000</code>来进行指定。</p>
 
-<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
+<p>在jvm运行的时候加上<code>-XX:+PrintCompilation</code>可以开启JIT编译信息，当有方法被JIT编译时，就会在stdout中输出，该选项可以更好的进行调试和优化。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
+<p>但是有一个例外，当一个方法body很大时，jvm不一定会对它进行JIT编译，在hotspot中这个方法的大小是8000字节，但是我们可以通过加上<code>-XX:-DontCompileHugeMethods</code>参数禁止这种策略，保证所有方法都可以被JIT编译，但是最好不要关闭这个特性！</p>
 
+<p>因此很多时候我们总是担心过多的调用很多小方法会影响执行效率，其实jvm会用jit来帮我们做很多优化，而且就像上面提到的并不是将多个小方法合并到一个大方法中就一定会有更好的效果，可能会被jvm坑了。</p>
 </div>
 
 
@@ -123,7 +120,7 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
       
 
 
@@ -131,7 +128,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/24/jit-in-hotspot/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/24/jit-in-hotspot/" >Tweet</a>
   
   
   
@@ -140,10 +137,10 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/06/25/charset-in-mysql/" title="Previous Post: linux下mysql编码设置">&laquo; linux下mysql编码设置</a>
+        <a class="basic-alignment left" href="/blog/2013/07/23/stop-suspend-resume-of-thread/" title="Previous Post: Thread中的stop, suspend, resume方法">&laquo; Thread中的stop, suspend, resume方法</a>
       
       
-        <a class="basic-alignment right" href="/blog/2013/06/25/ssh-without-password/" title="Next Post: linux下ssh免输入密码方法">linux下ssh免输入密码方法 &raquo;</a>
+        <a class="basic-alignment right" href="/blog/2013/07/24/open-file-in-java/" title="Next Post: java中的文件打开操作">java中的文件打开操作 &raquo;</a>
       
     </p>
   </footer>

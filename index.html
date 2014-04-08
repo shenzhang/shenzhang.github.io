@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样， &hellip;">
+  <meta name="description" content="jetty中的org.eclipse.jetty.server.handler.ScopedHandler主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +69,768 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-26T03:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>jetty中的<code>org.eclipse.jetty.server.handler.ScopedHandler</code>主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的，后面仔细看了之后觉得实际上他就是想实现一个具有以下执行流程的HandlerWrapper:</p>
+
+<pre><code> A.handle(...)
+   A.doScope(...)
+     B.doScope(...)
+       C.doScope(...)
+         A.doHandle(...)
+           B.doHandle(...)
+              C.doHandle(...)  
+</code></pre>
+
+<p>其中A包含B，B包含C。该执行流程主要应用在WebAppContext中。WebAppContext包含了SessionHandler,SecurityHandler, ServletHandler，但是从request的流程来看实际上是WebAppContext->SessionHandler->SecurityHandler->ServletHandler，所有后续执行逻辑都是被包含在前面的handler逻辑中的，或者所起堆栈是嵌套的。这样最大的好处是环境（context）共享和异常处理。内部的逻辑必须是在外部逻辑创造的环境内执行，比如所ServletHandler必须是在SessionHandler初始化好的session环境中处理。</p>
+
+<p>因此ScopedHandler需要两个过程：</p>
+
+<p><em>doScope:</em> 进入环境，并做响应的环境初始化,并在其中调用子handler的doScope，最后再做退出环境的逻辑。</p>
+
+<p><em>doHandler:</em> 执行该handler真正要处理的事情，并在其中调用子handler的doScope</p>
+
+<p>拿SessionHandler举例，它的doScope就是将session恢复好，并且再调用子handler的doScope进一步对SecurityHandler做环境初始化；它的doHandler实际上就没有做任何事情，仅仅是调用子handler的doHandler：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">never</span><span class="o">())</span>
+</span><span class='line'>        <span class="n">nextHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_nextScope</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">_nextScope</span> <span class="o">==</span> <span class="n">_handler</span><span class="o">)</span>
+</span><span class='line'>        <span class="n">_nextScope</span><span class="o">.</span><span class="na">doHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>        <span class="n">_handler</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>doScope的递归调用还算比较简单，但是如何从最底层的handler.doScope回到最上层的handler.doHandler呢，而且是嵌套的调用？</p>
+
+<p>ScopedHandler实际上维护了两个变量：</p>
+
+<p><em>_nextScope:</em> 指向下一个子handler</p>
+
+<p><em>_outterScope</em> 指向最外层的handler</p>
+
+<p>初始化：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doStart</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="k">try</span>
+</span><span class='line'>        <span class="o">{</span>
+</span><span class='line'>            <span class="n">_outerScope</span><span class="o">=</span><span class="n">__outerScope</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="kd">super</span><span class="o">.</span><span class="na">doStart</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">_nextScope</span><span class="o">=</span> <span class="o">(</span><span class="n">ScopedHandler</span><span class="o">)</span><span class="n">getChildHandlerByClass</span><span class="o">(</span><span class="n">ScopedHandler</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">finally</span>
+</span><span class='line'>        <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里的_outerScope的初始化我觉得实在是不优雅，显然整个jetty中那个最先初始化的ScopedHandler将会作为所有ScopedHandler的outerScope，显然不能再jetty中提供多个顶层ScopedHandler，这个需求可能是针对WebAppContext专门设计的，但是有点不符合Jetty这种灵活的可插拔式的定义。哪怕通过set方法主动设值都要好的多。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-26T01:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>IE6的bug本来是再寻常不过的事了，感觉表现正常了反而感觉不正常，但是背景图片缓存的bug对整个应用的影响太大了，最后找了半天在stackoverflow上找到了解决方案，在页面加载之初执行下面的语句：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nb">document</span><span class="p">.</span><span class="nx">execCommand</span><span class="p">(</span><span class="s2">&quot;BackgroundImageCache&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>自己试了下确实完美解决了问题，但是还是不明白该BackgroundImageCache参数是什么意思，会对IE6造成怎样的影响，找了半天MSDN的文档都没有发现该参数，最后在<a href="http://support.microsoft.com/kb/823727/en-us">这里</a>找到了答案.</p>
+
+<p>原来这个可以说是IE6的一个BUG，进而让微软出了一个针对sp1的hotfix来修复该BUG，但是要想激活该pach就需要执行该语句，因此该参数是没有记录在MSDN手册中的也仅仅是对IE6 SP1有效。</p>
+
+<p>但是微软对该bug的描述实在是轻描淡写啊：</p>
+
+<blockquote><p>&ldquo;This problem may occur over a long time (for example, several hours) when you run a script that constantly changes the background color of a button that also contains a background image.&rdquo;</p></blockquote>
+
+<p>实际情况是只要改变任意的style，其元素并且所有子元素的background-image都要重新向服务器请求，这个不但导致浏览器内存升高，还导致服务器的压力增大，页面背景闪烁等多重问题。</p>
+
+<p>没办法，能有解决方法已经谢天谢地了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T04:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>java中的死锁是各式各样的，但是类的静态初始化块死锁却很少被人提到。</p>
+
+<p>实际上jvm对同一个类的静态初始化块的初始化肯定是原子的，而且是限于当前线程内部，死锁主要是发生在不同类静态初始化交叉引用的并发初始化场景。</p>
+
+<p>举个例子，类B的static块应用了C，C的static块引用了B，显然这发生了循环引用，但是如果这种引用发生在同一个线程内，那么jvm可以很好的处理这种循环引用，一般后引用的类会优先初始化，也就是说实际初始化顺序是B > C。</p>
+
+<p>但是，如果这种循环引用出现在了多个线程内，那么就有可能发生死锁，比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">B</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;BB&quot;</span><span class="o">;</span>
+</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before B init&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B timeout&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B init&quot;</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">C</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;CC&quot;</span><span class="o">;</span>
+</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before C init&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C timeout&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C init&quot;</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个时候线程b中引用了B对象，线程c引用了C对象，在两个线程的sleep时间到了后就发生了死锁，因为B的初始化锁被线程b占有，C的初始化锁被c占有。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T01:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>jdk1.2之后提供了四个可以直接和GC交互的Reference:</p>
+
+<ul>
+<li>FinalReference</li>
+<li>SoftReference</li>
+<li>WeakReference</li>
+<li>PhantomReference</li>
+</ul>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/25/collection-for-reference-in-java/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-24T02:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>java中的文件操作一般都是要通过FileOutputStream/FileInputStream，这两个类可以获得channel通过NIO的手段来操作，或者是通过RandomAccessFile.getChannel()来获得channel并使用NIO。</p>
+
+<p>其实不论FileOutputStream还是RandomAccessFile，都会有一个打开文件的动作，打开文件的结果都会是产生一个FileDescriptor，可以通过<code>FileOutputStream.getDescrptor()</code>或<code>RandomAccessFile.getDescriptor()</code>来获得。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * The system dependent file descriptor.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">FileDescriptor</span> <span class="n">fd</span><span class="o">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就如同名字所表示的，这个就是一个文件描述符，或者在windows里面讲就是一个文件句柄（HANDLE），所有的系统调用都需要这个文件描述符作为参数。</p>
+
+<p>再来看以下几个构造函数：</p>
+
+<p><em>RandomAccessFile(String name, String mode):</em> 该方法会调用RandomAccessFile(File name, String mode)</p>
+
+<p><em>RandomAccessFile(File name, String mode):</em> 根据File对象打开文件，产生FileDescriptor，但是目标File不会做改动，position的位置在0</p>
+
+<p><em>FileOutputStream(File file):</em> 该方法会调用FileOutputStream(File file, false)</p>
+
+<p><em>FileOutputStream(File file, boolean append):</em> 根据File打开文件,如果append = true，目标file不变，position在文件尾；如果append = false,目标文件会被truncate为0，等同于删除并重新创建了这个文件，也就是清空这个文件。并在最后都生成对应的FileDescriptor</p>
+
+<p><em>FileOutputStream(FileDescriptor fd):</em> 由于参数是FileDescriptor，说明这个文件已经是被打开了的，因此该构造函数实际上不会做任何操作，只是将这个fd保存下来，供以后的操作使用。</p>
+
+<p>因此，我们最经常使用的FileOutputStream(File file)这个构造函数是会自动将文件进行truncate操作的，这个需要注意。</p>
+
+<p>对文件的操作实际上都是使用FileDescriptor，因此普通文件操作和获得channel后的nio操作都共享一个fd，也就是说在普通写操作后，对应channel.getPosition也会同样被移动了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/24/jit-in-hotspot/">hotspot中的JIT</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。</p>
+
+<p>当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置<code>-XX:CompileThreshold=10000</code>来进行指定。</p>
+
+<p>在jvm运行的时候加上<code>-XX:+PrintCompilation</code>可以开启JIT编译信息，当有方法被JIT编译时，就会在stdout中输出，该选项可以更好的进行调试和优化。</p>
+
+<p>但是有一个例外，当一个方法body很大时，jvm不一定会对它进行JIT编译，在hotspot中这个方法的大小是8000字节，但是我们可以通过加上<code>-XX:-DontCompileHugeMethods</code>参数禁止这种策略，保证所有方法都可以被JIT编译，但是最好不要关闭这个特性！</p>
+
+<p>因此很多时候我们总是担心过多的调用很多小方法会影响执行效率，其实jvm会用jit来帮我们做很多优化，而且就像上面提到的并不是将多个小方法合并到一个大方法中就一定会有更好的效果，可能会被jvm坑了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/23/stop-suspend-resume-of-thread/">Thread中的stop, Suspend, Resume方法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T02:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这三个方法都被标记为了deprecated，下面就来分析下原因。</p>
+
+<h2>stop()和stop(Throwable e)</h2>
+
+<p>这个方法会无条件的终止一个子线程，并且在子线程的当前执行的地方抛出传入的异常。如果调用stop()函数，则e = ThreadDeath异常。这个异常会一直向上传播，最终导致所有该子线程所具有的锁都被释放。</p>
+
+<p><em>废弃原因：</em>
+该方法太过于暴力，可能会让某些处于锁保护的关键区域（对象初始化）还没有完毕就退出，进一步导致这些对象或者操作处于一种不一致的状态，并暴露给系统的其他部分。</p>
+
+<h2>suspend,resume</h2>
+
+<p>这两个方法需要配合起来，suspend会暂时挂起一个线程，resume可以恢复挂起的线程</p>
+
+<p><em>废弃原因：</em>
+这两个方法会非常容易导致死锁。因为suspend在挂起一个线程的时候不会释放当前线程上的锁，如果该线程在被resume之前刚好需要请求这些锁，那么resume将永远不会执行，死锁就发生了。下面是我随便写的demo，本来想看看效果，但是却不幸的发生了死锁，可见该方法多么危险：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">import</span> <span class="nn">java.util.concurrent.TimeUnit</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ThreadDemo</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">ThreadDemo</span> <span class="n">thread</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ThreadDemo</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">setDaemon</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">suspend</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;suspended&quot;</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">resume</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;resumed&quot;</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">thread</span><span class="o">.</span><span class="na">isAlive</span><span class="o">());</span>
+</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>      <span class="k">while</span> <span class="o">(!</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;running &quot;</span> <span class="o">+</span> <span class="n">i</span><span class="o">++);</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>调试发现主线程阻塞到了System.out.println(&ldquo;suspended&rdquo;)处，并且产生了死锁，分析原因如下：
+子线程调用了out.println()，但是该方法会请求out对象上的锁：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">println</span><span class="o">(</span><span class="n">String</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">print</span><span class="o">(</span><span class="n">x</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">newLine</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>子线程被suspend后该锁却并没有释放，主线程又接着调用out.pritln(&ldquo;suspended&rdquo;)，自然会被block，然后产生死锁！</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/23/gc-in-hotspot/">hotspot中的不同GC算法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。</p>
+
+<h2>-XX:+UseSerialGC</h2>
+
+<p>串行垃圾搜集算法，具体表现为：</p>
+
+<p>新生代：</p>
+
+<pre><code>[DefNew: 34944K-&gt;3031K(39296K), 0.0264555 secs] 34944K-&gt;3031K(126720K), 0.0265033 secs] [Times: user=0.03 sys=0.00, real=0.03 secs] 
+</code></pre>
+
+<p>老年代：</p>
+
+<pre><code>[GC [DefNew: 37824K-&gt;37824K(39296K), 0.0000274 secs][Tenured: 84770K-&gt;87423K(87424K), 0.6707186 secs] 122594K-&gt;90531K(126720K), [Perm : 2963K-&gt;2963K(12288K)], 0.6708503 secs] [Times: user=0.67 sys=0.00, real=0.67 secs] 
+</code></pre>
+
+<p>Full:</p>
+
+<pre><code>[Full GC [Tenured: 87423K-&gt;87423K(87424K), 0.9254085 secs] 126719K-&gt;106207K(126720K), [Perm : 2962K-&gt;2962K(12288K)], 0.9254837 secs] [Times: user=0.92 sys=0.00, real=0.92 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelGC</h2>
+
+<p>并行垃圾搜集算法，新生代使用并行，老年代使用Mark-Sweep-Compact(标记，清除，压缩）</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 35680K-&gt;5432K(38208K)] 35680K-&gt;5636K(125632K), 0.0153779 secs] [Times: user=0.01 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;7374K(38080K)] [PSOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;94798K(125504K) [PSPermGen: 2963K-&gt;2963K(12288K)], 0.4979593 secs] [Times: user=0.50 sys=0.00, real=0.50 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelOldGC</h2>
+
+<p>并行垃圾搜集，老年代和新生代都是并行垃圾搜集</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 27552K-&gt;2144K(34432K)] 74201K-&gt;50809K(121856K), 0.0170400 secs] [Times: user=0.06 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;18745K(38080K)] [ParOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;106169K(125504K) [PSPermGen: 2962K-&gt;2962K(12288K)], 0.9138238 secs] [Times: user=3.13 sys=0.00, real=0.92 secs] 
+</code></pre>
+
+<h2>-XX:+UseConcMarkSweepGC</h2>
+
+<p>标记清除算法，每次只清除一部分死亡对象，基本不会造成stop the world，但是会有内存碎片可以配合以下选项来对碎片问题进行优化：</p>
+
+<pre><code>-XX:+UseCMSCompactAtFullCollection:让full gc的时候，顺便对内存进行整理
+-XX:+CMSFullGCsBeforeCompact: 多少次full gc后，再执行full gc时就进行内存整理
+</code></pre>
+
+<p>从算法行为上来说有4种类型：</p>
+
+<ol>
+<li>Mark-sweep:标记清除，缺点是会有大量内存碎片</li>
+<li>复制算法(copying)：简单高效，把存货的对象从一个区域复制到另一个区域，但是在存活率较高的情况下效率会变低（某个对象总是存活，那么自然就要来回复制，如果这些对象生命周期都很短，那么在GC的时候直接就不用复制到另一个区域了）</li>
+<li>标记整理（Mark-compact)：同标记清除类似，但是后续操作不是清除死亡的对象，而是把所有存活的对象往内存一边移动，将另外以便的内存所有都清理掉。</li>
+<li>分代搜集(具体到每一代又采用了上述三种算法）。</li>
+</ol>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/18/launchd-in-macos/">Launchd in MacOS</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-18T01:27:00+08:00" pubdate data-updated="true">Jul 18<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>在《mac下jdk7的乱码分析》中提到了/etc/launchd.conf文件可以作为mac中的系统启动配置文件，类似于/etc/rc.local或init文件，因此对mac的launchd框架做了下了解，边看wiki边把自己的理解记录下来。</p>
+
+<p>launchd是一个开源的服务管理框架，由apple的Dave Zarzycki设计和开发，可以管理系统范围内的服务、应用、进程以及脚本。launchd可以用来代替：init, rc, init.d脚本,rc.d脚本,SystemStarter, inetd/xinetd, crond/atd, watchdogd。确实感觉非常强大，apple设计它就是用来代替这些传统linux组件的，好处显而易见，首先可以让系统管理更加简单，其次就是提高运行效率特别是可以显著缩短开机时间。另外launchd框架不仅仅可以用于osx中，还可以在其他的系统中使用。</p>
+
+<p>在launchd系统中有两个重要的组件：launchd服务和launchctl接口</p>
+
+<p>launchd服务作为传统init进程，在mac中的PID为1，是系统启动的第一个进程，并且由它负责将系统启动起来。在/Libaray/LaunchAgents和/Libaray/LaunchDaemons目录中有一些配置文件用来控制lauchd启动服务的参数。</p>
+
+<p>launchctl接口是一个命令行的应用程序，可以与launchd服务通信是launchd服务提供的用户接口，可以控制launchd管辖的服务，启动或停止任务，获取或设置一些系统参数，比如ulimit的参数就可以通过launchctl来控制。</p>
+
+<h2>launchd</h2>
+
+<p>launchd主要有两个职责：开机的时候启动系统；加载和管理所有的服务。</p>
+
+<p>OSX的启动顺序大致如下：</p>
+
+<ol>
+<li><a href="http://en.wikipedia.org/wiki/Open_Firmware">Open Firmware</a>激活，初始化硬件并加载BootX.</li>
+<li><a href="http://en.wikipedia.org/wiki/BootX_(Apple\">BootX</a>)加载内核，并且加载需要的内核扩展(kexts)</li>
+<li>内核加载launchd</li>
+<li>launchd运行/etc/rc，扫描/System/Library/LaunchAgents和/System/Library/LaunchDaemons目录，根据需要读取其中的plist文件配置，最后启动登陆窗口</li>
+</ol>
+
+
+<p>在第四步，launchd会扫描一些不同的目录，但是主要包括两类：LaunchDaemons和LaunchAgents。LaunchDaemons中包含了那些需要以root身份运行的，并且是作为后台服务的进程；LaunchAgents包含了很多任务(agent应用)，会运行在用户环境。</p>
+
+<p>最重要的是launchd不同于SystemStarter，它不会在系统启动的时候真正启动所有的服务，它的思想类似与xinetd，是一种按需加载。在系统启动的时候，它会扫描所有jobs的plist文件，如果plist中包含了OnDemand键的话，那么该服务就不会在启动的时候立刻加载，launchd会一直保持监听状态，如果有其他程序需要该服务，那么launchd就会立刻将它启动起来，如果不再有需要了，launchd又会将它关闭。如果一个服务已经启动了，launchd又会像watchlog一样对这些服务保持监控，如果有哪个服务出现异常launchd还会重新启动它。</p>
+
+<h2>launchctl</h2>
+
+<p>在OSX中，可以使用launchctl来集中对服务进行管理。可以通过控制台、标准输入或者交互模式来对launchctl发送命令，一些永久的命令还可以写在/etc/launchd.conf中，或者对于不同的用户写在~/.launchd.conf中(不是所有的OSX都支持)。更多launchctl的参数可以参见man手册。</p>
+
+<h2>Property list</h2>
+
+<p>Property list(plist)文件被用来向launchd提供程序的启动配置，当launchd扫描这个文件或者通过launchctl提交一个job，launchd就会读取这个job对应的plist文件来决定怎样启动它。常用的plist参数包括：</p>
+
+<pre><code>Label:job的名称，模式是plist文件的名称，比如说fish.plist，那么默认的Label就是fish
+Program:程序的路径
+ProgramArguments:运行参数。（Program或者ProgramArguments必须要至少指定一个）
+UserName:以哪个用户来运行该job
+RunAtLoad:是否加载之后就立刻运行(默认是NO）
+WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired的目录。
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a></h1>
     
     
@@ -105,418 +867,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-10T01:27:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
-
-<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/10/pagetable/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-06T01:27:00+08:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
-
-<ol>
-<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
-<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
-<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/06/classloader-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-05T02:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
-1.多个名字对应一个IP地址
-2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名</p>
-
-<p>Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常，只有一个IP地址的机器会配置多个主机名或者域名给这个IP地址，部署在该机器的web应用需要给不同的主机名同时提供服务。另外一种情况是给不同的主机名提供不同的web服务。</p>
-
-<p>不管使用xml文件还是通过编程的模式给Jetty设置虚拟主机最终实际上都是使用<code>ContextHandler.setVitualHosts</code>方法。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/05/config-virtual-host-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-05T01:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如<a href="http://www.webalizer.org/">webalizer</a>.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/05/request-log-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/listening-80port-for-non-root-user/">非root用户监听80端口</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
-
-<ol>
-<li>ipchains</li>
-<li>iptables</li>
-<li>配置jetty的SetUID</li>
-<li>xinetd</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/listening-80port-for-non-root-user/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/config-form-size-for-jetty/">配置jetty的表单大小(Form Size)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/config-form-size-for-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/customize-error-page-in-jetty/">Jetty自定义错误页面</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T01:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>以下方法可以用来配置自定义错误页面：</p>
-
-<ol>
-<li>在web.xml中定义错误页面</li>
-<li>在context文件中定义错误页面</li>
-<li>实现自定义的错误处理handler</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/customize-error-page-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/03/connectors-in-jetty/">Jetty的连接器(Connectors)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
-
-<h2>连接器的类型</h2>
-
-<ul>
-<li>SelectChannelConnector</li>
-<li>SocketConnector</li>
-<li>SslSelectChannelConnector</li>
-<li>SslSocketConnector</li>
-<li>Ajp13SocketConnector</li>
-</ul>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/03/connectors-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/03/autovaccum-in-postgresql/">Postgresql中的autovaccum</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-03T02:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用<code>/dt+ table_name</code> 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。</p>
-
-<p>问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/03/autovaccum-in-postgresql/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -532,23 +882,23 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a>
+        <a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a>
+        <a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a>
+        <a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a>
+        <a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a>
+        <a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a>
       </li>
     
   </ul>

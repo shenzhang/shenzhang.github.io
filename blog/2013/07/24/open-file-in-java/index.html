@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成： 1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services &hellip;">
+  <meta name="description" content="java中的文件操作一般都是要通过FileOutputStream/FileInputStream，这两个类可以获得channel通过NIO的手段来操作，或者是通过RandomAccessFile.getChannel()来获得channel并使用NIO。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/24/open-file-in-java">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -67,7 +66,7 @@
   
   <header>
     
-      <h1 class="entry-title">Mysql远程客户端无法连接的问题</h1>
+      <h1 class="entry-title">Java中的文件打开操作</h1>
     
     
       <p class="meta">
@@ -83,24 +82,45 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-24T02:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
+<div class="entry-content"><p>java中的文件操作一般都是要通过FileOutputStream/FileInputStream，这两个类可以获得channel通过NIO的手段来操作，或者是通过RandomAccessFile.getChannel()来获得channel并使用NIO。</p>
 
-<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
-
-<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
+<p>其实不论FileOutputStream还是RandomAccessFile，都会有一个打开文件的动作，打开文件的结果都会是产生一个FileDescriptor，可以通过<code>FileOutputStream.getDescrptor()</code>或<code>RandomAccessFile.getDescriptor()</code>来获得。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * The system dependent file descriptor.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">FileDescriptor</span> <span class="n">fd</span><span class="o">;</span>
 </span></code></pre></td></tr></table></div></figure>
 
+
+<p>实际上就如同名字所表示的，这个就是一个文件描述符，或者在windows里面讲就是一个文件句柄（HANDLE），所有的系统调用都需要这个文件描述符作为参数。</p>
+
+<p>再来看以下几个构造函数：</p>
+
+<p><em>RandomAccessFile(String name, String mode):</em> 该方法会调用RandomAccessFile(File name, String mode)</p>
+
+<p><em>RandomAccessFile(File name, String mode):</em> 根据File对象打开文件，产生FileDescriptor，但是目标File不会做改动，position的位置在0</p>
+
+<p><em>FileOutputStream(File file):</em> 该方法会调用FileOutputStream(File file, false)</p>
+
+<p><em>FileOutputStream(File file, boolean append):</em> 根据File打开文件,如果append = true，目标file不变，position在文件尾；如果append = false,目标文件会被truncate为0，等同于删除并重新创建了这个文件，也就是清空这个文件。并在最后都生成对应的FileDescriptor</p>
+
+<p><em>FileOutputStream(FileDescriptor fd):</em> 由于参数是FileDescriptor，说明这个文件已经是被打开了的，因此该构造函数实际上不会做任何操作，只是将这个fd保存下来，供以后的操作使用。</p>
+
+<p>因此，我们最经常使用的FileOutputStream(File file)这个构造函数是会自动将文件进行truncate操作的，这个需要注意。</p>
+
+<p>对文件的操作实际上都是使用FileDescriptor，因此普通文件操作和获得channel后的nio操作都共享一个fd，也就是说在普通写操作后，对应channel.getPosition也会同样被移动了。</p>
 </div>
 
 
@@ -123,7 +143,7 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-24T02:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
       
 
 
@@ -131,7 +151,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/24/open-file-in-java/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/24/open-file-in-java/" >Tweet</a>
   
   
   
@@ -140,10 +160,10 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/06/25/charset-in-mysql/" title="Previous Post: linux下mysql编码设置">&laquo; linux下mysql编码设置</a>
+        <a class="basic-alignment left" href="/blog/2013/07/24/jit-in-hotspot/" title="Previous Post: hotspot中的JIT">&laquo; hotspot中的JIT</a>
       
       
-        <a class="basic-alignment right" href="/blog/2013/06/25/ssh-without-password/" title="Next Post: linux下ssh免输入密码方法">linux下ssh免输入密码方法 &raquo;</a>
+        <a class="basic-alignment right" href="/blog/2013/07/25/collection-for-reference-in-java/" title="Next Post: Reference的回收机制及利用价值">Reference的回收机制及利用价值 &raquo;</a>
       
     </p>
   </footer>

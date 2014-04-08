@@ -9,8 +9,8 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成： 1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services &hellip;">
+  <meta name="description" content="IE6的bug本来是再寻常不过的事了，感觉表现正常了反而感觉不正常，但是背景图片缓存的bug对整个应用的影响太大了，最后找了半天在stackoverflow上找到了解决方案，在页面加载之初执行下面的语句： 1
+document.execCommand(&quot; &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/26/bug-about-background-image-in-ie6">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -67,7 +67,7 @@
   
   <header>
     
-      <h1 class="entry-title">Mysql远程客户端无法连接的问题</h1>
+      <h1 class="entry-title">ie6中背景图片缓存的BUG</h1>
     
     
       <p class="meta">
@@ -83,24 +83,31 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-26T01:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
-
-<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
-
-<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
+<div class="entry-content"><p>IE6的bug本来是再寻常不过的事了，感觉表现正常了反而感觉不正常，但是背景图片缓存的bug对整个应用的影响太大了，最后找了半天在stackoverflow上找到了解决方案，在页面加载之初执行下面的语句：</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nb">document</span><span class="p">.</span><span class="nx">execCommand</span><span class="p">(</span><span class="s2">&quot;BackgroundImageCache&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
 </span></code></pre></td></tr></table></div></figure>
 
+
+<p>自己试了下确实完美解决了问题，但是还是不明白该BackgroundImageCache参数是什么意思，会对IE6造成怎样的影响，找了半天MSDN的文档都没有发现该参数，最后在<a href="http://support.microsoft.com/kb/823727/en-us">这里</a>找到了答案.</p>
+
+<p>原来这个可以说是IE6的一个BUG，进而让微软出了一个针对sp1的hotfix来修复该BUG，但是要想激活该pach就需要执行该语句，因此该参数是没有记录在MSDN手册中的也仅仅是对IE6 SP1有效。</p>
+
+<p>但是微软对该bug的描述实在是轻描淡写啊：</p>
+
+<blockquote><p>&ldquo;This problem may occur over a long time (for example, several hours) when you run a script that constantly changes the background color of a button that also contains a background image.&rdquo;</p></blockquote>
+
+<p>实际情况是只要改变任意的style，其元素并且所有子元素的background-image都要重新向服务器请求，这个不但导致浏览器内存升高，还导致服务器的压力增大，页面背景闪烁等多重问题。</p>
+
+<p>没办法，能有解决方法已经谢天谢地了。</p>
 </div>
 
 
@@ -123,7 +130,7 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-07-26T01:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
       
 
 
@@ -131,7 +138,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/26/bug-about-background-image-in-ie6/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/26/bug-about-background-image-in-ie6/" >Tweet</a>
   
   
   
@@ -140,10 +147,10 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/06/25/charset-in-mysql/" title="Previous Post: linux下mysql编码设置">&laquo; linux下mysql编码设置</a>
+        <a class="basic-alignment left" href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/" title="Previous Post: java中的静态初始化块死锁">&laquo; java中的静态初始化块死锁</a>
       
       
-        <a class="basic-alignment right" href="/blog/2013/06/25/ssh-without-password/" title="Next Post: linux下ssh免输入密码方法">linux下ssh免输入密码方法 &raquo;</a>
+        <a class="basic-alignment right" href="/blog/2013/07/26/scopehandler-in-jetty/" title="Next Post: Jetty中的ScopedHandler">Jetty中的ScopedHandler &raquo;</a>
       
     </p>
   </footer>

@@ -1,0 +1,380 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="jdk1.2之后提供了四个可以直接和GC交互的Reference: FinalReference
+SoftReference
+WeakReference
+PhantomReference 他们都共同从Reference继承， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/25/collection-for-reference-in-java">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Reference的回收机制及利用价值</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T01:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>jdk1.2之后提供了四个可以直接和GC交互的Reference:</p>
+
+<ul>
+<li>FinalReference</li>
+<li>SoftReference</li>
+<li>WeakReference</li>
+<li>PhantomReference</li>
+</ul>
+
+
+<!-- more -->
+
+
+<p>他们都共同从Reference继承，这几个Reference都提供了一个ReferenceQueue队列作为构造函数的参数，当Reference所引用的对象被GC回收的时候，该Reference就会被加入到这个队列中去，这样就实现了用户代码和GC的一个交互接口。那么这个过程是如何实现的呢？</p>
+
+<p>Reference类中有一个静态内部类：<code>private static class ReferenceHandler extends Thread</code>, 并且该ReferneceHandler在类初始化的时候就会作为一个daemon线程在后台运行，而且优先级最高：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">ThreadGroup</span> <span class="n">tg</span> <span class="o">=</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">getThreadGroup</span><span class="o">();</span>
+</span><span class='line'>    <span class="k">for</span> <span class="o">(</span><span class="n">ThreadGroup</span> <span class="n">tgn</span> <span class="o">=</span> <span class="n">tg</span><span class="o">;</span>
+</span><span class='line'>         <span class="n">tgn</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>         <span class="n">tg</span> <span class="o">=</span> <span class="n">tgn</span><span class="o">,</span> <span class="n">tgn</span> <span class="o">=</span> <span class="n">tg</span><span class="o">.</span><span class="na">getParent</span><span class="o">());</span>
+</span><span class='line'>    <span class="n">Thread</span> <span class="n">handler</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ReferenceHandler</span><span class="o">(</span><span class="n">tg</span><span class="o">,</span> <span class="s">&quot;Reference Handler&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="cm">/* If there were a special system-only priority greater than</span>
+</span><span class='line'><span class="cm">     * MAX_PRIORITY, it would be used here</span>
+</span><span class='line'><span class="cm">     */</span>
+</span><span class='line'>    <span class="n">handler</span><span class="o">.</span><span class="na">setPriority</span><span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">MAX_PRIORITY</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">handler</span><span class="o">.</span><span class="na">setDaemon</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">handler</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>该ReferenceHandler的内部逻辑如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">Reference</span> <span class="n">r</span><span class="o">;</span>
+</span><span class='line'>          <span class="kd">synchronized</span> <span class="o">(</span><span class="n">lock</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>               <span class="k">if</span> <span class="o">(</span><span class="n">pending</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">r</span> <span class="o">=</span> <span class="n">pending</span><span class="o">;</span>
+</span><span class='line'>                    <span class="n">Reference</span> <span class="n">rn</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+</span><span class='line'>                    <span class="n">pending</span> <span class="o">=</span> <span class="o">(</span><span class="n">rn</span> <span class="o">==</span> <span class="n">r</span><span class="o">)</span> <span class="o">?</span> <span class="kc">null</span> <span class="o">:</span> <span class="n">rn</span><span class="o">;</span>
+</span><span class='line'>                    <span class="n">r</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">r</span><span class="o">;</span>
+</span><span class='line'>               <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>                       <span class="n">lock</span><span class="o">.</span><span class="na">wait</span><span class="o">();</span>
+</span><span class='line'>                    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span> <span class="o">}</span>
+</span><span class='line'>                    <span class="k">continue</span><span class="o">;</span>
+</span><span class='line'>               <span class="o">}</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="c1">// Fast path for cleaners</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="k">instanceof</span> <span class="n">Cleaner</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>             <span class="o">((</span><span class="n">Cleaner</span><span class="o">)</span><span class="n">r</span><span class="o">).</span><span class="na">clean</span><span class="o">();</span>
+</span><span class='line'>             <span class="k">continue</span><span class="o">;</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="n">ReferenceQueue</span> <span class="n">q</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="na">queue</span><span class="o">;</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(</span><span class="n">q</span> <span class="o">!=</span> <span class="n">ReferenceQueue</span><span class="o">.</span><span class="na">NULL</span><span class="o">)</span> <span class="n">q</span><span class="o">.</span><span class="na">enqueue</span><span class="o">(</span><span class="n">r</span><span class="o">);</span>
+</span><span class='line'>     <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>其中，Reference类中有一个lock变量，该lock是会和jvm的gc线程做交互，用来进行互斥操作；pending代表了一个链表，当GC回收一个reference所引用的对象后，会将该reference加入到该链表中，并且通过lock.notify()来唤醒handler线程。handler线程被唤醒后，会遍历pending链表，最终将他们加入到对应的queue中，但是如果该Reference是一个Cleaner的话，会调用它的clean方法来做一些清理操作，并且不会加入到队列中。因此，这一切的一切最关键的还是Reference.lock这个锁对象，jvm会直接操纵该对象以达到交互的目的。</p>
+
+<p>前面提到了Cleaner类，该类只能通过工厂方法Cleaner.create(Object, Runnable)来产生，该类又从PhantomReference继承，因此具有了Reference的特性。该类到底有什么用呢，实际上它就是利用并封装了前面提到的Reference的清理机制，实际上是在和gc做交互，当一个对象被gc后可以调用指定的Runnable。</p>
+
+<p>比如DirectByteBuffer在内部就使用了Cleaner对象，并且将自己以及一个清理Runnable对象传给Cleaner.create来生成Cleaner对象。其目的就是希望在该DirectByteBuffer被gc后，能主动调用清理方法将不受jvm管制的内存给主动释放掉，避免内存泄漏。清理过程如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Deallocator</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Unsafe</span> <span class="n">unsafe</span> <span class="o">=</span> <span class="n">Unsafe</span><span class="o">.</span><span class="na">getUnsafe</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">address</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">size</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">int</span> <span class="n">capacity</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="nf">Deallocator</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">,</span> <span class="kt">long</span> <span class="n">size</span><span class="o">,</span> <span class="kt">int</span> <span class="n">capacity</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">assert</span> <span class="o">(</span><span class="n">address</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">address</span> <span class="o">=</span> <span class="n">address</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">size</span> <span class="o">=</span> <span class="n">size</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">capacity</span> <span class="o">=</span> <span class="n">capacity</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">address</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="c1">// Paranoia</span>
+</span><span class='line'>            <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">freeMemory</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">address</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">Bits</span><span class="o">.</span><span class="na">unreserveMemory</span><span class="o">(</span><span class="n">size</span><span class="o">,</span> <span class="n">capacity</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T01:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/25/collection-for-reference-in-java/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/25/collection-for-reference-in-java/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/24/open-file-in-java/" title="Previous Post: java中的文件打开操作">&laquo; java中的文件打开操作</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/" title="Next Post: java中的静态初始化块死锁">java中的静态初始化块死锁 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
