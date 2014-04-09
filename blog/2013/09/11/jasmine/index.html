@@ -1,0 +1,464 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="jasmine是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。 一个DEMO 1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/09/11/jasmine">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Javascript测试框架jasmine</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-11T01:27:00+08:00" pubdate data-updated="true">Sep 11<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
+
+<!-- more -->
+
+
+<h2>一个DEMO</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nx">describe</span><span class="p">(</span><span class="s2">&quot;this is a test suite&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>  <span class="kd">var</span> <span class="nx">foo</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// setup function run before every spec</span>
+</span><span class='line'>  <span class="nx">beforeEach</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">foo</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">foo</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">});</span>
+</span><span class='line'>  <span class="c1">// teardown function run before ever spec</span>
+</span><span class='line'>  <span class="nx">afterEach</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">foo</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">});</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">it</span><span class="p">(</span><span class="s2">&quot;this is a test spec 1&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">});</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">it</span><span class="p">(</span><span class="s2">&quot;this is a test spec 2&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">expect</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">});</span>
+</span><span class='line'><span class="p">});</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>jasmine提供的全局方法</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nx">describe</span><span class="p">(</span><span class="nx">testSuiteName</span><span class="p">,</span> <span class="nx">func</span><span class="p">)</span> <span class="c1">//定义一个test suite，其中可以包含it定义的spec，并且describe可以嵌套</span>
+</span><span class='line'><span class="nx">xdescribe</span><span class="p">(</span><span class="nx">testSuiteName</span><span class="p">,</span> <span class="nx">func</span><span class="p">)</span> <span class="c1">//类似于JUnit的@Ignore，忽略这个test suite</span>
+</span><span class='line'><span class="nx">it</span><span class="p">(</span><span class="nx">specName</span><span class="p">,</span> <span class="nx">func</span><span class="p">)</span> <span class="c1">//定义一个test unit(spec)</span>
+</span><span class='line'><span class="nx">xit</span><span class="p">(</span><span class="nx">specName</span><span class="p">,</span> <span class="nx">func</span><span class="p">)</span> <span class="c1">//类似于@Ignore，忽略这个unit</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">actualValue</span><span class="p">)</span> <span class="c1">//assert</span>
+</span><span class='line'><span class="nx">beforeEach</span><span class="p">(</span><span class="nx">func</span><span class="p">)</span> <span class="c1">//定义一个start function，在每个unit之前运行</span>
+</span><span class='line'><span class="nx">afterEach</span><span class="p">(</span><span class="nx">func</span><span class="p">)</span> <span class="c1">//定义一个deardown function, 在每个unit之后运行</span>
+</span><span class='line'><span class="nx">spyOn</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">funcName</span><span class="p">)</span> <span class="c1">//监视obj.funcName函数的调用情况</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">runs</span><span class="p">(</span><span class="nx">fun</span><span class="p">)</span>
+</span><span class='line'><span class="nx">waitsFor</span><span class="p">(</span><span class="nx">fun</span><span class="p">,</span> <span class="nx">msg</span><span class="p">,</span> <span class="nx">timeout</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">jasmine</span><span class="p">.</span><span class="nx">createSpy</span><span class="p">(</span><span class="nx">spyName</span><span class="p">)</span> <span class="c1">//定义一个spy函数，该函数可以被任意调用，主要用于mock</span>
+</span><span class='line'><span class="nx">jasmine</span><span class="p">.</span><span class="nx">createSpyObj</span><span class="p">(</span><span class="nx">objName</span><span class="p">,</span> <span class="nx">spyFuncNames</span><span class="p">)</span> <span class="c1">//定义一个spy对象，并且该对象具有spyFuncNames数组包含的方法。主要用于mock</span>
+</span><span class='line'><span class="nx">jasmine</span><span class="p">.</span><span class="nx">any</span><span class="p">(</span><span class="nx">construct</span><span class="o">|</span><span class="nx">className</span><span class="p">)</span> <span class="c1">//配合expect使用，检测该对象是否是指定类型，如：expect(12).toEqual(jasmine.any(Number));</span>
+</span><span class='line'><span class="nx">jasmine</span><span class="p">.</span><span class="nx">Clock</span><span class="p">.</span><span class="nx">useMock</span> <span class="c1">//启用模拟timer</span>
+</span><span class='line'><span class="nx">jasmine</span><span class="p">.</span><span class="nx">Clock</span><span class="p">.</span><span class="nx">tick</span> <span class="c1">//手动触发一个timer事件</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>expectation api</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBe</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//a === b</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">not</span><span class="p">.</span><span class="nx">toBe</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//!(a===b)</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//a是否和b相等，可以比较普通类型或者对象</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toMatch</span><span class="p">(</span><span class="nx">reg</span><span class="p">)</span> <span class="c1">//a是否符合reg的正则表达式</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">o</span><span class="p">.</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeDefined</span><span class="p">()</span> <span class="c1">//o.a是否被定义</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">o</span><span class="p">.</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeUnDefined</span><span class="p">()</span> <span class="c1">//o.a是否没有被定义</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeNull</span><span class="p">()</span> <span class="c1">//a === null ?</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeTruthy</span><span class="p">()</span> <span class="c1">//if (a) 是否成立</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeFalsy</span><span class="p">()</span> <span class="c1">//if (!a) 是否成立</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">array</span><span class="p">).</span><span class="nx">toContain</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//数组array里是否有b</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeLessThan</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//a &lt; b ?</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">a</span><span class="p">).</span><span class="nx">toBeGreaterThan</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">//a &gt; b?</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">func</span><span class="p">).</span><span class="nx">toThrow</span><span class="p">()</span> <span class="c1">//func被调用的时候是否抛出异常</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>spy</h2>
+
+<p>jasmine可以对指定的函数进行调用监视，相关的函数有spyOn, jasmine.createSpy(), jasmine.createSpyObj()，比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">hello</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;hello world&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">spyOn</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>那么对obj.hello的调用都会被jasmine截获，但是实际上是不会真正调用obj.hello的，除非：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nx">sypOn</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">).</span><span class="nx">andCallThough</span><span class="p">()</span> <span class="c1">// 调用obj.hello()时，最终会真正调用console.log</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">spyOn</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">).</span><span class="nx">andReturn</span><span class="p">(</span><span class="mi">123</span><span class="p">);</span> <span class="err">让</span><span class="nx">obj</span><span class="p">.</span><span class="nx">hello</span><span class="p">()</span><span class="err">永远返回</span><span class="mi">123</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">spyOn</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">).</span><span class="nx">andCallFake</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>             <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;welcome&#39;</span><span class="p">);</span>
+</span><span class='line'>          <span class="p">});</span>  <span class="c1">// 该方法会让obj.hello()委派到console.log(&#39;welcome&#39;)上，也就是执行提供的函数内容。</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从此可以看出Jasmine确实考虑的非常周到</p>
+
+<h2>expectation for spy</h2>
+
+<p>以下expect要配合spyOn, jasmine.createSpy(), jasmine.createSpyObj()来使用</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nx">spyOn</span><span class="p">(</span><span class="nx">foo</span><span class="p">,</span> <span class="s1">&#39;setBar&#39;</span><span class="p">);</span> <span class="c1">// 监视foo.setBar方法</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">.</span><span class="nx">setBar</span><span class="p">).</span><span class="nx">toHaveBeenCalled</span><span class="p">()</span><span class="o">:</span> <span class="err">该方法是否被调用过</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">.</span><span class="nx">setBar</span><span class="p">.</span><span class="nx">calls</span><span class="p">.</span><span class="nx">length</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">:</span> <span class="err">该方法是否被调用了两次</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">.</span><span class="nx">setBar</span><span class="p">).</span><span class="nx">toHaveBeenCalledWith</span><span class="p">(</span><span class="mi">456</span><span class="p">,</span> <span class="s1">&#39;another param&#39;</span><span class="p">)</span><span class="o">:</span> <span class="err">该方法是否被调用过，并且调用的参数是</span><span class="o">:</span><span class="mi">456</span><span class="err">和</span><span class="s1">&#39;another param&#39;</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">.</span><span class="nx">setBar</span><span class="p">.</span><span class="nx">mostRecentCall</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]).</span><span class="nx">toEqual</span><span class="p">(</span><span class="mi">456</span><span class="p">)</span><span class="o">:</span> <span class="err">最近一次调用的第一个参数是否是</span><span class="mi">456</span>
+</span><span class='line'><span class="nx">expect</span><span class="p">(</span><span class="nx">foo</span><span class="p">.</span><span class="nx">setBar</span><span class="p">.</span><span class="nx">calls</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]).</span><span class="nx">toEqual</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span><span class="o">:</span> <span class="err">第一次调用的第一个参数是否是</span><span class="mi">123</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>HTML Reporter</h2>
+
+<p>jasmine还可以控制执行以及测试结果的输出，比如下面的代码就是将测试报告输出到html页面上：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>  <span class="kd">var</span> <span class="nx">jasmineEnv</span> <span class="o">=</span> <span class="nx">jasmine</span><span class="p">.</span><span class="nx">getEnv</span><span class="p">();</span>
+</span><span class='line'>  <span class="nx">jasmineEnv</span><span class="p">.</span><span class="nx">updateInterval</span> <span class="o">=</span> <span class="mi">250</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">var</span> <span class="nx">htmlReporter</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">jasmine</span><span class="p">.</span><span class="nx">HtmlReporter</span><span class="p">();</span>
+</span><span class='line'>  <span class="nx">jasmineEnv</span><span class="p">.</span><span class="nx">addReporter</span><span class="p">(</span><span class="nx">htmlReporter</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">jasmineEnv</span><span class="p">.</span><span class="nx">specFilter</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">spec</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">htmlReporter</span><span class="p">.</span><span class="nx">specFilter</span><span class="p">(</span><span class="nx">spec</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">var</span> <span class="nx">currentWindowOnload</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nx">onload</span><span class="p">;</span>
+</span><span class='line'>  <span class="nb">window</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">currentWindowOnload</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nx">currentWindowOnload</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">&#39;.version&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">jasmineEnv</span><span class="p">.</span><span class="nx">versionString</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">execJasmine</span><span class="p">();</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">function</span> <span class="nx">execJasmine</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">jasmineEnv</span><span class="p">.</span><span class="nx">execute</span><span class="p">();</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">})();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-11T01:27:00+08:00" pubdate data-updated="true">Sep 11<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/09/11/jasmine/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/09/11/jasmine/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/09/10/inspect-seajs/" title="Previous Post: SeaJS原理解析">&laquo; SeaJS原理解析</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/09/12/add-source-to-repository/" title="Next Post: 如何针对缺少source包的jar添加source包">如何针对缺少source包的jar添加source包 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

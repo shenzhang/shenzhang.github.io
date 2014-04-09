@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="maven中一些常用的scope及其介绍。 compile: maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用. runtime: &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/09/13/scope-in-maven">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Maven依赖的scope</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T01:27:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>maven中一些常用的scope及其介绍。</p>
+
+<h3>compile:</h3>
+
+<p>maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用.</p>
+
+<h3>runtime:</h3>
+
+<p>在compile相关的阶段都不会起作用，仅仅是在运行(runtime)或者测试(test)的时候有效。</p>
+
+<h3>provided:</h3>
+
+<p>和compile类似，但是往往这些依赖不需要随应用一起发布，一般是由外部环境或者容器来提供，不需要自己准备，比如说servlet-api, jsp-api这些都可以由container提供。</p>
+
+<h3>test:</h3>
+
+<p>这个最好理解，仅仅是在测试的时候有用，compile和runtime都不需要</p>
+
+<h3>system:</h3>
+
+<p>有些依赖是仓库没有的，那么可以通过使用system范围来告诉maven在指定的本地路径上查找依赖。因此需要在dependency中指定systemPath元素，告诉maven依赖的具体位置。一般来说是不应该使用该范围的，很可能大家不能共享你的配置。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T01:27:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/09/13/scope-in-maven/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/09/13/scope-in-maven/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/09/12/add-source-to-repository/" title="Previous Post: 如何针对缺少source包的jar添加source包">&laquo; 如何针对缺少source包的jar添加source包</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/09/15/something-about-maven/" title="Next Post: maven杂谈(生命周期,插件绑定,effective-xx)">maven杂谈(生命周期,插件绑定,effective-xx) &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

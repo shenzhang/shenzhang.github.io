@@ -1,0 +1,711 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="JNDI是什么 jndi: Java Naming and Directory Interface jndi是j2ee提供的用于对象查找和获取的接口规范，该规范需要j2ee容器去实现以提供jndi的功能，不同的容器或者说jndi实现者对jndi里的对象的注册方式和内部管理方式都不完全一样， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/07/27/inspect-jndi">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">JNDI环境初始化深入分析</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-27T05:27:00+08:00" pubdate data-updated="true">Jul 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>JNDI是什么</h2>
+
+<p>jndi: Java Naming and Directory Interface</p>
+
+<p>jndi是j2ee提供的用于对象查找和获取的接口规范，该规范需要j2ee容器去实现以提供jndi的功能，不同的容器或者说jndi实现者对jndi里的对象的注册方式和内部管理方式都不完全一样，但是获取方式都完全一样（jndi规定了怎么获取）,如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">InitalContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">InitialContext</span><span class="o">();</span>
+</span><span class='line'><span class="n">Object</span> <span class="n">yourObject</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">lookup</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>当然jndi中还包含了LDAP等更高层次的接口规范，这里不进行描述。</p>
+
+<h2>JNDI中可用的环境变量</h2>
+
+<p>JNDI中预定义了一些环境变量，这些环境变量可以控制JNDI环境的行为（包括初始化过程），变量的定义在javax.naming.Context接口中，对应的javadoc有对各变量的说明，但是如果不看源码很难准确理解这些变量的意义。下面的片段截取了一些变量：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">String</span> <span class="n">INITIAL_CONTEXT_FACTORY</span> <span class="o">=</span> <span class="s">&quot;java.naming.factory.initial&quot;</span><span class="o">;</span>
+</span><span class='line'><span class="n">String</span> <span class="n">OBJECT_FACTORIES</span> <span class="o">=</span> <span class="s">&quot;java.naming.factory.object&quot;</span><span class="o">;</span>
+</span><span class='line'><span class="n">String</span> <span class="n">URL_PKG_PREFIXES</span> <span class="o">=</span> <span class="s">&quot;java.naming.factory.url.pkgs&quot;</span><span class="o">;</span>
+</span><span class='line'><span class="n">String</span> <span class="n">APPLET</span> <span class="o">=</span> <span class="s">&quot;java.naming.applet&quot;</span><span class="o">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>InitalContext</h2>
+
+<p>javax.naming.InitalContext是客户端使用jndi的入口，也是jndi容器初始化的入口，因此jndi容器(环境)的初始化是lazy的，只有到需要的时候才会进行初始化。InitalContext的构造函数有两个：</p>
+
+<p>1.不接受任何初始化环境变量</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="nf">InitialContext</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">NamingException</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">init</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>2.主动设置初始化环境变量(就是在上一节提到的环境变量)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="nf">InitialContext</span><span class="o">(</span><span class="n">Hashtable</span><span class="o">&lt;?,?&gt;</span> <span class="n">environment</span><span class="o">)</span><span class="kd">throws</span> <span class="n">NamingException</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">environment</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">environment</span> <span class="o">=</span> <span class="o">(</span><span class="n">Hashtable</span><span class="o">)</span><span class="n">environment</span><span class="o">.</span><span class="na">clone</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="n">init</span><span class="o">(</span><span class="n">environment</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>接下来会调用init函数来初始化InitalContext.defaultInitCtx变量，该变量也是Context类型，并且由具体的容器来实现，它才是真正的实现者。待defaultInitCtx创建好之后，InitalContext的所有操作就会被分发给defaultInitCtx执行，InitalContext本质上讲就是defaultInitCtx的工厂和代理。</p>
+
+<h2>初始化过程</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">(</span><span class="n">Hashtable</span><span class="o">&lt;?,?&gt;</span> <span class="n">environment</span><span class="o">)</span><span class="kd">throws</span> <span class="n">NamingException</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">myProps</span> <span class="o">=</span> <span class="n">ResourceManager</span><span class="o">.</span><span class="na">getInitialEnvironment</span><span class="o">(</span><span class="n">environment</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">myProps</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">INITIAL_CONTEXT_FACTORY</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// user has specified initial context factory; try to get it</span>
+</span><span class='line'>        <span class="n">getDefaultInitCtx</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="n">Hashtable</span> <span class="nf">getInitialEnvironment</span><span class="o">(</span><span class="n">Hashtable</span> <span class="n">env</span><span class="o">)</span>
+</span><span class='line'>        <span class="kd">throws</span> <span class="n">NamingException</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="n">String</span><span class="o">[]</span> <span class="n">props</span> <span class="o">=</span> <span class="n">VersionHelper</span><span class="o">.</span><span class="na">PROPS</span><span class="o">;</span>   <span class="c1">// system/applet properties</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">env</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">env</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Hashtable</span><span class="o">(</span><span class="mi">11</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="n">Object</span> <span class="n">applet</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">APPLET</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// Merge property values from env param, applet params, and system</span>
+</span><span class='line'>    <span class="c1">// properties.  The first value wins:  there&#39;s no concatenation of</span>
+</span><span class='line'>    <span class="c1">// colon-separated lists.</span>
+</span><span class='line'>    <span class="c1">// Read system properties by first trying System.getProperties(),</span>
+</span><span class='line'>    <span class="c1">// and then trying System.getProperty() if that fails.  The former</span>
+</span><span class='line'>    <span class="c1">// is more efficient due to fewer permission checks.</span>
+</span><span class='line'>    <span class="n">String</span><span class="o">[]</span> <span class="n">jndiSysProps</span> <span class="o">=</span> <span class="n">helper</span><span class="o">.</span><span class="na">getJndiProperties</span><span class="o">();</span>
+</span><span class='line'>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">props</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Object</span> <span class="n">val</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">props</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">val</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">applet</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">val</span> <span class="o">=</span> <span class="n">AppletParameter</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">applet</span><span class="o">,</span> <span class="n">props</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">val</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="c1">// Read system property.</span>
+</span><span class='line'>                <span class="n">val</span> <span class="o">=</span> <span class="o">(</span><span class="n">jndiSysProps</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">?</span> <span class="n">jndiSysProps</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
+</span><span class='line'>                    <span class="o">:</span> <span class="n">helper</span><span class="o">.</span><span class="na">getJndiProperty</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">val</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">env</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">props</span><span class="o">[</span><span class="n">i</span><span class="o">],</span> <span class="n">val</span><span class="o">);</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// Merge the above with the values read from all application</span>
+</span><span class='line'>    <span class="c1">// resource files.  Colon-separated lists are concatenated.</span>
+</span><span class='line'>    <span class="n">mergeTables</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">getApplicationResources</span><span class="o">());</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">env</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个函数实际上就是从一些环境变量（参数）源搜集jndi需要的环境变量，然后再以map的形式返回。</p>
+
+<ol>
+<li>InitalContext(environment)构造函数传递的环境变量。</li>
+<li>如果a中指定了javax.naming.applet对象，则转换为Applet对象，这个Applet对象也成了源(applet)</li>
+<li>System.getProperties()提供的环境变量(systemProperties)</li>
+<li>应用程序提供的环境变量(application)。</li>
+</ol>
+
+
+<p>这些环境变量的优先级如下：2和3只能够提供以下的环境变量，其他的变量将被忽略：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">final</span> <span class="kd">static</span> <span class="n">String</span><span class="o">[]</span> <span class="n">PROPS</span> <span class="o">=</span> <span class="k">new</span> <span class="n">String</span><span class="o">[]</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">INITIAL_CONTEXT_FACTORY</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">OBJECT_FACTORIES</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">URL_PKG_PREFIXES</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">STATE_FACTORIES</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">PROVIDER_URL</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">Context</span><span class="o">.</span><span class="na">DNS_URL</span><span class="o">,</span>
+</span><span class='line'>    <span class="c1">// The following shouldn&#39;t create a runtime dependence on ldap package.</span>
+</span><span class='line'>    <span class="n">javax</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">ldap</span><span class="o">.</span><span class="na">LdapContext</span><span class="o">.</span><span class="na">CONTROL_FACTORIES</span>
+</span><span class='line'><span class="o">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>优先级是environment > applet > systemProperties</p>
+
+<p>最后的env会和application（应用指定的）环境变量合并（如果env没有提供就采用application的，如果env有了，那么就会和application的合并，用逗号分割），如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">mergeTables</span><span class="o">(</span><span class="n">Hashtable</span> <span class="n">props1</span><span class="o">,</span> <span class="n">Hashtable</span> <span class="n">props2</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">Enumeration</span> <span class="n">keys</span> <span class="o">=</span> <span class="n">props2</span><span class="o">.</span><span class="na">keys</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">while</span> <span class="o">(</span><span class="n">keys</span><span class="o">.</span><span class="na">hasMoreElements</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">String</span> <span class="n">prop</span> <span class="o">=</span> <span class="o">(</span><span class="n">String</span><span class="o">)</span><span class="n">keys</span><span class="o">.</span><span class="na">nextElement</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">Object</span> <span class="n">val1</span> <span class="o">=</span> <span class="n">props1</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">prop</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">val1</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">props1</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">prop</span><span class="o">,</span> <span class="n">props2</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">prop</span><span class="o">));</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">isListProperty</span><span class="o">(</span><span class="n">prop</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">String</span> <span class="n">val2</span> <span class="o">=</span> <span class="o">(</span><span class="n">String</span><span class="o">)</span><span class="n">props2</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">prop</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">props1</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">prop</span><span class="o">,</span> <span class="o">((</span><span class="n">String</span><span class="o">)</span><span class="n">val1</span><span class="o">)</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">val2</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最后来看下怎么获取application(应用级别)的环境变量:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kd">static</span> <span class="n">Hashtable</span> <span class="nf">getApplicationResources</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">NamingException</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">ClassLoader</span> <span class="n">cl</span> <span class="o">=</span> <span class="n">helper</span><span class="o">.</span><span class="na">getContextClassLoader</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">propertiesCache</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Hashtable</span> <span class="n">result</span> <span class="o">=</span> <span class="o">(</span><span class="n">Hashtable</span><span class="o">)</span><span class="n">propertiesCache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">cl</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">result</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">NamingEnumeration</span> <span class="n">resources</span> <span class="o">=</span>
+</span><span class='line'>                <span class="n">helper</span><span class="o">.</span><span class="na">getResources</span><span class="o">(</span><span class="n">cl</span><span class="o">,</span> <span class="n">APP_RESOURCE_FILE_NAME</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">while</span> <span class="o">(</span><span class="n">resources</span><span class="o">.</span><span class="na">hasMore</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">Properties</span> <span class="n">props</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Properties</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">props</span><span class="o">.</span><span class="na">load</span><span class="o">((</span><span class="n">InputStream</span><span class="o">)</span><span class="n">resources</span><span class="o">.</span><span class="na">next</span><span class="o">());</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">result</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">result</span> <span class="o">=</span> <span class="n">props</span><span class="o">;</span>
+</span><span class='line'>                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">mergeTables</span><span class="o">(</span><span class="n">result</span><span class="o">,</span> <span class="n">props</span><span class="o">);</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// Merge in properties from file in &lt;java.home&gt;/lib.</span>
+</span><span class='line'>            <span class="n">InputStream</span> <span class="n">istream</span> <span class="o">=</span>
+</span><span class='line'>                <span class="n">helper</span><span class="o">.</span><span class="na">getJavaHomeLibStream</span><span class="o">(</span><span class="n">JRELIB_PROPERTY_FILE_NAME</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">istream</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">Properties</span> <span class="n">props</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Properties</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">props</span><span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="n">istream</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">result</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">result</span> <span class="o">=</span> <span class="n">props</span><span class="o">;</span>
+</span><span class='line'>                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">mergeTables</span><span class="o">(</span><span class="n">result</span><span class="o">,</span> <span class="n">props</span><span class="o">);</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">NamingException</span> <span class="n">ne</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConfigurationException</span><span class="o">(</span>
+</span><span class='line'>                    <span class="s">&quot;Error reading application resource file&quot;</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">ne</span><span class="o">.</span><span class="na">setRootCause</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="n">ne</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">result</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Hashtable</span><span class="o">(</span><span class="mi">11</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="n">propertiesCache</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">cl</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就是使用当前线程的ContextClassLoader去尝试加载两个peropery形式的配置文件：</p>
+
+<ol>
+<li>APP_RESOURCE_FILE = jndi.properties</li>
+<li>&lt;java.home>/lib/jndi.properties</li>
+</ol>
+
+
+<p>这个步骤对于某些jndi容器来说是相当重要的，因为前面提到了环境变量指定方式都需要应用做额外的配置或者写特定的代码，这个步骤就可以让容器的实现者可以将自己的配置放在约定的配置文件里，供jndi使用。比如jetty8的jndi容器实现就是通过<code>classpath://jndi.properties</code>来做配置的:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">java</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">factory</span><span class="o">.</span><span class="na">url</span><span class="o">.</span><span class="na">pkgs</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="na">eclipse</span><span class="o">.</span><span class="na">jetty</span><span class="o">.</span><span class="na">jndi</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="na">naming</span><span class="o">.</span><span class="na">factory</span><span class="o">.</span><span class="na">initial</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="na">eclipse</span><span class="o">.</span><span class="na">jetty</span><span class="o">.</span><span class="na">jndi</span><span class="o">.</span><span class="na">InitialContextFactory</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>之前有个朋友问他的jetty中的应用为什么InitalContext.lookup总是报错，配置不对。实际上就是没有将jetty-jndi-[version].jar依赖进来，这个里面就包含了jndi.properties的配置文件，除非使用jetty-all.jar的集合包，否则要想让jetty提供jndi的功能就一定需要该jar包。</p>
+
+<p>好了通过上面的分析，最后搜集到了所有的环境变量的值，并保存在InitialContext.myProps中，继续初始化defaultInitCtx&hellip;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">(</span><span class="n">Hashtable</span><span class="o">&lt;?,?&gt;</span> <span class="n">environment</span><span class="o">)</span><span class="kd">throws</span> <span class="n">NamingException</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">myProps</span> <span class="o">=</span> <span class="n">ResourceManager</span><span class="o">.</span><span class="na">getInitialEnvironment</span><span class="o">(</span><span class="n">environment</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">myProps</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">INITIAL_CONTEXT_FACTORY</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// user has specified initial context factory; try to get it</span>
+</span><span class='line'>        <span class="n">getDefaultInitCtx</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如果环境变量里指明了INITAL_CONTEXT_FACTORY(java.naming.factory.inital)就开始初始化默认的Context:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="n">Context</span> <span class="nf">getDefaultInitCtx</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">NamingException</span><span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(!</span><span class="n">gotDefault</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">defaultInitCtx</span> <span class="o">=</span> <span class="n">NamingManager</span><span class="o">.</span><span class="na">getInitialContext</span><span class="o">(</span><span class="n">myProps</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">gotDefault</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">defaultInitCtx</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">throw</span> <span class="k">new</span> <span class="nf">NoInitialContextException</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="n">defaultInitCtx</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="n">Context</span> <span class="nf">getInitialContext</span><span class="o">(</span><span class="n">Hashtable</span><span class="o">&lt;?,?&gt;</span> <span class="n">env</span><span class="o">)</span>
+</span><span class='line'>    <span class="kd">throws</span> <span class="n">NamingException</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">InitialContextFactory</span> <span class="n">factory</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">InitialContextFactoryBuilder</span> <span class="n">builder</span> <span class="o">=</span> <span class="n">getInitialContextFactoryBuilder</span><span class="o">();</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">builder</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// No factory installed, use property</span>
+</span><span class='line'>        <span class="c1">// Get initial context factory class name</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">String</span> <span class="n">className</span> <span class="o">=</span> <span class="n">env</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span>
+</span><span class='line'>            <span class="o">(</span><span class="n">String</span><span class="o">)</span><span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">INITIAL_CONTEXT_FACTORY</span><span class="o">)</span> <span class="o">:</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">className</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">NoInitialContextException</span> <span class="n">ne</span> <span class="o">=</span> <span class="k">new</span> <span class="n">NoInitialContextException</span><span class="o">(</span>
+</span><span class='line'>                <span class="s">&quot;Need to specify class name in environment or system &quot;</span> <span class="o">+</span>
+</span><span class='line'>                <span class="s">&quot;property, or as an applet parameter, or in an &quot;</span> <span class="o">+</span>
+</span><span class='line'>                <span class="s">&quot;application resource file:  &quot;</span> <span class="o">+</span>
+</span><span class='line'>                <span class="n">Context</span><span class="o">.</span><span class="na">INITIAL_CONTEXT_FACTORY</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="n">ne</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">factory</span> <span class="o">=</span> <span class="o">(</span><span class="n">InitialContextFactory</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">helper</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">className</span><span class="o">).</span><span class="na">newInstance</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span><span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">NoInitialContextException</span> <span class="n">ne</span> <span class="o">=</span>
+</span><span class='line'>                <span class="k">new</span> <span class="nf">NoInitialContextException</span><span class="o">(</span>
+</span><span class='line'>                    <span class="s">&quot;Cannot instantiate class: &quot;</span> <span class="o">+</span> <span class="n">className</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">ne</span><span class="o">.</span><span class="na">setRootCause</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="n">ne</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">factory</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="na">createInitialContextFactory</span><span class="o">(</span><span class="n">env</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="n">factory</span><span class="o">.</span><span class="na">getInitialContext</span><span class="o">(</span><span class="n">env</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看出创建Context的过程实际上是一个工厂模式，要先找到这个工厂(InitalContextFactory)</p>
+
+<ol>
+<li>首先检查NamingManager中是否配置的有IntialContextFactoryBuilder（Context工厂的工厂），如果有的话就用指定的factoryBuilder创建一个ContextFactory</li>
+<li>否则就用环境变量里java.naming.factory.inital指定的工厂。</li>
+<li>得到工厂后，就用这个工厂去创建这个defaultContext(InitalContext就是这个真正的Context的代理）。</li>
+</ol>
+
+
+<p>至于这个defaultContext是怎么实现的就依赖具体的容器了，只要符合jndi的规范就可以了，但是实际上规范中对这块的要求也是很少的，只是对一些概念和接口做了确定。</p>
+
+<p>回头看来其实jndi的初始化是很简单的，就是简单的指定一些环境变量，特别是<code>INITAL_CONTEXT_FACTORY(java.naming.factory.inital)</code>参数，特工一个真正Context的工厂就行了，连创建的过程都交给具体容器去实现了。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-27T05:27:00+08:00" pubdate data-updated="true">Jul 27<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/07/27/inspect-jndi/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/07/27/inspect-jndi/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/27/gziphandler-in-jetty/" title="Previous Post: Jetty常用handler之GzipHandler">&laquo; Jetty常用handler之GzipHandler</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/08/05/fist-view-of-zookeeper/" title="Next Post: 初识zookeeper">初识zookeeper &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

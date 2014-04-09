@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/09/04/status-of-thread">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Thread的状态</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
+
+<p>Thread的状态是由Thread.State枚举表示的，有下面的6个值：</p>
+
+<h3>NEW</h3>
+
+<p>当线程刚被new出来，并且没有start的时候处于NEW状态</p>
+
+<h3>BLOCKED</h3>
+
+<p>线程被阻塞，一般是由于锁的原因等待进入临界区时候的状态</p>
+
+<h3>RUNNABLE</h3>
+
+<p>正在运行，就算是没有获得CPU时间片的线程也是在RUNNABLE</p>
+
+<h3>WAITING</h3>
+
+<p>顾名思义，线程处于等待状态。它正在等待其他的操作被触发，比如wait()后等待notify()或者notifyAll()；Thread.join()后等待目标线程被结束；LockSupport.park()后等待LockSupport.unpark()。</p>
+
+<p>注意，在调用wait()后会首先进入WAITING状态，如果被notify()了，并且无法获得锁并进入临界区，那么就在BLOCKED；如果进入临界区了，那么就是RUNNABLE</p>
+
+<h3>TIMED_WAITING</h3>
+
+<p>相比WAITING状态，只是多了一个时间参数，比如Thread.sleep(10)，object.wait(10)等等。</p>
+
+<h3>TERMINATED</h3>
+
+<p>运行完毕</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/09/04/status-of-thread/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/09/04/status-of-thread/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/" title="Previous Post: 理解GC暂停 - Hotspot中的minor gc[译]">&laquo; 理解GC暂停 - Hotspot中的minor gc[译]</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/09/05/settimeout-and-setinterval/" title="Next Post: setTimeout和setInterval">setTimeout和setInterval &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

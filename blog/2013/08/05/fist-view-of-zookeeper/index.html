@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="zookeeper是apache基金会下的一个高可用的分布式数据管理和协调框架，它最初也是hadoop下的一个子项目被用于hadoop生态系统中，但是随着被大家的不断挖掘，zookeeper有了更广泛的应用(应用场景可以参见这里). 如何搭建单机版的zookeeper服务 1. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/08/05/fist-view-of-zookeeper">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">初识zookeeper</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-05T01:27:00+08:00" pubdate data-updated="true">Aug 5<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>zookeeper是apache基金会下的一个高可用的分布式数据管理和协调框架，它最初也是hadoop下的一个子项目被用于hadoop生态系统中，但是随着被大家的不断挖掘，zookeeper有了更广泛的应用(应用场景可以参见<a href="http://rdc.taobao.com/team/jm/archives/1232">这里</a>).</p>
+
+<h2>如何搭建单机版的zookeeper服务</h2>
+
+<p>1.下载zookeeper</p>
+
+<p>2.创建配置文件conf/zoo.cfg，并加入下面的配置信息：</p>
+
+<pre><code>tickTime=2000
+dataDir=/var/lib/zookeeper
+clientPort=2181
+</code></pre>
+
+<p>完整的配置参数请参见<a href="http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_configuration">官方文档</a>.</p>
+
+<p>3.启动zookeeper服务</p>
+
+<pre><code>bin/zkServer.sh start
+</code></pre>
+
+<h2>测试</h2>
+
+<p>可以直接使用bin/zkCli.sh这个脚本提供的java客户端来进行测试，该脚本的内容也非常简单:</p>
+
+<ol>
+<li>执行zkEnv.sh设置环境变量</li>
+<li>执行org.apache.zookeeper.ZooKeeperMain</li>
+</ol>
+
+
+<p><code>bin/zkCli.sh -server host:port</code>来启动客户端，或者直接使用zkCli.sh来连接localhost:2181，连接上后可以使用help命令来查看所有客户端支持的命令：</p>
+
+<pre><code>connect host:port
+get path [watch]
+ls path [watch]
+set path data [version]
+rmr path
+delquota [-n|-b] path
+quit
+printwatches on|off
+create [-s] [-e] path data acl
+stat path [watch]
+close
+ls2 path [watch]
+history
+listquota path
+setAcl path acl
+getAcl path
+sync path
+redo cmdno
+addauth scheme auth
+delete path [version]
+setquota -n|-b val path
+</code></pre>
+
+<p>例如：</p>
+
+<ol>
+<li>查看根路径: ls /</li>
+<li>创建一个znode(节点): create /fish helloworld</li>
+<li>查看一个节点: get /fish</li>
+<li>重新设置一个节点的内容: set /fish hello</li>
+</ol>
+
+
+<h2>关闭zookeeper</h2>
+
+<pre><code>bin/zkServer.sh stop
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-05T01:27:00+08:00" pubdate data-updated="true">Aug 5<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/08/05/fist-view-of-zookeeper/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/08/05/fist-view-of-zookeeper/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/07/27/inspect-jndi/" title="Previous Post: JNDI环境初始化深入分析">&laquo; JNDI环境初始化深入分析</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/08/12/timeout-in-different-browser/" title="Next Post: 不同浏览器支持的最小时间精度">不同浏览器支持的最小时间精度 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

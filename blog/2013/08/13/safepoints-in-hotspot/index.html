@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="原文链接 术语Stop-The-World(STW)通常和垃圾搜集相关。虽然GC是STW暂停的最主要原因，但并不是唯一的原因。 Safepoints 在Hotspot虚拟机中Stop-The-World暂停机制被称作safepoint。在safepoint期间，所有运行java代码的线程都会被挂起 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Hotspot中的safepoints[译]</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://blog.ragozin.info/2012/10/safepoints-in-hotspot-jvm.html">原文链接</a></p>
+
+<p>术语Stop-The-World(STW)通常和垃圾搜集相关。虽然GC是STW暂停的最主要原因，但并不是唯一的原因。</p>
+
+<h2>Safepoints</h2>
+
+<p>在Hotspot虚拟机中Stop-The-World暂停机制被称作safepoint。在safepoint期间，所有运行java代码的线程都会被挂起。运行本地代码的线程都会继续执行，直到与JVM进行交互（比如调用java的方法或者从本地代码返回到java代码）。</p>
+
+<p>在暂停所有的线程时，要求safepoint的发起者具有JVM数据的排他访问权限，这样就可以做很多疯狂的事情，比如在堆中移动数据或者替换正在运行的方法中的代码。</p>
+
+<h2>Safepoint是怎么工作的？</h2>
+
+<p>Hotspot JVM中的safepoint是一种协作性的协议。所有的应用程序线程会检查safepoint的状态，当需要进入safepoint的时候，线程会暂停自己并且保持在一个安全的状态下。</p>
+
+<p>对于已经被编译的代码（JIT编译），JIT编译器会在某些代码点插入safepoint检查代码（一般是在调用返回的时候或者是循环退出的时候）。对于解释执行的代码，JVM有两个字节码分发表(byte code dispatch table)，当需要进入safepoint的时候，JVM会在这两个表之间切换以便做safepoint检查。</p>
+
+<p>safepoint状态检查实现的非常巧妙，普通的内存变量检查需要内存屏障的支持。safepoint检查以读取内存屏障的方式实现。当需要safepoint的时候，JVM取消对应用程序线程中导致页错误的地址映射（由JVM直接处理）。这样，Hotspot可以让经过JIT编译的代码保持CPU流水线的友好性，同时也保证了正确的内存语义。</p>
+
+<h2>什么时候会触发safepoints</h2>
+
+<p>下面是Hotspot JVM中会触发safepoints的一些原因：</p>
+
+<ol>
+<li>垃圾回收</li>
+<li>代码优化</li>
+<li>刷新缓存</li>
+<li>类重定义(比如hotswap或者instrumentation)</li>
+<li>撤销偏向锁</li>
+<li>多种调试操作(比如死锁检查，运行栈dump)</li>
+</ol>
+
+
+<h2>safepoints问题排查</h2>
+
+<p>通常情况下safepoints会经常存在并一直工作者，因此你并不需要怎么关系它（大多数情况下，除了GC，都非常快速和短暂）。如果由于偶然的因素破坏了safepoint的正常工作，就会让事情变得很糟，因此下面是一些有用的诊断方法：</p>
+
+<ol>
+<li><p><code>-XX:+PrintGCApplicationStoppedTime</code>:该选项会报告所有safepoints的暂停时间（与GC相关的或者不相关的）。但是不幸的是，这个选项的输出缺少时间戳信息，但是它仍然可以帮助定位问题。</p></li>
+<li><p><code>-XX:+PrintSafepointStatistics和-XX:PrintSafepointStatisticsCount=1</code>:这两个选项会强制JVM在safepoint后报告发生safepoint的原因及耗时（仅会输出到stdout，不会输出到GC日志(log)里）</p></li>
+</ol>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/08/12/timeout-in-different-browser/" title="Previous Post: 不同浏览器支持的最小时间精度">&laquo; 不同浏览器支持的最小时间精度</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/08/13/serial-paiallel-cms-in-hotspot/" title="Next Post: Hotspot的垃圾回收：串行、并行和CMS[译]">Hotspot的垃圾回收：串行、并行和CMS[译] &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

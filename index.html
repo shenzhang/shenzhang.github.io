@@ -9,7 +9,15 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="jetty中的org.eclipse.jetty.server.handler.ScopedHandler主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的， &hellip;">
+  <meta name="description" content="1.生命周期 Clean pre-clean
+clean
+post-clean Default validate
+initialize
+generate-sources
+process-sources
+generate-resources
+process-resources
+compile &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,7 +77,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a></h1>
     
     
       <p class="meta">
@@ -85,488 +93,64 @@
   
 
 
-<time datetime="2013-07-26T03:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
+<time datetime="2013-09-15T01:27:00+08:00" pubdate data-updated="true">Sep 15<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>jetty中的<code>org.eclipse.jetty.server.handler.ScopedHandler</code>主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的，后面仔细看了之后觉得实际上他就是想实现一个具有以下执行流程的HandlerWrapper:</p>
+  <div class="entry-content"><h2>1.生命周期</h2>
 
-<pre><code> A.handle(...)
-   A.doScope(...)
-     B.doScope(...)
-       C.doScope(...)
-         A.doHandle(...)
-           B.doHandle(...)
-              C.doHandle(...)  
+<h3>Clean</h3>
+
+<pre><code>pre-clean
+clean
+post-clean
 </code></pre>
 
-<p>其中A包含B，B包含C。该执行流程主要应用在WebAppContext中。WebAppContext包含了SessionHandler,SecurityHandler, ServletHandler，但是从request的流程来看实际上是WebAppContext->SessionHandler->SecurityHandler->ServletHandler，所有后续执行逻辑都是被包含在前面的handler逻辑中的，或者所起堆栈是嵌套的。这样最大的好处是环境（context）共享和异常处理。内部的逻辑必须是在外部逻辑创造的环境内执行，比如所ServletHandler必须是在SessionHandler初始化好的session环境中处理。</p>
-
-<p>因此ScopedHandler需要两个过程：</p>
-
-<p><em>doScope:</em> 进入环境，并做响应的环境初始化,并在其中调用子handler的doScope，最后再做退出环境的逻辑。</p>
-
-<p><em>doHandler:</em> 执行该handler真正要处理的事情，并在其中调用子handler的doScope</p>
-
-<p>拿SessionHandler举例，它的doScope就是将session恢复好，并且再调用子handler的doScope进一步对SecurityHandler做环境初始化；它的doHandler实际上就没有做任何事情，仅仅是调用子handler的doHandler：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">never</span><span class="o">())</span>
-</span><span class='line'>        <span class="n">nextHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_nextScope</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">_nextScope</span> <span class="o">==</span> <span class="n">_handler</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_nextScope</span><span class="o">.</span><span class="na">doHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_handler</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>doScope的递归调用还算比较简单，但是如何从最底层的handler.doScope回到最上层的handler.doHandler呢，而且是嵌套的调用？</p>
-
-<p>ScopedHandler实际上维护了两个变量：</p>
-
-<p><em>_nextScope:</em> 指向下一个子handler</p>
-
-<p><em>_outterScope</em> 指向最外层的handler</p>
-
-<p>初始化：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doStart</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>        <span class="k">try</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="n">_outerScope</span><span class="o">=</span><span class="n">__outerScope</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="kd">super</span><span class="o">.</span><span class="na">doStart</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="n">_nextScope</span><span class="o">=</span> <span class="o">(</span><span class="n">ScopedHandler</span><span class="o">)</span><span class="n">getChildHandlerByClass</span><span class="o">(</span><span class="n">ScopedHandler</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">finally</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这里的_outerScope的初始化我觉得实在是不优雅，显然整个jetty中那个最先初始化的ScopedHandler将会作为所有ScopedHandler的outerScope，显然不能再jetty中提供多个顶层ScopedHandler，这个需求可能是针对WebAppContext专门设计的，但是有点不符合Jetty这种灵活的可插拔式的定义。哪怕通过set方法主动设值都要好的多。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-26T01:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>IE6的bug本来是再寻常不过的事了，感觉表现正常了反而感觉不正常，但是背景图片缓存的bug对整个应用的影响太大了，最后找了半天在stackoverflow上找到了解决方案，在页面加载之初执行下面的语句：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nb">document</span><span class="p">.</span><span class="nx">execCommand</span><span class="p">(</span><span class="s2">&quot;BackgroundImageCache&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>自己试了下确实完美解决了问题，但是还是不明白该BackgroundImageCache参数是什么意思，会对IE6造成怎样的影响，找了半天MSDN的文档都没有发现该参数，最后在<a href="http://support.microsoft.com/kb/823727/en-us">这里</a>找到了答案.</p>
-
-<p>原来这个可以说是IE6的一个BUG，进而让微软出了一个针对sp1的hotfix来修复该BUG，但是要想激活该pach就需要执行该语句，因此该参数是没有记录在MSDN手册中的也仅仅是对IE6 SP1有效。</p>
-
-<p>但是微软对该bug的描述实在是轻描淡写啊：</p>
-
-<blockquote><p>&ldquo;This problem may occur over a long time (for example, several hours) when you run a script that constantly changes the background color of a button that also contains a background image.&rdquo;</p></blockquote>
-
-<p>实际情况是只要改变任意的style，其元素并且所有子元素的background-image都要重新向服务器请求，这个不但导致浏览器内存升高，还导致服务器的压力增大，页面背景闪烁等多重问题。</p>
-
-<p>没办法，能有解决方法已经谢天谢地了。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-25T04:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>java中的死锁是各式各样的，但是类的静态初始化块死锁却很少被人提到。</p>
-
-<p>实际上jvm对同一个类的静态初始化块的初始化肯定是原子的，而且是限于当前线程内部，死锁主要是发生在不同类静态初始化交叉引用的并发初始化场景。</p>
-
-<p>举个例子，类B的static块应用了C，C的static块引用了B，显然这发生了循环引用，但是如果这种引用发生在同一个线程内，那么jvm可以很好的处理这种循环引用，一般后引用的类会优先初始化，也就是说实际初始化顺序是B > C。</p>
-
-<p>但是，如果这种循环引用出现在了多个线程内，那么就有可能发生死锁，比如：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">B</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;BB&quot;</span><span class="o">;</span>
-</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before B init&quot;</span><span class="o">);</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
-</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B timeout&quot;</span><span class="o">);</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B init&quot;</span><span class="o">);</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">C</span> <span class="o">{</span>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;CC&quot;</span><span class="o">;</span>
-</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before C init&quot;</span><span class="o">);</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
-</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C timeout&quot;</span><span class="o">);</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C init&quot;</span><span class="o">);</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这个时候线程b中引用了B对象，线程c引用了C对象，在两个线程的sleep时间到了后就发生了死锁，因为B的初始化锁被线程b占有，C的初始化锁被c占有。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-25T01:27:00+08:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>jdk1.2之后提供了四个可以直接和GC交互的Reference:</p>
-
-<ul>
-<li>FinalReference</li>
-<li>SoftReference</li>
-<li>WeakReference</li>
-<li>PhantomReference</li>
-</ul>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/25/collection-for-reference-in-java/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-24T02:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>java中的文件操作一般都是要通过FileOutputStream/FileInputStream，这两个类可以获得channel通过NIO的手段来操作，或者是通过RandomAccessFile.getChannel()来获得channel并使用NIO。</p>
-
-<p>其实不论FileOutputStream还是RandomAccessFile，都会有一个打开文件的动作，打开文件的结果都会是产生一个FileDescriptor，可以通过<code>FileOutputStream.getDescrptor()</code>或<code>RandomAccessFile.getDescriptor()</code>来获得。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/**</span>
-</span><span class='line'><span class="cm"> * The system dependent file descriptor.</span>
-</span><span class='line'><span class="cm"> */</span>
-</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">FileDescriptor</span> <span class="n">fd</span><span class="o">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>实际上就如同名字所表示的，这个就是一个文件描述符，或者在windows里面讲就是一个文件句柄（HANDLE），所有的系统调用都需要这个文件描述符作为参数。</p>
-
-<p>再来看以下几个构造函数：</p>
-
-<p><em>RandomAccessFile(String name, String mode):</em> 该方法会调用RandomAccessFile(File name, String mode)</p>
-
-<p><em>RandomAccessFile(File name, String mode):</em> 根据File对象打开文件，产生FileDescriptor，但是目标File不会做改动，position的位置在0</p>
-
-<p><em>FileOutputStream(File file):</em> 该方法会调用FileOutputStream(File file, false)</p>
-
-<p><em>FileOutputStream(File file, boolean append):</em> 根据File打开文件,如果append = true，目标file不变，position在文件尾；如果append = false,目标文件会被truncate为0，等同于删除并重新创建了这个文件，也就是清空这个文件。并在最后都生成对应的FileDescriptor</p>
-
-<p><em>FileOutputStream(FileDescriptor fd):</em> 由于参数是FileDescriptor，说明这个文件已经是被打开了的，因此该构造函数实际上不会做任何操作，只是将这个fd保存下来，供以后的操作使用。</p>
-
-<p>因此，我们最经常使用的FileOutputStream(File file)这个构造函数是会自动将文件进行truncate操作的，这个需要注意。</p>
-
-<p>对文件的操作实际上都是使用FileDescriptor，因此普通文件操作和获得channel后的nio操作都共享一个fd，也就是说在普通写操作后，对应channel.getPosition也会同样被移动了。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/24/jit-in-hotspot/">hotspot中的JIT</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。</p>
-
-<p>当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置<code>-XX:CompileThreshold=10000</code>来进行指定。</p>
-
-<p>在jvm运行的时候加上<code>-XX:+PrintCompilation</code>可以开启JIT编译信息，当有方法被JIT编译时，就会在stdout中输出，该选项可以更好的进行调试和优化。</p>
-
-<p>但是有一个例外，当一个方法body很大时，jvm不一定会对它进行JIT编译，在hotspot中这个方法的大小是8000字节，但是我们可以通过加上<code>-XX:-DontCompileHugeMethods</code>参数禁止这种策略，保证所有方法都可以被JIT编译，但是最好不要关闭这个特性！</p>
-
-<p>因此很多时候我们总是担心过多的调用很多小方法会影响执行效率，其实jvm会用jit来帮我们做很多优化，而且就像上面提到的并不是将多个小方法合并到一个大方法中就一定会有更好的效果，可能会被jvm坑了。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/23/stop-suspend-resume-of-thread/">Thread中的stop, Suspend, Resume方法</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-23T02:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>这三个方法都被标记为了deprecated，下面就来分析下原因。</p>
-
-<h2>stop()和stop(Throwable e)</h2>
-
-<p>这个方法会无条件的终止一个子线程，并且在子线程的当前执行的地方抛出传入的异常。如果调用stop()函数，则e = ThreadDeath异常。这个异常会一直向上传播，最终导致所有该子线程所具有的锁都被释放。</p>
-
-<p><em>废弃原因：</em>
-该方法太过于暴力，可能会让某些处于锁保护的关键区域（对象初始化）还没有完毕就退出，进一步导致这些对象或者操作处于一种不一致的状态，并暴露给系统的其他部分。</p>
-
-<h2>suspend,resume</h2>
-
-<p>这两个方法需要配合起来，suspend会暂时挂起一个线程，resume可以恢复挂起的线程</p>
-
-<p><em>废弃原因：</em>
-这两个方法会非常容易导致死锁。因为suspend在挂起一个线程的时候不会释放当前线程上的锁，如果该线程在被resume之前刚好需要请求这些锁，那么resume将永远不会执行，死锁就发生了。下面是我随便写的demo，本来想看看效果，但是却不幸的发生了死锁，可见该方法多么危险：</p>
+<h3>Default</h3>
+
+<pre><code>validate
+initialize
+generate-sources
+process-sources
+generate-resources
+process-resources
+compile
+process-classes
+generate-test-sources
+process-test-sources
+generate-test-resources
+process-test-resources
+test-compile
+process-test-classes
+test
+prepare-package
+package
+pre-integration-test
+integration-test
+post-integration-test
+verify
+install
+deploy
+</code></pre>
+
+<h3>Site</h3>
+
+<pre><code>pre-site
+site
+post-site
+site-deploy
+</code></pre>
+
+<h2>2.插件绑定</h2>
+
+<p>maven在不同的生命周期中会按顺序进入不同的阶段，每个阶段又会执行与该阶段绑定的plugins。如何将plugins绑定到生命周期中呢，maven-compile-plugin又是怎么知道在每次的compile阶段执行的呢？</p>
+
+<p>plugin绑定到生命周期中需要在pom.xml中的<build>=><plugins>中进行声明，有些是在pom.xml中，有些可能是在super pom中，有些甚至是maven默认的绑定，但是最终都会出现在effective pom中（mvn help:effective-pom查看)。</p>
+
+<p>那么具体是在哪个阶段执行呢？看effective pom中对maven-compile-plugin的描述：</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -588,58 +172,38 @@
 <span class='line-number'>18</span>
 <span class='line-number'>19</span>
 <span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">import</span> <span class="nn">java.util.concurrent.TimeUnit</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ThreadDemo</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">ThreadDemo</span> <span class="n">thread</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ThreadDemo</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">setDaemon</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">suspend</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;suspended&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">resume</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;resumed&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">thread</span><span class="o">.</span><span class="na">isAlive</span><span class="o">());</span>
-</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>      <span class="k">while</span> <span class="o">(!</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;running &quot;</span> <span class="o">+</span> <span class="n">i</span><span class="o">++);</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>  <span class="nt">&lt;plugin&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>maven-compiler-plugin<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;version&gt;</span>2.3.2<span class="nt">&lt;/version&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;executions&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-testCompile<span class="nt">&lt;/id&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>test-compile<span class="nt">&lt;/phase&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>testCompile<span class="nt">&lt;/goal&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-compile<span class="nt">&lt;/id&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>compile<span class="nt">&lt;/phase&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>compile<span class="nt">&lt;/goal&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/executions&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/plugin&gt;</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>调试发现主线程阻塞到了System.out.println(&ldquo;suspended&rdquo;)处，并且产生了死锁，分析原因如下：
-子线程调用了out.println()，但是该方法会请求out对象上的锁：</p>
+<p>主要是在phase节点和goals节点，上面的配置说明了maven-compile-plugin被分别绑定到了compile阶段和test-compile阶段，并且分别执行该插件的compile goal和testCompile goal。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">println</span><span class="o">(</span><span class="n">String</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">print</span><span class="o">(</span><span class="n">x</span><span class="o">);</span>
-</span><span class='line'>        <span class="n">newLine</span><span class="o">();</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<p>另外有些plugin可能并没有在pom.xml中说明具体的执行阶段，那么就要看该插件中的/META-INF/maven/plugin.xml插件描述文件了，该描述文件说明了该plugin的前缀(goalPrefix)，所有的mojos或者说是goal，并且这些goal的名字以及默认的执行阶段，比如compile:testCompile节点就说明了&lt;phase&gt;test-compile&lt;/phase&gt;。因此如果没有在pom.xml中说明执行阶段的话，就按照该plugin的goal的自描述中的phase进行绑定。</p>
 
+<h2>3.effective-xx</h2>
 
-<p>子线程被suspend后该锁却并没有释放，主线程又接着调用out.pritln(&ldquo;suspended&rdquo;)，自然会被block，然后产生死锁！</p>
+<p>maven有关于自己运行的配置文件settings.xml，该文件可以是$MAVEN_HOME/conf/settings.xml或者$USER/.m2/setttings.xml，并且后者会覆盖前者，可以通过mvn help:effective-settings查看相对于默认的settings.xml所改变的部分。</p>
+
+<p>同样，前面提到的effective-pom也是由多个部分合并而来，首先是项目下的pom.xml，然后是maven的super pom($MAVEN_HOME/lib/maven-model-builder-x.x.x.jar#org/apache/maven/model/pom-x.x.x.xml)，还有一些是maven针对不同的生命周期默认绑定的插件信息($MAVEN_HOME/lib/maven-core-x.x.x.jar#/META-INF/plexus/components.xml)。最终的pom可以通过help:effective-pom查看)</p>
 </div>
   
   
@@ -652,7 +216,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/07/23/gc-in-hotspot/">hotspot中的不同GC算法</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a></h1>
     
     
       <p class="meta">
@@ -668,79 +232,34 @@
   
 
 
-<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+<time datetime="2013-09-13T01:27:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。</p>
+  <div class="entry-content"><p>maven中一些常用的scope及其介绍。</p>
 
-<h2>-XX:+UseSerialGC</h2>
+<h3>compile:</h3>
 
-<p>串行垃圾搜集算法，具体表现为：</p>
+<p>maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用.</p>
 
-<p>新生代：</p>
+<h3>runtime:</h3>
 
-<pre><code>[DefNew: 34944K-&gt;3031K(39296K), 0.0264555 secs] 34944K-&gt;3031K(126720K), 0.0265033 secs] [Times: user=0.03 sys=0.00, real=0.03 secs] 
-</code></pre>
+<p>在compile相关的阶段都不会起作用，仅仅是在运行(runtime)或者测试(test)的时候有效。</p>
 
-<p>老年代：</p>
+<h3>provided:</h3>
 
-<pre><code>[GC [DefNew: 37824K-&gt;37824K(39296K), 0.0000274 secs][Tenured: 84770K-&gt;87423K(87424K), 0.6707186 secs] 122594K-&gt;90531K(126720K), [Perm : 2963K-&gt;2963K(12288K)], 0.6708503 secs] [Times: user=0.67 sys=0.00, real=0.67 secs] 
-</code></pre>
+<p>和compile类似，但是往往这些依赖不需要随应用一起发布，一般是由外部环境或者容器来提供，不需要自己准备，比如说servlet-api, jsp-api这些都可以由container提供。</p>
 
-<p>Full:</p>
+<h3>test:</h3>
 
-<pre><code>[Full GC [Tenured: 87423K-&gt;87423K(87424K), 0.9254085 secs] 126719K-&gt;106207K(126720K), [Perm : 2962K-&gt;2962K(12288K)], 0.9254837 secs] [Times: user=0.92 sys=0.00, real=0.92 secs]
-</code></pre>
+<p>这个最好理解，仅仅是在测试的时候有用，compile和runtime都不需要</p>
 
-<h2>-XX:+UseParallelGC</h2>
+<h3>system:</h3>
 
-<p>并行垃圾搜集算法，新生代使用并行，老年代使用Mark-Sweep-Compact(标记，清除，压缩）</p>
-
-<p>新生代：</p>
-
-<pre><code>[GC [PSYoungGen: 35680K-&gt;5432K(38208K)] 35680K-&gt;5636K(125632K), 0.0153779 secs] [Times: user=0.01 sys=0.00, real=0.02 secs]
-</code></pre>
-
-<p>full：</p>
-
-<pre><code>[Full GC [PSYoungGen: 32768K-&gt;7374K(38080K)] [PSOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;94798K(125504K) [PSPermGen: 2963K-&gt;2963K(12288K)], 0.4979593 secs] [Times: user=0.50 sys=0.00, real=0.50 secs]
-</code></pre>
-
-<h2>-XX:+UseParallelOldGC</h2>
-
-<p>并行垃圾搜集，老年代和新生代都是并行垃圾搜集</p>
-
-<p>新生代：</p>
-
-<pre><code>[GC [PSYoungGen: 27552K-&gt;2144K(34432K)] 74201K-&gt;50809K(121856K), 0.0170400 secs] [Times: user=0.06 sys=0.00, real=0.02 secs]
-</code></pre>
-
-<p>full：</p>
-
-<pre><code>[Full GC [PSYoungGen: 32768K-&gt;18745K(38080K)] [ParOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;106169K(125504K) [PSPermGen: 2962K-&gt;2962K(12288K)], 0.9138238 secs] [Times: user=3.13 sys=0.00, real=0.92 secs] 
-</code></pre>
-
-<h2>-XX:+UseConcMarkSweepGC</h2>
-
-<p>标记清除算法，每次只清除一部分死亡对象，基本不会造成stop the world，但是会有内存碎片可以配合以下选项来对碎片问题进行优化：</p>
-
-<pre><code>-XX:+UseCMSCompactAtFullCollection:让full gc的时候，顺便对内存进行整理
--XX:+CMSFullGCsBeforeCompact: 多少次full gc后，再执行full gc时就进行内存整理
-</code></pre>
-
-<p>从算法行为上来说有4种类型：</p>
-
-<ol>
-<li>Mark-sweep:标记清除，缺点是会有大量内存碎片</li>
-<li>复制算法(copying)：简单高效，把存货的对象从一个区域复制到另一个区域，但是在存活率较高的情况下效率会变低（某个对象总是存活，那么自然就要来回复制，如果这些对象生命周期都很短，那么在GC的时候直接就不用复制到另一个区域了）</li>
-<li>标记整理（Mark-compact)：同标记清除类似，但是后续操作不是清除死亡的对象，而是把所有存活的对象往内存一边移动，将另外以便的内存所有都清理掉。</li>
-<li>分代搜集(具体到每一代又采用了上述三种算法）。</li>
-</ol>
-
+<p>有些依赖是仓库没有的，那么可以通过使用system范围来告诉maven在指定的本地路径上查找依赖。因此需要在dependency中指定systemPath元素，告诉maven依赖的具体位置。一般来说是不应该使用该范围的，很可能大家不能共享你的配置。</p>
 </div>
   
   
@@ -753,7 +272,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/07/18/launchd-in-macos/">Launchd in MacOS</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a></h1>
     
     
       <p class="meta">
@@ -769,55 +288,29 @@
   
 
 
-<time datetime="2013-07-18T01:27:00+08:00" pubdate data-updated="true">Jul 18<span>th</span>, 2013</time>
+<time datetime="2013-09-12T01:27:00+08:00" pubdate data-updated="true">Sep 12<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>在《mac下jdk7的乱码分析》中提到了/etc/launchd.conf文件可以作为mac中的系统启动配置文件，类似于/etc/rc.local或init文件，因此对mac的launchd框架做了下了解，边看wiki边把自己的理解记录下来。</p>
+  <div class="entry-content"><p>repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。</p>
 
-<p>launchd是一个开源的服务管理框架，由apple的Dave Zarzycki设计和开发，可以管理系统范围内的服务、应用、进程以及脚本。launchd可以用来代替：init, rc, init.d脚本,rc.d脚本,SystemStarter, inetd/xinetd, crond/atd, watchdogd。确实感觉非常强大，apple设计它就是用来代替这些传统linux组件的，好处显而易见，首先可以让系统管理更加简单，其次就是提高运行效率特别是可以显著缩短开机时间。另外launchd框架不仅仅可以用于osx中，还可以在其他的系统中使用。</p>
+<p>那么可以自己准备对应的源码包：hadoop-core-1.0.4-srouces.jar并安装到本地仓库中。</p>
 
-<p>在launchd系统中有两个重要的组件：launchd服务和launchctl接口</p>
+<pre><code>mvn install:install-file -Dfile=e:\hadoop-core-1.0.4-sources.jar -DgroupId=org.apache.hadoop -DartifactId=hadoop-core -Dversion=1.0.4 -DgeneratePom=false -Dpackaging=java-source
+</code></pre>
 
-<p>launchd服务作为传统init进程，在mac中的PID为1，是系统启动的第一个进程，并且由它负责将系统启动起来。在/Libaray/LaunchAgents和/Libaray/LaunchDaemons目录中有一些配置文件用来控制lauchd启动服务的参数。</p>
+<p>注意<code>packaging=java-source</code>，不要使用<code>packaging=jar</code></p>
 
-<p>launchctl接口是一个命令行的应用程序，可以与launchd服务通信是launchd服务提供的用户接口，可以控制launchd管辖的服务，启动或停止任务，获取或设置一些系统参数，比如ulimit的参数就可以通过launchctl来控制。</p>
+<p>从中我们可以推测maven打包和依赖查找的机制：</p>
 
-<h2>launchd</h2>
+<p>我们发布一个包，指定了groupId, artifacteId, version, packaging，那么maven会自动帮我们给要发布的文件重命名：</p>
 
-<p>launchd主要有两个职责：开机的时候启动系统；加载和管理所有的服务。</p>
-
-<p>OSX的启动顺序大致如下：</p>
-
-<ol>
-<li><a href="http://en.wikipedia.org/wiki/Open_Firmware">Open Firmware</a>激活，初始化硬件并加载BootX.</li>
-<li><a href="http://en.wikipedia.org/wiki/BootX_(Apple\">BootX</a>)加载内核，并且加载需要的内核扩展(kexts)</li>
-<li>内核加载launchd</li>
-<li>launchd运行/etc/rc，扫描/System/Library/LaunchAgents和/System/Library/LaunchDaemons目录，根据需要读取其中的plist文件配置，最后启动登陆窗口</li>
-</ol>
-
-
-<p>在第四步，launchd会扫描一些不同的目录，但是主要包括两类：LaunchDaemons和LaunchAgents。LaunchDaemons中包含了那些需要以root身份运行的，并且是作为后台服务的进程；LaunchAgents包含了很多任务(agent应用)，会运行在用户环境。</p>
-
-<p>最重要的是launchd不同于SystemStarter，它不会在系统启动的时候真正启动所有的服务，它的思想类似与xinetd，是一种按需加载。在系统启动的时候，它会扫描所有jobs的plist文件，如果plist中包含了OnDemand键的话，那么该服务就不会在启动的时候立刻加载，launchd会一直保持监听状态，如果有其他程序需要该服务，那么launchd就会立刻将它启动起来，如果不再有需要了，launchd又会将它关闭。如果一个服务已经启动了，launchd又会像watchlog一样对这些服务保持监控，如果有哪个服务出现异常launchd还会重新启动它。</p>
-
-<h2>launchctl</h2>
-
-<p>在OSX中，可以使用launchctl来集中对服务进行管理。可以通过控制台、标准输入或者交互模式来对launchctl发送命令，一些永久的命令还可以写在/etc/launchd.conf中，或者对于不同的用户写在~/.launchd.conf中(不是所有的OSX都支持)。更多launchctl的参数可以参见man手册。</p>
-
-<h2>Property list</h2>
-
-<p>Property list(plist)文件被用来向launchd提供程序的启动配置，当launchd扫描这个文件或者通过launchctl提交一个job，launchd就会读取这个job对应的plist文件来决定怎样启动它。常用的plist参数包括：</p>
-
-<pre><code>Label:job的名称，模式是plist文件的名称，比如说fish.plist，那么默认的Label就是fish
-Program:程序的路径
-ProgramArguments:运行参数。（Program或者ProgramArguments必须要至少指定一个）
-UserName:以哪个用户来运行该job
-RunAtLoad:是否加载之后就立刻运行(默认是NO）
-WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired的目录。
+<pre><code>packaging=jar =&gt; artifacteId-version.jar
+packaging=java-srouce =&gt; artifacteId-version-sources.jar
+packaging=java-doc =&gt; artifacteId-version-doc.jar
 </code></pre>
 </div>
   
@@ -831,7 +324,7 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Mac下jdk7的乱码分析</a></h1>
+      <h1 class="entry-title"><a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a></h1>
     
     
       <p class="meta">
@@ -847,21 +340,468 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   
 
 
-<time datetime="2013-07-13T01:27:00+08:00" pubdate data-updated="true">Jul 13<span>th</span>, 2013</time>
+<time datetime="2013-09-11T01:27:00+08:00" pubdate data-updated="true">Sep 11<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样，甚至连JAVA_HOME怎么设置都不太确定，看了下官方的介绍大致明白了，也知道了java_home这个工具，确实有点意思。最后打开eclipse，添加了新的jre，配置了src，正准备继续工作时出现了最悲剧的事情，所有以中文命名的文件夹、包和文件都显示不出来了，但是本地却是实际存在的，进一步发现用eclipse新创建的中文名文件可以正常显示，但是在finder中确是？了。在网上粗略搜了下，原来很多同学都遇到了这个情况，所有的建议都是删除1.7，重新使用apple的1.6版本。由于这也不算是长久之计，因此打算自己排查下问题的原因。</p>
+  <div class="entry-content"><p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
 
 </div>
   
   
     <footer>
-      <a rel="full-article" href="/blog/2013/07/13/charset-for-jdk7-in-macos/">Read on &rarr;</a>
+      <a rel="full-article" href="/blog/2013/09/11/jasmine/">Read on &rarr;</a>
     </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-10T01:27:00+08:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系，不能用SeaJS的风格来使用RequireJS吧。</p>
+
+<p>今天粗略看了下SeaJS的源码，不对源码的细节进行分析，仅仅对其模块的组织和加载原理做简单的分析，知道了原理剩下的就是代码效率和浏览器兼容性的问题了。</p>
+
+<p>主要解决一下问题：</p>
+
+<ol>
+<li>怎么用SeaJS</li>
+<li>怎么解析、加载和执行模块</li>
+<li>模块标识符（依赖名）的path解析</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/09/10/inspect-seajs/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/05/settimeout-and-setinterval/">setTimeout和setInterval</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
+
+<h3>setInterval:</h3>
+
+<p>可以定期按照一定的频率做一个事情，比如funA。但是如果funA中抛出了异常会怎样呢？  firefox和chrome不会因为抛出异常而做出什么奇怪的事情，毕竟调用setInterval只是告诉浏览器我要定期做一个事情，哪怕这个事情出错了；但是IE却在出现异常后停止继续定期做这个事情，所以千万要保证funA中的事情一定不要有异常出现。</p>
+
+<h3>setTimeout:</h3>
+
+<p>延时一段时间做某个事情funcB。比如：</p>
+
+<p>setTimeout(tick, 1000)会在1秒之后将tick加入到事件队列中准备执行，并且tick方法的arguments是空的，但是在firefox13以下的tick的arguments却不一定是空的，有可能会有一个表示延时时间的数值(小于0)来表示执行该函数比预期时间推后了多少。新版本的firefox已经解决了该问题，但是还是不要试图在tick方法中根据arguments的数量来决定行为。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/04/status-of-thread/">Thread的状态</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
+
+<p>Thread的状态是由Thread.State枚举表示的，有下面的6个值：</p>
+
+<h3>NEW</h3>
+
+<p>当线程刚被new出来，并且没有start的时候处于NEW状态</p>
+
+<h3>BLOCKED</h3>
+
+<p>线程被阻塞，一般是由于锁的原因等待进入临界区时候的状态</p>
+
+<h3>RUNNABLE</h3>
+
+<p>正在运行，就算是没有获得CPU时间片的线程也是在RUNNABLE</p>
+
+<h3>WAITING</h3>
+
+<p>顾名思义，线程处于等待状态。它正在等待其他的操作被触发，比如wait()后等待notify()或者notifyAll()；Thread.join()后等待目标线程被结束；LockSupport.park()后等待LockSupport.unpark()。</p>
+
+<p>注意，在调用wait()后会首先进入WAITING状态，如果被notify()了，并且无法获得锁并进入临界区，那么就在BLOCKED；如果进入临界区了，那么就是RUNNABLE</p>
+
+<h3>TIMED_WAITING</h3>
+
+<p>相比WAITING状态，只是多了一个时间参数，比如Thread.sleep(10)，object.wait(10)等等。</p>
+
+<h3>TERMINATED</h3>
+
+<p>运行完毕</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/">理解GC暂停 - Hotspot中的minor Gc[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-16T02:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots.html">原文链接</a></p>
+
+<p>当JVM进行垃圾搜集的时候会Stop-The-World暂停，它们是java应用程序的天敌。Hotspot JVM多种先进的、被优化的垃圾收集器，但是要想找到一个最优的配置需要首先了解垃圾搜集算法的机制。这篇文章介绍了GC在STW时怎么使用CPU，并且还介绍了一个新生代的垃圾搜集算法。</p>
+
+<h2>堆结构</h2>
+
+<p>大多数现代GC算法都是分代收集的，这意味着java的堆被划分为了多个空间。不同的空间用其中保存的对象的年龄划分。对象首先被分配到新生代，然后经过多次存活后，最终被放到了老年代。这个是基于“大多数的对象在创建后很快就会消亡”的假设。所有的Hotspot垃圾收集器都将内存划分为5个部分（对于G1收集器，空间可能不是连续的）。</p>
+
+<p><img src="/images/2013/08/java_heap_struct.png"></p>
+
+<ol>
+<li>Eden:eden区是对象被分配的地方</li>
+<li>Survivor: Survivor区被用来在young gc或者minor gc中接收存活的对象</li>
+<li>Tenured:Tenured区是保存长时间存活的对象</li>
+<li>Permanent:Permanent是供JVM自己使用，比如classes或者被JIT编译后的代码，它的行为和tenured区类似，因此在文章的后面我们将忽略该区域。</li>
+</ol>
+
+
+<p>Eden和2个Survivor区在一起被称作新生代（yound space)。</p>
+
+<h3>Hotspot GC算法</h3>
+
+<ol>
+<li>串行垃圾收集(-XX:+UseSerialGC)</li>
+<li>新生代并行，老年代串行的分代收集(-XX:+UseParallelGC)</li>
+<li>新生代和老年代都并行的分代收集(-XX:+UseParallelOldGC)</li>
+<li>CMS收集算法和串行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:-UseParNewGC)</li>
+<li>CMS收集算法和并行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:+UseParNewGC)</li>
+<li>G1收集算法(-XX:+UseG1GC)</li>
+</ol>
+
+
+<p>除了G1之外，其他所有的垃圾收集算法在新生代部分都使用了类似的算法（串行或者并行）</p>
+
+<h3>写屏障(Write barrier)</h3>
+
+<p>分代垃圾收集器的关键点在于，是否有必要每次都对整个java堆进行垃圾收集，还是对其中的一部分进行收集（比如新生代)。但是JVM为了实现这个效果，需要实现一个特殊的机制“写屏障”。在Hotspot中实现了两种类型的写屏障：dirty cards和snaphot-at-the-beginning(SATB)。SATB被用于G1算法中（该文没有对其描述）。其他所有的垃圾收集算法都使用dirty cards。</p>
+
+<h3>Dirty cards写屏障(卡片标记)</h3>
+
+<p>Dirty cards写屏障的原理非常简单。每当应用程序改变内存中的引用时，都需要标记该内存页是脏(dirty)的。JVM中有一个特殊的卡片表(card table)，每512字节的页都对应其中的1个字节。</p>
+
+<p><img src="/images/2013/08/card-table.png"></p>
+
+<h3>新生代垃圾收集算法</h3>
+
+<p>绝大部分的对象会被首先分配到eden区（除了在一些特殊的情况下，对象可能会直接被分配到老年代）。为了更高效的分配内存，Hotspot使用了线程本地分配块（thread local allocation block, TLAB)来分配新的对象，但是TLAB本身又被分配在eden区。一旦eden区满了就会触发minor gc。minor gc的目标是清理eden区，释放内存。在这里使用的是拷贝算法，存活的对象被拷贝到另外的一块区域，之前的区域的所有空间被标记为可用（free）。但是在开始垃圾收集之前，JVM首先需要找到根（root）引用，所有用于minor gc的根引用是来自堆栈的引用或者来自老年代的引用。</p>
+
+<p>通常情况下，搜集来自于老年代的引用需要扫描整个老年代对象的所有引用，因此我们需要写屏障（write-barrier）。所有在新生代中的对象都是在上次写屏障被复位之后分配的，也就意味着非脏(no-dirty)页是不可能引用新生代的对象，最后意味着我们没必要扫描整个老年代，而只需要扫描dirty pages中的对象即可。</p>
+
+<p><img src="/images/2013/08/dirty-pages.png"></p>
+
+<p>最开始的dirty cards是空的，并且开始young gc后，JVM拷贝eden和其中一个survivor中存活的对象到另外一个survivor区。JVM只需要花费时间在存活对象上，拷贝和再分配（relocate）对象也需要更新指向它们的引用。</p>
+
+<p><img src="/images/2013/08/dirty-pages1.png"></p>
+
+<p>当JVM更新移动后的对象的引用时，内存也同时也被修改了，自然会打上dirty的标记。最终在我们下次开始young gc的时候，只有位于dirty pages中的页才有可能引用新生代的对象。</p>
+
+<p><img src="/images/2013/08/dirty-pages2.png"></p>
+
+<h3>对象升级</h3>
+
+<p>如果对象没有在young gc中被清除，那么最终会被拷贝到老年代。对象升级会在下述情况下发生：</p>
+
+<ol>
+<li>-XX:+AlwaysTenure:让JVM直接将eden中的对象升级到老年代，而不通过survivor区（survivor区在这里不再使用）</li>
+<li>其中一个survivor区已经满了，那么所有剩下的存活对象都直接升级到老年代。</li>
+<li>如果对象在新生代的垃圾收集中存活了足够多的周期，就会被升级到老年代（存活周期数通过–XX:MaxTenuringThreshol选项和-XX:TargetSurvivorRatio选项调整）</li>
+</ol>
+
+
+<h3>对象直接被分配到老年代</h3>
+
+<p>如果我们可以将存活时间较长的对象直接分配到老年代，那么我们会获得性能提升。但是很不幸，我们无法告诉JVM这么做。但是仍然还是有一些情况，对象可以直接被分配到老年代：</p>
+
+<ol>
+<li>-XX:PretenureSizeThreshold=<n>：告诉JVM如果对象的大小大于<n>时，就可以直接将该对象分配到老年代。</li>
+<li>如果对象的大小大于了eden区，那么也会直接分配到老年代。</li>
+</ol>
+
+
+<p>不同于应用程序对象，系统级的对象会直接分配到永久带。</p>
+
+<h3>并行执行</h3>
+
+<p>在young gc中的大部分任务都可以并行执行。如果有多个CPU可用，那么JVM可以充分利用它们以减少STW的时间。可以通过选项–XX:ParallelGCTreads=<n>来告诉JVM使用多少个线程来执行GC。默认情况下，JVM会使用当前可用的CPU数量作为GC的线程数。但是串行版的收集器会忽律给选项，因为它只使用一个CPU线程。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-cms-in-hotspot/">理解GC暂停 - Hotspot中的CMS[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-16T01:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots_02.html">原文链接</a></p>
+
+<p>Concurrent-Mark-Sweep(CMS)是Hotspot JVM中的一个短停顿垃圾回收器。CMS在回收内存时做的大部分工作都可以和应用程序并发执行（不用暂停应用程序）。但是仍然需要短暂的Stop-The-World暂停。这篇文章会介绍这个暂停的原因以及如何减少这样的暂停。</p>
+
+<h2>CMS基础</h2>
+
+<p>Hotspot中的CMS收集器是分代搜集的，因此整个java堆被分为了新生代和老年代，并且它们可以独立进行搜集。对于新生代Hotspot通常使用的是拷贝算法。要想开启CMS收集器，需要在命令行参数里指定-XX:+UseConcMarkSweepGC选项。</p>
+
+<p>CMS被用来搜集老年代，一个CMS搜集周期包括以下阶段：</p>
+
+<ol>
+<li>Inital mark:CMS在这个阶段搜集所有的根(root)引用，并且是STW的。</li>
+<li>Concurrent mark:这个阶段会与应用程序并发执行，在该阶段垃圾收集器会遍历老年代的所有对象(从root开始)，将存活的对象标记出来。</li>
+<li>Concurrent pre clean:这是另外一个并发阶段，主要也是用于标记操作，它会找到从上次标记(mark)之后改变了的引用。这个阶段最主要的目的是减少remark阶段的STW时间。</li>
+<li>Remark：一旦Concurrent mark结束了，垃圾收集器需要进入STW暂停，在暂停的时候找到所有从上次mark之后所有被改变了的引用。</li>
+<li>Concurrent sweep:垃圾收集器在该阶段会扫描整个老年代，并且回收不再使用的内存。</li>
+<li>Concurrent reset：在CMS周期结束后，一些数据结构需要在下次周期开始之前被重置。</li>
+</ol>
+
+
+<p>不同于其他大多数垃圾收集器，CMS不会对老年代的堆内存进行整理。CMS没有对内存对象进行移动以便让为使用的空间保持连续，它会维护所有空闲内存段的列表。这样CMS避免了对内存重新布局的开销（对内存重新布局需要STW），但是负面效果就是会产生内存碎片。为了减少产生内存碎片的风险，CMS会对对象尺寸进行统计，并且针对对象的不同尺寸来维护空闲列表。</p>
+
+<h2>CMS暂停时间</h2>
+
+<p>CMS本身只有两个暂停点，但是你的应用程序执行新生代的垃圾回收时同样会进行暂停。</p>
+
+<h2>Inital mark</h2>
+
+<p>在inital mark阶段，CMS会遍历老年代的所有根引用。这包括：</p>
+
+<ol>
+<li>来自于线程栈的引用</li>
+<li>来自于新生代的引用</li>
+</ol>
+
+
+<p>来自于线程栈的引用会搜集的很快（不超过1毫秒），但是搜集来自于新生代的引用就依赖于新生代对象的多少了。通常inital mark会在新生代gc完毕后开始，所以eden区这个时候时空的，并且其中一个survivor区里面也仅仅包含了存活下来的对象。Survivor区通常很小，因此在young gc完成后执行inital mark会很快，不超过毫秒。但是，如果inital mark在eden区满的时候开启，那么将会花费很长的时间（往往比young gc本身都还要长）</p>
+
+<p>一旦CMS收集器被触发了，JVM会等待一段时间，让young gc完成后再开始inital mark。JVM配置参数-XX:CMSWaitDuration=<t>可以用来配置CMS等待多长时间才开始inital mark。如果你不希望长时间的inital mark暂停，那么你可以配置该选项，让等待时间略微长于你的应用中执行一次young gc所需要的时间。</p>
+
+<h2>Remark</h2>
+
+<p>大多数的标记（marking）可以和应用程序并行执行，但是也不是绝对的，因为有可能应用会在mark阶段修改对象引用图。当concurrent mark结束后，垃圾收集器会暂停应用程序，并且进行重复的标记以保证所有可达的的对象都已经标记为存活状态。但是收集器不需要遍历整个对象图，它仅仅需要遍历哪些自从上次标记（marking）阶段之后被修改过的引用（确切的说是从上次pre clean阶段之后）。卡片表（card table)被用来标记那些老年代中被修改的内存区域，但是新生代和堆栈部分还是需要被重新扫描一遍。</p>
+
+<p>通常情况下remark阶段大部分时间被花费在了扫描新生代部分。如果在开始remark之前对新生代进行了gc，那么这个时间会大大缩短。我们可以加上-XX:+CMSScanvengeBeforeRemark选项来让JVM在开始remark之前强制进行新生代的gc。就算新生代是空的，remark阶段还是会对老年代中已经修改的引用进行扫描，这个所花费的时间和新生代gc暂停时间差不多。</p>
+
+<h2>什么时候会触发CMS</h2>
+
+<p>不同于其他老年代STW收集器，CMS搜集周期在老年代满了之前就需要开始（其他老年代收集器只需要老年代满的时候出发，而CMS需要在老年代没满的时候就触发）。CMS收集器在老年代的可用空间达到一定的阈值时（这个阈值可根据JVM在运行中搜集的统计信息或者参数来决定），并且CMS可能会推迟到下一次young gc触发之后才开始。普通的对象只会在yong gc的过程中被分配到老年代，因此CMS一般是在yong gc发生之后才开始，并且这样也会让initial mark变得很小。但是在某些情况下，对象可能会直接被分配在老年代，并且CMS开始的时候eden区可能具有很多对象。这个时候inital mark会多耗费10-100倍的时间，这个情况是非常糟糕的。通常这种情况只会在分配很大对象的时候（好几M大小的数组）。为了避免这种长暂停，你可以配置-XX:CMSWaitDuration选项。</p>
+
+<h2>配置CMS开始的固定阈值</h2>
+
+<p>你可以配置固定的老年代充满比例阈值来触发CMS gc：</p>
+
+<pre><code>‑XX:+UseCMSInitiatingOccupancyOnly 
+‑XX:CMSInitiatingOccupancyFraction=70(这会告诉JVM只有当超过70%的老年代被使用后才触发CMS)
+</code></pre>
+
+<h2>显式触发CMS</h2>
+
+<p>你可以配置JVM，只要代码调用System.gc()方法后就触发CMS：<code>-XX:+ExplicitGCInvokesConcurrent</code></p>
+
+<h2>CMS和Full gc</h2>
+
+<p>如果CMS不能释放足够的老年代内存，JVM会启用整理式的搜集算法(Compacting)。整理收集器会强迫进入STW暂停，因此它只会出现在紧急情况下。通常大家都不希望进行full gc和较长时间的STW暂停。当CMS不能足够快的释放老年代内存，或者CMS启动的太晚了，或者因为老年代的内存碎片（没有足够的连续空间存放对象）时才会发生full gc。又或者你没有配置足够的堆内存，那么在full gc之后就会抛出OutOfMemoryException。</p>
+
+<h2>永久带gc</h2>
+
+<p>CMS结束后会触发full gc的一个原因是因为永久带的垃圾问题。默认的，CMS不会对永久带进行搜集。如果你的应用程序使用了多个classloader，或者反射，你可能会需要开启对永久带的垃圾回收。JVM选项-XX:+CMSClassUnloadingEnabled会允许CMS对永久带进行垃圾搜集。需要注意的是，位于永久带的对象可能会具有老年代对象的引用，如果永久带并没有满，这些从永久带到老年代的引用会导致一些已经死掉(dead)的对象在CMS周期内不可达，除非开启了class unloading。</p>
+
+<h2>有效使用多核</h2>
+
+<p>CMS具有多个阶段，有些是可以并发执行的，另外的是需要STW暂停的，但是可以并行执行以压缩程序暂停时间。</p>
+
+<pre><code>-XX:+CMSConcurrentMTEnabled:允许CMS在concurrent阶段使用多核。
+-XX:ConcGCThreads=&lt;n&gt;:指定concurrent阶段使用的线程数量
+-XX:ParallelGCThreads=&lt;n&gt;:指定在STW暂停中并行工作的线程数（默认是机器的物理核心数）
+-XX:+UseParNewGC:让JVM在新生代使用并行收集器，配合老年代的CMS。
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/08/14/how-to-implement-lock-in-jvm/">JVM是如何实现锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-14T01:27:00+08:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://slava-technical.blogspot.de/2011/04/how-does-jvm-handle-locks.html">原文链接</a></p>
+
+<p>Hotspot JVM 1.6具有三种类型的锁，当你试图使用java.util.concurrent.locks.Lock的实现去获取一个锁，或者进入一个synchronized块时就会使用JVM提供的锁：</p>
+
+<h2>biased锁(偏向锁)</h2>
+
+<p>在有些时候，就算时在一个并发环境中，实际上对于某些对象来说时没有真正的竞争的，这个时候jvm就不会向操作系统申请互斥对象(mutex)来实现锁。Hotspot可以使用一些内部的数据结构来更加高效的模拟锁。比如，一段被synchronized包裹的同步代码在当前并没有并发的执行，JVM就会使用CAS来将当前拥有锁的线程ID赋给一个用来表示互斥对象的对象中，并且如果CAS成功的话还会将重入次数也存进去。这个就是偏向锁，JVM最轻量级的锁。重入次数这个变量会被锁的当前拥有线程更新，就像更新一个局部变量一样，不会使用CAS。如果CAS失败，说明该锁当前正被其他线程拥有，这个时候JVM会暂停该互斥对象的拥有线程，将线程上下文刷新的主存中，并检查重入次数。如果重入次数时0，那么JVM就会将该锁升级为thin，否则就升级为fat。Hotspot使用互斥对象中的同样的域(field)来存储锁的拥有者线程ID</p>
+
+<h2>thin锁</h2>
+
+<p>这个实际上是一个简单的自旋锁。如果自旋的时间很短的话，它可以班组节约线程切换的时间（不立刻阻塞并且发生切换，而是先自旋一段时间）。当一个线程试图获取一个已经被占用的锁，那么该线程会先自旋一段时间，直到这个锁被释放。自旋的次数由内部的jvm实现决定，通常会考虑以下因素：JVM对当前应用所搜集的一些统计信息；当前线程数；CPU使用情况和数量等等。当自旋失败后，JVM决定将该thin锁升级为fat锁</p>
+
+<h2>fat锁</h2>
+
+<p>JVM中最高级别的锁，底层会向操作系统申请系统级别的互斥对象，并且使用操作系统的调度器来对线程进行挂起和恢复。这种类型的锁的开销比前面提到的锁要大得多，因为每次锁的释放和获取都会使得JVM与底层操作系统进行互操作。</p>
+</div>
+  
   
 
 
@@ -882,23 +822,23 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a>
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a>
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a>
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a>
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a>
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
       </li>
     
   </ul>

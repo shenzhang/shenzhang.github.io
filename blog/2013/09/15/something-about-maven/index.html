@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="1.生命周期 Clean pre-clean
+clean
+post-clean Default validate
+initialize
+generate-sources
+process-sources
+generate-resources
+process-resources
+compile &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/09/15/something-about-maven">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Maven杂谈(生命周期,插件绑定,effective-xx)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-15T01:27:00+08:00" pubdate data-updated="true">Sep 15<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>1.生命周期</h2>
+
+<h3>Clean</h3>
+
+<pre><code>pre-clean
+clean
+post-clean
+</code></pre>
+
+<h3>Default</h3>
+
+<pre><code>validate
+initialize
+generate-sources
+process-sources
+generate-resources
+process-resources
+compile
+process-classes
+generate-test-sources
+process-test-sources
+generate-test-resources
+process-test-resources
+test-compile
+process-test-classes
+test
+prepare-package
+package
+pre-integration-test
+integration-test
+post-integration-test
+verify
+install
+deploy
+</code></pre>
+
+<h3>Site</h3>
+
+<pre><code>pre-site
+site
+post-site
+site-deploy
+</code></pre>
+
+<h2>2.插件绑定</h2>
+
+<p>maven在不同的生命周期中会按顺序进入不同的阶段，每个阶段又会执行与该阶段绑定的plugins。如何将plugins绑定到生命周期中呢，maven-compile-plugin又是怎么知道在每次的compile阶段执行的呢？</p>
+
+<p>plugin绑定到生命周期中需要在pom.xml中的<build>=><plugins>中进行声明，有些是在pom.xml中，有些可能是在super pom中，有些甚至是maven默认的绑定，但是最终都会出现在effective pom中（mvn help:effective-pom查看)。</p>
+
+<p>那么具体是在哪个阶段执行呢？看effective pom中对maven-compile-plugin的描述：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>  <span class="nt">&lt;plugin&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>maven-compiler-plugin<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;version&gt;</span>2.3.2<span class="nt">&lt;/version&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;executions&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-testCompile<span class="nt">&lt;/id&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>test-compile<span class="nt">&lt;/phase&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>testCompile<span class="nt">&lt;/goal&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-compile<span class="nt">&lt;/id&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>compile<span class="nt">&lt;/phase&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>compile<span class="nt">&lt;/goal&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/executions&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/plugin&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>主要是在phase节点和goals节点，上面的配置说明了maven-compile-plugin被分别绑定到了compile阶段和test-compile阶段，并且分别执行该插件的compile goal和testCompile goal。</p>
+
+<p>另外有些plugin可能并没有在pom.xml中说明具体的执行阶段，那么就要看该插件中的/META-INF/maven/plugin.xml插件描述文件了，该描述文件说明了该plugin的前缀(goalPrefix)，所有的mojos或者说是goal，并且这些goal的名字以及默认的执行阶段，比如compile:testCompile节点就说明了&lt;phase&gt;test-compile&lt;/phase&gt;。因此如果没有在pom.xml中说明执行阶段的话，就按照该plugin的goal的自描述中的phase进行绑定。</p>
+
+<h2>3.effective-xx</h2>
+
+<p>maven有关于自己运行的配置文件settings.xml，该文件可以是$MAVEN_HOME/conf/settings.xml或者$USER/.m2/setttings.xml，并且后者会覆盖前者，可以通过mvn help:effective-settings查看相对于默认的settings.xml所改变的部分。</p>
+
+<p>同样，前面提到的effective-pom也是由多个部分合并而来，首先是项目下的pom.xml，然后是maven的super pom($MAVEN_HOME/lib/maven-model-builder-x.x.x.jar#org/apache/maven/model/pom-x.x.x.xml)，还有一些是maven针对不同的生命周期默认绑定的插件信息($MAVEN_HOME/lib/maven-core-x.x.x.jar#/META-INF/plexus/components.xml)。最终的pom可以通过help:effective-pom查看)</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-15T01:27:00+08:00" pubdate data-updated="true">Sep 15<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/09/15/something-about-maven/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/09/15/something-about-maven/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/09/13/scope-in-maven/" title="Previous Post: maven依赖的scope">&laquo; maven依赖的scope</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

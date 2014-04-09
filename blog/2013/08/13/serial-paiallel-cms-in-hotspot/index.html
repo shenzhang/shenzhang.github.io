@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="原文链接 串行(Serial)，并行(Parallel)和CMS（Concurrent-Mark-Sweep)垃圾搜集算法到底有什么不同呢？ 首先，让我们看看哪些算法是用于新生代，哪些算法是用于老年代： 以下算法用于新生代： -XX:+UseSerialGC -XX:+UseParallelGC &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Hotspot的垃圾回收：串行、并行和CMS[译]</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://www.tikalk.com/java/garbage-collection-serial-vs-parallel-vs-concurrent-mark-sweep">原文链接</a></p>
+
+<p>串行(Serial)，并行(Parallel)和CMS（Concurrent-Mark-Sweep)垃圾搜集算法到底有什么不同呢？</p>
+
+<p>首先，让我们看看哪些算法是用于新生代，哪些算法是用于老年代：</p>
+
+<h3>以下算法用于新生代：</h3>
+
+<pre><code>-XX:+UseSerialGC 
+-XX:+UseParallelGC 
+-XX:+UseParNewGC
+</code></pre>
+
+<h3>以下算法用于老年代:</h3>
+
+<pre><code>-XX:+UseParallelOldGC 
+-XX:+UseConcMarkSweepGC
+</code></pre>
+
+<h3>串行和并行收集器有什么不同</h3>
+
+<p>串行和并行垃圾收集器在GC的时候都会造成Stop-The-World，串行收集器默认是一个拷贝算法，并且使用单个线程来完成GC操作；并行收集器采用多个线程完成GC操作。</p>
+
+<h3>并行收集器和CMS有什么不同</h3>
+
+<p>CMS会通过以下步骤（所有步骤都使用一个线程完成）</p>
+
+<ol>
+<li>inital mark</li>
+<li>concurrent marking</li>
+<li>remark</li>
+<li>concurrent sweeping</li>
+</ol>
+
+
+<p><em>主要有两点不同：</em></p>
+
+<ol>
+<li>并行收集器使用多个线程，CMS只使用单个线程</li>
+<li>并行收集器会Stop-The-World，但是CMS仅仅在inital mark和remark阶段会STW,concrrent marking和concurrent sweeping阶段时，GC线程会和应用程序线程并发运行。</li>
+</ol>
+
+
+<h3>如果你想将GC定制化为并行化和并发化，那么可以使用下面的参数:</h3>
+
+<pre><code>-XX:UserParNewGC：让新生代使用多个线程
+-XX:+UseConcMarkSweepGC:在老年代使用CMS（一个线程，仅仅在inital mark和remark阶段才发生STW)
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/08/13/safepoints-in-hotspot/" title="Previous Post: Hotspot中的safepoints[译]">&laquo; Hotspot中的safepoints[译]</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/08/14/garbage-collection-in-hotspot/" title="Next Post: Hotspot JVM中的垃圾收集器[译]">Hotspot JVM中的垃圾收集器[译] &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
