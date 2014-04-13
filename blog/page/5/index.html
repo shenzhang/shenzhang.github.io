@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。 但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的 &hellip;">
+  <meta name="description" content="由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。 1.安装 在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。 2.创建资源库 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,93 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/subversion-setup-in-linux/">Linux下搭建subversion</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T01:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。</p>
+
+<h2>1.安装</h2>
+
+<p>在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。</p>
+
+<h2>2.创建资源库</h2>
+
+<p>在linux中先创建一个用于资源库的目录</p>
+
+<pre><code>mkdir ***/svn
+</code></pre>
+
+<p>使用svnadmin创建资源库</p>
+
+<pre><code>svnadmin create ***/svn
+</code></pre>
+
+<p>创建完毕后svn目录就具有了svn资源库的布局，比如conf, db, hooks目录等等</p>
+
+<h2>3.启动服务</h2>
+
+<p>subversion可以提供的服务方式有多种，比如：</p>
+
+<ol>
+<li>与apache结合使用http协议</li>
+<li>使用svnserve提供的独立服务，使用svn协议</li>
+<li>直接委托给xinet，当xinet转发的时候需要使用svnserve的-i参数，具体的看下svnserve的帮助</li>
+</ol>
+
+
+<p>我由于没什么特殊要求，就直接使用了svnserve提供的独立服务模式：<code>svnserve -d -r ***/svn</code>启动服务,这样就svnserve就开始监听3690的默认端口</p>
+
+<h2>4.配置用户和权限</h2>
+
+<p>a.修改***/svn/conf/svnserve.conf文件，将auth-access, password-db, authz-db的注释取消掉。具体各选项什么意思，在文件中都有说明。(虽然注释中说明了注释的样子就是svnserve的默认选项，但是发现只有取消了注释才生效的，反正保险点还是显示注明吧)</p>
+
+<p>b.在passwd中添加用户和密码:</p>
+
+<pre><code>[users]
+fish = 123
+</code></pre>
+
+<p>c.在authz中修改用户权限:</p>
+
+<pre><code>[/]
+fish = rw
+</code></pre>
+
+<p>说明fish可以访问根目录下的所有文件(读写)</p>
+
+<p>Done.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -546,52 +633,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/debug-parameter-in-javac/">Javac的调试选项-g的意义</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T05:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>javac的调试选项-g 主要包含了三个子选项：lines, vars, source</p>
-
-<p>如果没有指定-g参数，javac是默认包含了lines和source选项，若指定-g参数则会包含所有三个选项。</p>
-
-<p>下面分别简要解释下三个子选项的意义和效果：</p>
-
-<p><strong>source:</strong> 将该class文件对应的源文件名称写进class中，这样在调试进入这个类时调试器就可以找到指定的源文件。可能有些同学会问：class的类名不就是源文件的名称吗，包命就是从classpath开始的路径。这种情况只是针对访问修饰符为public的类，一个源文件可以定义多个类（甚至是内部类）。如果在调试的过程中说找不到源文件，则很有可能是在编译的时候没有加上该选项。</p>
-
-<p><strong>lines:</strong> 将源文件中的行号和class中字节码的偏移量对应起来，这样当你下断点的时候，调试器就知道该断点对应到class字节码的哪条指令。如果不设置该选项，那么你根本就没办法下断点。抛异常的时候也不会给出行数信息。</p>
-
-<p><strong>vars:</strong> 局部变量的符号表。比如在eclipse调试的时候，可以边调试边看变量的信息，这些都要归功与局部变量的符号表，它可以帮助把运行过程中的变量值和源代码中的变量名对应起来。如果没有它，调试的时候是不能看到局部变量的值的，方法的参数也变成了arg1,arg2&hellip;。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -609,6 +650,10 @@ org.eclipse.jetty.xml.XmlConfiguration \
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
       </li>
     
@@ -622,10 +667,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
     
       <li class="post">
         <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
       </li>
     
   </ul>

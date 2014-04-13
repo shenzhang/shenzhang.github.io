@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-04-13T11:13:31+08:00</updated>
+  <updated>2014-04-13T21:21:13+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -12,6 +12,60 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jcl-over-slf4j]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j/"/>
+    <updated>2014-04-13T02:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j</id>
+    <content type="html"><![CDATA[<p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
+
+<h2>jcl的绑定流程</h2>
+
+<p>使用jcl的标准方法如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Log</span> <span class="n">log</span> <span class="o">=</span> <span class="n">LogFactory</span><span class="o">.</span><span class="na">getLog</span><span class="o">(</span><span class="n">XXX</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>LogFactory中给出了如下绑定流程：</p>
+
+<ol>
+<li>检查系统属性<code>org.apache.commons.logging.LogFactory</code>，其中记录了具体的LogFactory的实现类。</li>
+<li>通过java的service loading机制加载<code>META-INF/services/org.apache.commons.logging.LogFactory</code>配置文件，其中记录了LogFactory的实现类。</li>
+<li>检查classpath中的<code>commons-logging.properties</code>配置文件，里面记录了具体的LogFactory的实现类。</li>
+<li>使用jcl提供的默认实现类：<code>org.apache.commons.logging.impl.LogFactoryImpl</code>来创建Log。</li>
+</ol>
+
+
+<p>如果不幸进入了最后一个步骤使用<code>org.apache.commons.logging.impl.LogFactoryImpl</code>来创建Log，那么它又会使用一套发现机制类查找合适的日志实现：</p>
+
+<ol>
+<li>检查<code>org.apache.commons.logging.impl.LogFactoryImpl</code>是否已经配置了<code>org.apache.commons.logging.Log</code>属性，如果配置了该属性，则使用该属性指定的Log。</li>
+<li>使用系统属性<code>org.apache.commons.logging.Log</code>中所定义的Log实现</li>
+<li>检查是否存在log4j的实现类:<code>org.apache.commons.logging.impl.Log4JLogger</code>。</li>
+<li>检查<code>org.apache.commons.logging.impl.Jdk14Logger</code></li>
+<li>检查<code>org.apache.commons.logging.impl.Jdk13LumberjackLogger</code></li>
+<li>检查<code>org.apache.commons.logging.impl.SimpleLog</code></li>
+</ol>
+
+
+<h2>jcl-over-slf4j桥接模式</h2>
+
+<p>其实仔细看看jcl-over-slf4j的实现，可以发现它提供了两种桥接方法。</p>
+
+<h3>1.引入jcl-over-slf4j并排除jcl</h3>
+
+<p>该方法也是spring官方推荐的方法，它的实现也是很巧妙也很直接。因为我们使用jcl都是通过<code>LogFactory.getLog(XXX.class)</code>来获得Log，jcl-over-slf4j中也就提供了名称完全一样的LogFactory，只不过它的getLog方法直接通过Slf4jLogFactory返回Slf4jLog。如果在dependencies中排除掉jcl，那么所有引用jcl的地方就偷天换日的直接使用了slf4j的日志。</p>
+
+<h3>2.引入jcl-over-slf4j并且没有排除jcl</h3>
+
+<p>有些人可能发现如果没有在dependencies中排除掉jcl也是可以工作的，这又是为什么呢？实际上jcl-over-slf4j提供了方法1外，还参考了jcl的绑定机制，并且参考上面提到的步骤2提供了<code>META-INF/services/org.apache.commons.logging.LogFactory</code>，其中说明了jcl需要绑定的LogFactory实现是<code>org.apache.commons.logging.impl.SLF4JLogFactory</code>。这不，也委托回slf4j上让其提供Log。</p>
+
+<p>实际上，上面的两种方法都是可以的。但是推荐使用第一种方法，因为更加直接和清晰。第二种方法会让classpath中存在两个完全同名的jcl的LogFactory，但是不论jvm加载哪一个都是OK的。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[哪个更快：Java堆还是本地内存[译]]]></title>
@@ -2235,26 +2289,6 @@ setquota -n|-b val path
 <p>该handler主要被放置在handler链的头部，它会在请求开始处理的时候向指定的OutputStream输出当前时间以及请求路径等信息，并且在该request处理完成后输出当前时间，主要用于分析不同资源的请求处理时长。可以调用<code>DebugHandler.setOutputStream</code>来指定输出目的地。</p>
 
 <p>显然这种将所有请求都进行输出的方式不但影响性能，同时对于大量的日志还需要专门的程序进行分析。更好的方式是直接设定输出阈值，处理时间超过了该阈值就进行输出，当然如果对于日志还有其他的分析目的就另当别论了，有点类似RequestLogHandler。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Jetty常用handler之DefaultHandler]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/07/27/defaulthandler-in-jetty/"/>
-    <updated>2013-07-27T01:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/07/27/defaulthandler-in-jetty</id>
-    <content type="html"><![CDATA[<p><code>org.eclipse.jetty.server.handler.DefaultHandler</code>，从名字就可以看出是jetty里的默认handler，之所以是默认不是Jetty预设的handler，而是说一般将该handler作为handler链的最后一个handler来处理请求。如果前面的handler都没能顺利处理请求(request.setHandled(true))，那么就让该handler来处理。</p>
-
-<p>DefaultHandler提供了以下功能：</p>
-
-<ol>
-<li>如果请求的是/favicon.ico，那么就将jetty自己的icon图标返回给客户端。</li>
-<li>如果请求的是/，那么就将当前jetty里所有的context根路径配合简单的html标签返回给客户端，比如说jetty提供了/app1和/app2两个引用，但是用户并不知道该server提供的应用的context，那么就可以直接输入/路径，DefaultHandler如果处理该请求就会用友好的方法告诉用户“当前的jetty提供了/app1和/app2两个引用”</li>
-<li>其他情况一律返回404代码及对应的出错页面。</li>
-</ol>
-
-
-<p>其实自己看下上述三种功能，在实际应用中都不实用，最多开发阶段供调试使用。不过里面的代码还是值得一看的，既简单又反映了标准的handler编写模式。</p>
 ]]></content>
   </entry>
   

@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接 使用Java的一个好处就是你可以不用亲自来管理内存的分配和释放。当你用new关键字来实例化一个对象时，它所需的内存会自动的在Java堆中分配。堆会被垃圾回收器进行管理，并且它会在对象超出作用域时进行内存回收。但是在JVM中有一个‘后门’可以让你访问不在堆中的本地内存(native &hellip;">
+  <meta name="description" content="`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,87 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-13T02:27:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
+
+<h2>jcl的绑定流程</h2>
+
+<p>使用jcl的标准方法如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Log</span> <span class="n">log</span> <span class="o">=</span> <span class="n">LogFactory</span><span class="o">.</span><span class="na">getLog</span><span class="o">(</span><span class="n">XXX</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>LogFactory中给出了如下绑定流程：</p>
+
+<ol>
+<li>检查系统属性<code>org.apache.commons.logging.LogFactory</code>，其中记录了具体的LogFactory的实现类。</li>
+<li>通过java的service loading机制加载<code>META-INF/services/org.apache.commons.logging.LogFactory</code>配置文件，其中记录了LogFactory的实现类。</li>
+<li>检查classpath中的<code>commons-logging.properties</code>配置文件，里面记录了具体的LogFactory的实现类。</li>
+<li>使用jcl提供的默认实现类：<code>org.apache.commons.logging.impl.LogFactoryImpl</code>来创建Log。</li>
+</ol>
+
+
+<p>如果不幸进入了最后一个步骤使用<code>org.apache.commons.logging.impl.LogFactoryImpl</code>来创建Log，那么它又会使用一套发现机制类查找合适的日志实现：</p>
+
+<ol>
+<li>检查<code>org.apache.commons.logging.impl.LogFactoryImpl</code>是否已经配置了<code>org.apache.commons.logging.Log</code>属性，如果配置了该属性，则使用该属性指定的Log。</li>
+<li>使用系统属性<code>org.apache.commons.logging.Log</code>中所定义的Log实现</li>
+<li>检查是否存在log4j的实现类:<code>org.apache.commons.logging.impl.Log4JLogger</code>。</li>
+<li>检查<code>org.apache.commons.logging.impl.Jdk14Logger</code></li>
+<li>检查<code>org.apache.commons.logging.impl.Jdk13LumberjackLogger</code></li>
+<li>检查<code>org.apache.commons.logging.impl.SimpleLog</code></li>
+</ol>
+
+
+<h2>jcl-over-slf4j桥接模式</h2>
+
+<p>其实仔细看看jcl-over-slf4j的实现，可以发现它提供了两种桥接方法。</p>
+
+<h3>1.引入jcl-over-slf4j并排除jcl</h3>
+
+<p>该方法也是spring官方推荐的方法，它的实现也是很巧妙也很直接。因为我们使用jcl都是通过<code>LogFactory.getLog(XXX.class)</code>来获得Log，jcl-over-slf4j中也就提供了名称完全一样的LogFactory，只不过它的getLog方法直接通过Slf4jLogFactory返回Slf4jLog。如果在dependencies中排除掉jcl，那么所有引用jcl的地方就偷天换日的直接使用了slf4j的日志。</p>
+
+<h3>2.引入jcl-over-slf4j并且没有排除jcl</h3>
+
+<p>有些人可能发现如果没有在dependencies中排除掉jcl也是可以工作的，这又是为什么呢？实际上jcl-over-slf4j提供了方法1外，还参考了jcl的绑定机制，并且参考上面提到的步骤2提供了<code>META-INF/services/org.apache.commons.logging.LogFactory</code>，其中说明了jcl需要绑定的LogFactory实现是<code>org.apache.commons.logging.impl.SLF4JLogFactory</code>。这不，也委托回slf4j上让其提供Log。</p>
+
+<p>实际上，上面的两种方法都是可以的。但是推荐使用第一种方法，因为更加直接和清晰。第二种方法会让classpath中存在两个完全同名的jcl的LogFactory，但是不论jvm加载哪一个都是OK的。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -989,120 +1070,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-cms-in-hotspot/">理解GC暂停 - Hotspot中的CMS[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-16T01:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots_02.html">原文链接</a></p>
-
-<p>Concurrent-Mark-Sweep(CMS)是Hotspot JVM中的一个短停顿垃圾回收器。CMS在回收内存时做的大部分工作都可以和应用程序并发执行（不用暂停应用程序）。但是仍然需要短暂的Stop-The-World暂停。这篇文章会介绍这个暂停的原因以及如何减少这样的暂停。</p>
-
-<h2>CMS基础</h2>
-
-<p>Hotspot中的CMS收集器是分代搜集的，因此整个java堆被分为了新生代和老年代，并且它们可以独立进行搜集。对于新生代Hotspot通常使用的是拷贝算法。要想开启CMS收集器，需要在命令行参数里指定-XX:+UseConcMarkSweepGC选项。</p>
-
-<p>CMS被用来搜集老年代，一个CMS搜集周期包括以下阶段：</p>
-
-<ol>
-<li>Inital mark:CMS在这个阶段搜集所有的根(root)引用，并且是STW的。</li>
-<li>Concurrent mark:这个阶段会与应用程序并发执行，在该阶段垃圾收集器会遍历老年代的所有对象(从root开始)，将存活的对象标记出来。</li>
-<li>Concurrent pre clean:这是另外一个并发阶段，主要也是用于标记操作，它会找到从上次标记(mark)之后改变了的引用。这个阶段最主要的目的是减少remark阶段的STW时间。</li>
-<li>Remark：一旦Concurrent mark结束了，垃圾收集器需要进入STW暂停，在暂停的时候找到所有从上次mark之后所有被改变了的引用。</li>
-<li>Concurrent sweep:垃圾收集器在该阶段会扫描整个老年代，并且回收不再使用的内存。</li>
-<li>Concurrent reset：在CMS周期结束后，一些数据结构需要在下次周期开始之前被重置。</li>
-</ol>
-
-
-<p>不同于其他大多数垃圾收集器，CMS不会对老年代的堆内存进行整理。CMS没有对内存对象进行移动以便让为使用的空间保持连续，它会维护所有空闲内存段的列表。这样CMS避免了对内存重新布局的开销（对内存重新布局需要STW），但是负面效果就是会产生内存碎片。为了减少产生内存碎片的风险，CMS会对对象尺寸进行统计，并且针对对象的不同尺寸来维护空闲列表。</p>
-
-<h2>CMS暂停时间</h2>
-
-<p>CMS本身只有两个暂停点，但是你的应用程序执行新生代的垃圾回收时同样会进行暂停。</p>
-
-<h2>Inital mark</h2>
-
-<p>在inital mark阶段，CMS会遍历老年代的所有根引用。这包括：</p>
-
-<ol>
-<li>来自于线程栈的引用</li>
-<li>来自于新生代的引用</li>
-</ol>
-
-
-<p>来自于线程栈的引用会搜集的很快（不超过1毫秒），但是搜集来自于新生代的引用就依赖于新生代对象的多少了。通常inital mark会在新生代gc完毕后开始，所以eden区这个时候时空的，并且其中一个survivor区里面也仅仅包含了存活下来的对象。Survivor区通常很小，因此在young gc完成后执行inital mark会很快，不超过毫秒。但是，如果inital mark在eden区满的时候开启，那么将会花费很长的时间（往往比young gc本身都还要长）</p>
-
-<p>一旦CMS收集器被触发了，JVM会等待一段时间，让young gc完成后再开始inital mark。JVM配置参数-XX:CMSWaitDuration=<t>可以用来配置CMS等待多长时间才开始inital mark。如果你不希望长时间的inital mark暂停，那么你可以配置该选项，让等待时间略微长于你的应用中执行一次young gc所需要的时间。</p>
-
-<h2>Remark</h2>
-
-<p>大多数的标记（marking）可以和应用程序并行执行，但是也不是绝对的，因为有可能应用会在mark阶段修改对象引用图。当concurrent mark结束后，垃圾收集器会暂停应用程序，并且进行重复的标记以保证所有可达的的对象都已经标记为存活状态。但是收集器不需要遍历整个对象图，它仅仅需要遍历哪些自从上次标记（marking）阶段之后被修改过的引用（确切的说是从上次pre clean阶段之后）。卡片表（card table)被用来标记那些老年代中被修改的内存区域，但是新生代和堆栈部分还是需要被重新扫描一遍。</p>
-
-<p>通常情况下remark阶段大部分时间被花费在了扫描新生代部分。如果在开始remark之前对新生代进行了gc，那么这个时间会大大缩短。我们可以加上-XX:+CMSScanvengeBeforeRemark选项来让JVM在开始remark之前强制进行新生代的gc。就算新生代是空的，remark阶段还是会对老年代中已经修改的引用进行扫描，这个所花费的时间和新生代gc暂停时间差不多。</p>
-
-<h2>什么时候会触发CMS</h2>
-
-<p>不同于其他老年代STW收集器，CMS搜集周期在老年代满了之前就需要开始（其他老年代收集器只需要老年代满的时候出发，而CMS需要在老年代没满的时候就触发）。CMS收集器在老年代的可用空间达到一定的阈值时（这个阈值可根据JVM在运行中搜集的统计信息或者参数来决定），并且CMS可能会推迟到下一次young gc触发之后才开始。普通的对象只会在yong gc的过程中被分配到老年代，因此CMS一般是在yong gc发生之后才开始，并且这样也会让initial mark变得很小。但是在某些情况下，对象可能会直接被分配在老年代，并且CMS开始的时候eden区可能具有很多对象。这个时候inital mark会多耗费10-100倍的时间，这个情况是非常糟糕的。通常这种情况只会在分配很大对象的时候（好几M大小的数组）。为了避免这种长暂停，你可以配置-XX:CMSWaitDuration选项。</p>
-
-<h2>配置CMS开始的固定阈值</h2>
-
-<p>你可以配置固定的老年代充满比例阈值来触发CMS gc：</p>
-
-<pre><code>‑XX:+UseCMSInitiatingOccupancyOnly 
-‑XX:CMSInitiatingOccupancyFraction=70(这会告诉JVM只有当超过70%的老年代被使用后才触发CMS)
-</code></pre>
-
-<h2>显式触发CMS</h2>
-
-<p>你可以配置JVM，只要代码调用System.gc()方法后就触发CMS：<code>-XX:+ExplicitGCInvokesConcurrent</code></p>
-
-<h2>CMS和Full gc</h2>
-
-<p>如果CMS不能释放足够的老年代内存，JVM会启用整理式的搜集算法(Compacting)。整理收集器会强迫进入STW暂停，因此它只会出现在紧急情况下。通常大家都不希望进行full gc和较长时间的STW暂停。当CMS不能足够快的释放老年代内存，或者CMS启动的太晚了，或者因为老年代的内存碎片（没有足够的连续空间存放对象）时才会发生full gc。又或者你没有配置足够的堆内存，那么在full gc之后就会抛出OutOfMemoryException。</p>
-
-<h2>永久带gc</h2>
-
-<p>CMS结束后会触发full gc的一个原因是因为永久带的垃圾问题。默认的，CMS不会对永久带进行搜集。如果你的应用程序使用了多个classloader，或者反射，你可能会需要开启对永久带的垃圾回收。JVM选项-XX:+CMSClassUnloadingEnabled会允许CMS对永久带进行垃圾搜集。需要注意的是，位于永久带的对象可能会具有老年代对象的引用，如果永久带并没有满，这些从永久带到老年代的引用会导致一些已经死掉(dead)的对象在CMS周期内不可达，除非开启了class unloading。</p>
-
-<h2>有效使用多核</h2>
-
-<p>CMS具有多个阶段，有些是可以并发执行的，另外的是需要STW暂停的，但是可以并行执行以压缩程序暂停时间。</p>
-
-<pre><code>-XX:+CMSConcurrentMTEnabled:允许CMS在concurrent阶段使用多核。
--XX:ConcGCThreads=&lt;n&gt;:指定concurrent阶段使用的线程数量
--XX:ParallelGCThreads=&lt;n&gt;:指定在STW暂停中并行工作的线程数（默认是机器的物理核心数）
--XX:+UseParNewGC:让JVM在新生代使用并行收集器，配合老年代的CMS。
-</code></pre>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1118,6 +1085,10 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
       </li>
     
@@ -1131,10 +1102,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
     
       <li class="post">
         <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
       </li>
     
   </ul>
