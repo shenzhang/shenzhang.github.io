@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文连接，该文和我的这篇文章非常非常类似，纯属巧合。另外也可以看看这篇文章对不同垃圾算法的描述。 Hotspot拥有好几种GC模式，具体采用那种模式可以通过命令行选项来指定。默认的GC模式由JVM的版本，client/server模式，以及当前的硬件条件来决定。 串行GC（Serial GC) &hellip;">
+  <meta name="description" content="原文链接 Hotspot JVM 1.6具有三种类型的锁，当你试图使用java.util.concurrent.locks.Lock的实现去获取一个锁，或者进入一个synchronized块时就会使用JVM提供的锁： biased锁(偏向锁) 在有些时候，就算时在一个并发环境中， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,56 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/08/14/how-to-implement-lock-in-jvm/">JVM是如何实现锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-14T01:27:00+08:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://slava-technical.blogspot.de/2011/04/how-does-jvm-handle-locks.html">原文链接</a></p>
+
+<p>Hotspot JVM 1.6具有三种类型的锁，当你试图使用java.util.concurrent.locks.Lock的实现去获取一个锁，或者进入一个synchronized块时就会使用JVM提供的锁：</p>
+
+<h2>biased锁(偏向锁)</h2>
+
+<p>在有些时候，就算时在一个并发环境中，实际上对于某些对象来说时没有真正的竞争的，这个时候jvm就不会向操作系统申请互斥对象(mutex)来实现锁。Hotspot可以使用一些内部的数据结构来更加高效的模拟锁。比如，一段被synchronized包裹的同步代码在当前并没有并发的执行，JVM就会使用CAS来将当前拥有锁的线程ID赋给一个用来表示互斥对象的对象中，并且如果CAS成功的话还会将重入次数也存进去。这个就是偏向锁，JVM最轻量级的锁。重入次数这个变量会被锁的当前拥有线程更新，就像更新一个局部变量一样，不会使用CAS。如果CAS失败，说明该锁当前正被其他线程拥有，这个时候JVM会暂停该互斥对象的拥有线程，将线程上下文刷新的主存中，并检查重入次数。如果重入次数时0，那么JVM就会将该锁升级为thin，否则就升级为fat。Hotspot使用互斥对象中的同样的域(field)来存储锁的拥有者线程ID</p>
+
+<h2>thin锁</h2>
+
+<p>这个实际上是一个简单的自旋锁。如果自旋的时间很短的话，它可以班组节约线程切换的时间（不立刻阻塞并且发生切换，而是先自旋一段时间）。当一个线程试图获取一个已经被占用的锁，那么该线程会先自旋一段时间，直到这个锁被释放。自旋的次数由内部的jvm实现决定，通常会考虑以下因素：JVM对当前应用所搜集的一些统计信息；当前线程数；CPU使用情况和数量等等。当自旋失败后，JVM决定将该thin锁升级为fat锁</p>
+
+<h2>fat锁</h2>
+
+<p>JVM中最高级别的锁，底层会向操作系统申请系统级别的互斥对象，并且使用操作系统的调度器来对线程进行挂起和恢复。这种类型的锁的开销比前面提到的锁要大得多，因为每次锁的释放和获取都会使得JVM与底层操作系统进行互操作。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1229,129 +1279,6 @@ setquota -n|-b val path
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-26T03:27:00+08:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>jetty中的<code>org.eclipse.jetty.server.handler.ScopedHandler</code>主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的，后面仔细看了之后觉得实际上他就是想实现一个具有以下执行流程的HandlerWrapper:</p>
-
-<pre><code> A.handle(...)
-   A.doScope(...)
-     B.doScope(...)
-       C.doScope(...)
-         A.doHandle(...)
-           B.doHandle(...)
-              C.doHandle(...)  
-</code></pre>
-
-<p>其中A包含B，B包含C。该执行流程主要应用在WebAppContext中。WebAppContext包含了SessionHandler,SecurityHandler, ServletHandler，但是从request的流程来看实际上是WebAppContext->SessionHandler->SecurityHandler->ServletHandler，所有后续执行逻辑都是被包含在前面的handler逻辑中的，或者所起堆栈是嵌套的。这样最大的好处是环境（context）共享和异常处理。内部的逻辑必须是在外部逻辑创造的环境内执行，比如所ServletHandler必须是在SessionHandler初始化好的session环境中处理。</p>
-
-<p>因此ScopedHandler需要两个过程：</p>
-
-<p><em>doScope:</em> 进入环境，并做响应的环境初始化,并在其中调用子handler的doScope，最后再做退出环境的逻辑。</p>
-
-<p><em>doHandler:</em> 执行该handler真正要处理的事情，并在其中调用子handler的doScope</p>
-
-<p>拿SessionHandler举例，它的doScope就是将session恢复好，并且再调用子handler的doScope进一步对SecurityHandler做环境初始化；它的doHandler实际上就没有做任何事情，仅仅是调用子handler的doHandler：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">never</span><span class="o">())</span>
-</span><span class='line'>        <span class="n">nextHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_nextScope</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">_nextScope</span> <span class="o">==</span> <span class="n">_handler</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_nextScope</span><span class="o">.</span><span class="na">doHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_handler</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>doScope的递归调用还算比较简单，但是如何从最底层的handler.doScope回到最上层的handler.doHandler呢，而且是嵌套的调用？</p>
-
-<p>ScopedHandler实际上维护了两个变量：</p>
-
-<p><em>_nextScope:</em> 指向下一个子handler</p>
-
-<p><em>_outterScope</em> 指向最外层的handler</p>
-
-<p>初始化：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doStart</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>        <span class="k">try</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="n">_outerScope</span><span class="o">=</span><span class="n">__outerScope</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="kd">super</span><span class="o">.</span><span class="na">doStart</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="n">_nextScope</span><span class="o">=</span> <span class="o">(</span><span class="n">ScopedHandler</span><span class="o">)</span><span class="n">getChildHandlerByClass</span><span class="o">(</span><span class="n">ScopedHandler</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">finally</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这里的_outerScope的初始化我觉得实在是不优雅，显然整个jetty中那个最先初始化的ScopedHandler将会作为所有ScopedHandler的outerScope，显然不能再jetty中提供多个顶层ScopedHandler，这个需求可能是针对WebAppContext专门设计的，但是有点不符合Jetty这种灵活的可插拔式的定义。哪怕通过set方法主动设值都要好的多。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -1369,6 +1296,10 @@ setquota -n|-b val path
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
@@ -1382,10 +1313,6 @@ setquota -n|-b val path
     
       <li class="post">
         <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
       </li>
     
   </ul>

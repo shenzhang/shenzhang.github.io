@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-04-09T22:06:52+08:00</updated>
+  <updated>2014-04-13T11:13:31+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -12,6 +12,333 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[哪个更快：Java堆还是本地内存[译]]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/"/>
+    <updated>2014-04-13T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory</id>
+    <content type="html"><![CDATA[<p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
+
+<p>使用Java的一个好处就是你可以不用亲自来管理内存的分配和释放。当你用<code>new</code>关键字来实例化一个对象时，它所需的内存会自动的在Java堆中分配。堆会被垃圾回收器进行管理，并且它会在对象超出作用域时进行内存回收。但是在JVM中有一个‘后门’可以让你访问不在堆中的本地内存(native memory)。在这篇文章中，我会给你演示一个对象是怎样以连续的字节码的方式在内存中进行存储，并且告诉你是应该怎样存储这些字节，是在Java堆中还是在本地内存中。最后我会就怎样从JVM中访问内存更快给一些结论：是用Java堆还是本地内存。</p>
+
+<h1>使用<code>Unsafe</code>来分配和回收内存</h1>
+
+<p><code>sun.misc.Unsafe</code>可以让你在Java中分配和回收本地内存，就像C语言中的<code>malloc</code>和<code>free</code>。通过它分配的内存不在Java堆中，并且不受垃圾回收器的管理，因此在它被使用完的时候你需要自己来负责释放和回收。下面是我写的一个使用<code>Unsafe</code>来管理本地内存的一个工具类：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Direct</span> <span class="kd">implements</span> <span class="n">Memory</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Unsafe</span> <span class="n">unsafe</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="n">AVAILABLE</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">Field</span> <span class="n">field</span> <span class="o">=</span> <span class="n">Unsafe</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&quot;theUnsafe&quot;</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">field</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">unsafe</span> <span class="o">=</span> <span class="o">(</span><span class="n">Unsafe</span><span class="o">)</span><span class="n">field</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">AVAILABLE</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span><span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="c1">// NOOP: throw exception later when allocating memory</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isAvailable</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">AVAILABLE</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Direct</span> <span class="n">INSTANCE</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Memory</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">INSTANCE</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Direct</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">INSTANCE</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="nf">Direct</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">alloc</span><span class="o">(</span><span class="kt">long</span> <span class="n">size</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(!</span><span class="n">AVAILABLE</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">(</span><span class="s">&quot;sun.misc.Unsafe is not accessible!&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">allocateMemory</span><span class="o">(</span><span class="n">size</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">free</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">freeMemory</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">long</span> <span class="nf">getLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">putLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">,</span> <span class="kt">long</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">putLong</span><span class="o">(</span><span class="n">address</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">int</span> <span class="nf">getInt</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getInt</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">putInt</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">putInt</span><span class="o">(</span><span class="n">address</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>在本地内存中分配一个对象</h2>
+
+<p>让我们来将下面的Java对象放到本地内存中：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SomeObject</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">someLong</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">int</span> <span class="n">someInt</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getSomeLong</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">someLong</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setSomeLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">someLong</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">someLong</span> <span class="o">=</span> <span class="n">someLong</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSomeInt</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">someInt</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setSomeInt</span><span class="o">(</span><span class="kt">int</span> <span class="n">someInt</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">someInt</span> <span class="o">=</span> <span class="n">someInt</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>我们所做的仅仅是把对象的属性放入到<code>Memory</code>中：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SomeMemoryObject</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">someLong_OFFSET</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">someInt_OFFSET</span> <span class="o">=</span> <span class="mi">8</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">SIZE</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">4</span><span class="o">;</span> <span class="c1">// one long + one int</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">address</span><span class="o">;</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Memory</span> <span class="n">memory</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">SomeMemoryObject</span><span class="o">(</span><span class="n">Memory</span> <span class="n">memory</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">memory</span> <span class="o">=</span> <span class="n">memory</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">address</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="na">alloc</span><span class="o">(</span><span class="n">SIZE</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">finalize</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">free</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">setSomeLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">someLong</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">putLong</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someLong_OFFSET</span><span class="o">,</span> <span class="n">someLong</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">long</span> <span class="nf">getSomeLong</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someLong_OFFSET</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">setSomeInt</span><span class="o">(</span><span class="kt">int</span> <span class="n">someInt</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">putInt</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someInt_OFFSET</span><span class="o">,</span> <span class="n">someInt</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">int</span> <span class="nf">getSomeInt</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="na">getInt</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someInt_OFFSET</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>现在我们来看看对两个数组的读写性能：其中一个含有数百万的<code>SomeObject</code>对象，另外一个含有数百万的<code>SomeMemoryObject</code>对象。</p>
+
+<pre><code>// with JIT:
+Number of Objects:  1,000     1,000,000     10,000,000    60,000,000
+Heap Avg Write:      107         2.30          2.51         2.58       
+Native Avg Write:    305         6.65          5.94         5.26
+Heap Avg Read:       61          0.31          0.28         0.28
+Native Avg Read:     309         3.50          2.96         2.16
+
+
+// without JIT: (-Xint)
+Number of Objects:  1,000     1,000,000     10,000,000    60,000,000
+Heap Avg Write:      104         107           105         102       
+Native Avg Write:    292         293           300         297
+Heap Avg Read:       59          63            60          58
+Native Avg Read:     297         298           302         299
+</code></pre>
+
+<p><strong>结论：</strong>跨越JVM的屏障来读本地内存大约会比直接读Java堆中的内存慢10倍，而对于写操作会慢大约2倍。<em>但是需要注意的是，由于每一个SomeMemoryObject对象所管理的本地内存空间都是独立的，因此读写操作都不是连续的。</em>那么我们接下来就来对比下读写连续的内存空间的性能。</p>
+
+<h2>访问一大块的连续内存空间</h2>
+
+<p>这个测试分别在堆中和一大块连续本地内存中包含了相同的测试数据。然后我们来做多次的读写操作看看哪个更快。并且我们会做一些随机地址的访问来对比结果。</p>
+
+<pre><code>// with JIT and sequential access:
+Number of Objects:  1,000     1,000,000     1,000,000,000
+Heap Avg Write:      12          0.34           0.35 
+Native Avg Write:    102         0.71           0.69 
+Heap Avg Read:       12          0.29           0.28 
+Native Avg Read:     110         0.32           0.32
+
+// without JIT and sequential access: (-Xint)
+Number of Objects:  1,000     1,000,000      10,000,000
+Heap Avg Write:      8           8              8
+Native Avg Write:    91          92             94
+Heap Avg Read:       10          10             10
+Native Avg Read:     91          90             94
+
+// with JIT and random access:
+Number of Objects:  1,000     1,000,000     1,000,000,000
+Heap Avg Write:      61          1.01           1.12
+Native Avg Write:    151         0.89           0.90 
+Heap Avg Read:       59          0.89           0.92 
+Native Avg Read:     156         0.78           0.84
+
+// without JIT and random access: (-Xint)
+Number of Objects:  1,000     1,000,000      10,000,000
+Heap Avg Write:      55          55              55
+Native Avg Write:    141         142             140
+Heap Avg Read:       55          55              55 
+Native Avg Read:     138         140             138
+</code></pre>
+
+<p><strong>结论:</strong>在做连续访问的时候，Java堆内存通常都比本地内存要快。对于随机地址访问，堆内存仅仅比本地内存慢一点点，并且是针对大块连续数据的时候，而且没有慢很多。</p>
+
+<h2>最后的结论</h2>
+
+<p>在Java中使用本地内存有它的意义，比如当你要操作大块的数据时(>2G)并且不想使用垃圾回收器(GC)的时候。从延迟的角度来说，直接访问本地内存不会比访问Java堆快。这个结论其实是有道理的，因为跨越JVM屏障肯定是有开销的。这样的结论对使用本地还是堆的<code>ByteBuffer</code>同样适用。使用本地ByteBuffer的速度提升不在于访问这些内存，而是它可以直接与操作系统提供的本地IO进行操作。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[maven杂谈(生命周期,插件绑定,effective-xx)]]></title>
@@ -1928,102 +2255,6 @@ setquota -n|-b val path
 
 
 <p>其实自己看下上述三种功能，在实际应用中都不实用，最多开发阶段供调试使用。不过里面的代码还是值得一看的，既简单又反映了标准的handler编写模式。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Jetty中的ScopedHandler]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/07/26/scopehandler-in-jetty/"/>
-    <updated>2013-07-26T03:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/07/26/scopehandler-in-jetty</id>
-    <content type="html"><![CDATA[<p>jetty中的<code>org.eclipse.jetty.server.handler.ScopedHandler</code>主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的，后面仔细看了之后觉得实际上他就是想实现一个具有以下执行流程的HandlerWrapper:</p>
-
-<pre><code> A.handle(...)
-   A.doScope(...)
-     B.doScope(...)
-       C.doScope(...)
-         A.doHandle(...)
-           B.doHandle(...)
-              C.doHandle(...)  
-</code></pre>
-
-<p>其中A包含B，B包含C。该执行流程主要应用在WebAppContext中。WebAppContext包含了SessionHandler,SecurityHandler, ServletHandler，但是从request的流程来看实际上是WebAppContext->SessionHandler->SecurityHandler->ServletHandler，所有后续执行逻辑都是被包含在前面的handler逻辑中的，或者所起堆栈是嵌套的。这样最大的好处是环境（context）共享和异常处理。内部的逻辑必须是在外部逻辑创造的环境内执行，比如所ServletHandler必须是在SessionHandler初始化好的session环境中处理。</p>
-
-<p>因此ScopedHandler需要两个过程：</p>
-
-<p><em>doScope:</em> 进入环境，并做响应的环境初始化,并在其中调用子handler的doScope，最后再做退出环境的逻辑。</p>
-
-<p><em>doHandler:</em> 执行该handler真正要处理的事情，并在其中调用子handler的doScope</p>
-
-<p>拿SessionHandler举例，它的doScope就是将session恢复好，并且再调用子handler的doScope进一步对SecurityHandler做环境初始化；它的doHandler实际上就没有做任何事情，仅仅是调用子handler的doHandler：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">never</span><span class="o">())</span>
-</span><span class='line'>        <span class="n">nextHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_nextScope</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">_nextScope</span> <span class="o">==</span> <span class="n">_handler</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_nextScope</span><span class="o">.</span><span class="na">doHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">_handler</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>doScope的递归调用还算比较简单，但是如何从最底层的handler.doScope回到最上层的handler.doHandler呢，而且是嵌套的调用？</p>
-
-<p>ScopedHandler实际上维护了两个变量：</p>
-
-<p><em>_nextScope:</em> 指向下一个子handler</p>
-
-<p><em>_outterScope</em> 指向最外层的handler</p>
-
-<p>初始化：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doStart</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>        <span class="k">try</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="n">_outerScope</span><span class="o">=</span><span class="n">__outerScope</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="kd">super</span><span class="o">.</span><span class="na">doStart</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>            <span class="n">_nextScope</span><span class="o">=</span> <span class="o">(</span><span class="n">ScopedHandler</span><span class="o">)</span><span class="n">getChildHandlerByClass</span><span class="o">(</span><span class="n">ScopedHandler</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">finally</span>
-</span><span class='line'>        <span class="o">{</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这里的_outerScope的初始化我觉得实在是不优雅，显然整个jetty中那个最先初始化的ScopedHandler将会作为所有ScopedHandler的outerScope，显然不能再jetty中提供多个顶层ScopedHandler，这个需求可能是针对WebAppContext专门设计的，但是有点不符合Jetty这种灵活的可插拔式的定义。哪怕通过set方法主动设值都要好的多。</p>
 ]]></content>
   </entry>
   

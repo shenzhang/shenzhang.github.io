@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成： 1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
-修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services &hellip;">
+  <meta name="description" content="我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。 若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -64,6 +63,55 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/25/ssh-without-password/">Linux下ssh免输入密码方法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T04:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。</p>
+
+<p>若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)，需要以下步骤：</p>
+
+<p>1.登陆A，并切换到zhangsan: <code>su - zhangsan</code>;</p>
+
+<p>2.生成公钥和私钥：<code>ssh-keygen -t dsa</code>。其中-t参数后面可以为dsa或rsa，具体类型根据机器环境决定，现在大部分应该是dsa。接下来一路回车后会在~zhangsan/.ssh/目录下生成id_dsa和id_dsa.pub文件，其中id_dsa.pub文件就是公钥文件，需要拷贝到目标及其B上的。</p>
+
+<p>3.拷贝公钥到目标机器:
+<code>scp id_dsa.pub zhangsan@B:/home/zhangsan/.ssh/id_dsa.pub.A</code></p>
+
+<p>4.追加到目标机器~/.ssh/authorized_keys中: <code>~/.ssh/cat id_dsa.pub.A &gt;&gt; ~/.ssh/authorized_keys</code></p>
+
+<p>5.Done</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -248,6 +296,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
@@ -261,10 +313,6 @@
     
       <li class="post">
         <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
       </li>
     
   </ul>

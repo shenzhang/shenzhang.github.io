@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -61,15 +61,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a></h1>
+      <h1 class="entry-title">哪个更快：Java堆还是本地内存[译]</h1>
     
     
       <p class="meta">
@@ -92,7 +89,7 @@
   </header>
 
 
-  <div class="entry-content"><p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
+<div class="entry-content"><p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
 
 <p>使用Java的一个好处就是你可以不用亲自来管理内存的分配和释放。当你用<code>new</code>关键字来实例化一个对象时，它所需的内存会自动的在Java堆中分配。堆会被垃圾回收器进行管理，并且它会在对象超出作用域时进行内存回收。但是在JVM中有一个‘后门’可以让你访问不在堆中的本地内存(native memory)。在这篇文章中，我会给你演示一个对象是怎样以连续的字节码的方式在内存中进行存储，并且告诉你是应该怎样存储这些字节，是在Java堆中还是在本地内存中。最后我会就怎样从JVM中访问内存更快给一些结论：是用Java堆还是本地内存。</p>
 
@@ -412,161 +409,16 @@ Native Avg Read:     138         140             138
 
 <p>在Java中使用本地内存有它的意义，比如当你要操作大块的数据时(>2G)并且不想使用垃圾回收器(GC)的时候。从延迟的角度来说，直接访问本地内存不会比访问Java堆快。这个结论其实是有道理的，因为跨越JVM屏障肯定是有开销的。这样的结论对使用本地还是堆的<code>ByteBuffer</code>同样适用。使用本地ByteBuffer的速度提升不在于访问这些内存，而是它可以直接与操作系统提供的本地IO进行操作。</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
   
 
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
 
-<time datetime="2013-09-15T01:27:00+08:00" pubdate data-updated="true">Sep 15<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h2>1.生命周期</h2>
-
-<h3>Clean</h3>
-
-<pre><code>pre-clean
-clean
-post-clean
-</code></pre>
-
-<h3>Default</h3>
-
-<pre><code>validate
-initialize
-generate-sources
-process-sources
-generate-resources
-process-resources
-compile
-process-classes
-generate-test-sources
-process-test-sources
-generate-test-resources
-process-test-resources
-test-compile
-process-test-classes
-test
-prepare-package
-package
-pre-integration-test
-integration-test
-post-integration-test
-verify
-install
-deploy
-</code></pre>
-
-<h3>Site</h3>
-
-<pre><code>pre-site
-site
-post-site
-site-deploy
-</code></pre>
-
-<h2>2.插件绑定</h2>
-
-<p>maven在不同的生命周期中会按顺序进入不同的阶段，每个阶段又会执行与该阶段绑定的plugins。如何将plugins绑定到生命周期中呢，maven-compile-plugin又是怎么知道在每次的compile阶段执行的呢？</p>
-
-<p>plugin绑定到生命周期中需要在pom.xml中的<build>=><plugins>中进行声明，有些是在pom.xml中，有些可能是在super pom中，有些甚至是maven默认的绑定，但是最终都会出现在effective pom中（mvn help:effective-pom查看)。</p>
-
-<p>那么具体是在哪个阶段执行呢？看effective pom中对maven-compile-plugin的描述：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'>  <span class="nt">&lt;plugin&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>maven-compiler-plugin<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;version&gt;</span>2.3.2<span class="nt">&lt;/version&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;executions&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-testCompile<span class="nt">&lt;/id&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>test-compile<span class="nt">&lt;/phase&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
-</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>testCompile<span class="nt">&lt;/goal&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-compile<span class="nt">&lt;/id&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>compile<span class="nt">&lt;/phase&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
-</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>compile<span class="nt">&lt;/goal&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;/executions&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;/plugin&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>主要是在phase节点和goals节点，上面的配置说明了maven-compile-plugin被分别绑定到了compile阶段和test-compile阶段，并且分别执行该插件的compile goal和testCompile goal。</p>
-
-<p>另外有些plugin可能并没有在pom.xml中说明具体的执行阶段，那么就要看该插件中的/META-INF/maven/plugin.xml插件描述文件了，该描述文件说明了该plugin的前缀(goalPrefix)，所有的mojos或者说是goal，并且这些goal的名字以及默认的执行阶段，比如compile:testCompile节点就说明了&lt;phase&gt;test-compile&lt;/phase&gt;。因此如果没有在pom.xml中说明执行阶段的话，就按照该plugin的goal的自描述中的phase进行绑定。</p>
-
-<h2>3.effective-xx</h2>
-
-<p>maven有关于自己运行的配置文件settings.xml，该文件可以是$MAVEN_HOME/conf/settings.xml或者$USER/.m2/setttings.xml，并且后者会覆盖前者，可以通过mvn help:effective-settings查看相对于默认的settings.xml所改变的部分。</p>
-
-<p>同样，前面提到的effective-pom也是由多个部分合并而来，首先是项目下的pom.xml，然后是maven的super pom($MAVEN_HOME/lib/maven-model-builder-x.x.x.jar#org/apache/maven/model/pom-x.x.x.xml)，还有一些是maven针对不同的生命周期默认绑定的插件信息($MAVEN_HOME/lib/maven-core-x.x.x.jar#/META-INF/plexus/components.xml)。最终的pom可以通过help:effective-pom查看)</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
@@ -578,539 +430,32 @@ site-deploy
   
 
 
-<time datetime="2013-09-13T01:27:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>maven中一些常用的scope及其介绍。</p>
-
-<h3>compile:</h3>
-
-<p>maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用.</p>
-
-<h3>runtime:</h3>
-
-<p>在compile相关的阶段都不会起作用，仅仅是在运行(runtime)或者测试(test)的时候有效。</p>
-
-<h3>provided:</h3>
-
-<p>和compile类似，但是往往这些依赖不需要随应用一起发布，一般是由外部环境或者容器来提供，不需要自己准备，比如说servlet-api, jsp-api这些都可以由container提供。</p>
-
-<h3>test:</h3>
-
-<p>这个最好理解，仅仅是在测试的时候有用，compile和runtime都不需要</p>
-
-<h3>system:</h3>
-
-<p>有些依赖是仓库没有的，那么可以通过使用system范围来告诉maven在指定的本地路径上查找依赖。因此需要在dependency中指定systemPath元素，告诉maven依赖的具体位置。一般来说是不应该使用该范围的，很可能大家不能共享你的配置。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
+<time datetime="2014-04-13T01:27:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2014</time>
       
-  <header>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
+      <div class="sharing">
   
-
-
-<time datetime="2013-09-12T01:27:00+08:00" pubdate data-updated="true">Sep 12<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。</p>
-
-<p>那么可以自己准备对应的源码包：hadoop-core-1.0.4-srouces.jar并安装到本地仓库中。</p>
-
-<pre><code>mvn install:install-file -Dfile=e:\hadoop-core-1.0.4-sources.jar -DgroupId=org.apache.hadoop -DartifactId=hadoop-core -Dversion=1.0.4 -DgeneratePom=false -Dpackaging=java-source
-</code></pre>
-
-<p>注意<code>packaging=java-source</code>，不要使用<code>packaging=jar</code></p>
-
-<p>从中我们可以推测maven打包和依赖查找的机制：</p>
-
-<p>我们发布一个包，指定了groupId, artifacteId, version, packaging，那么maven会自动帮我们给要发布的文件重命名：</p>
-
-<pre><code>packaging=jar =&gt; artifacteId-version.jar
-packaging=java-srouce =&gt; artifacteId-version-sources.jar
-packaging=java-doc =&gt; artifacteId-version-doc.jar
-</code></pre>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/" data-via="" data-counturl="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/" >Tweet</a>
+  
+  
+  
 </div>
-  
-  
 
-
-    </article>
-  
-  
-    <article>
+    
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-11T01:27:00+08:00" pubdate data-updated="true">Sep 11<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/09/11/jasmine/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+        <a class="basic-alignment left" href="/blog/2013/09/15/something-about-maven/" title="Previous Post: maven杂谈(生命周期,插件绑定,effective-xx)">&laquo; maven杂谈(生命周期,插件绑定,effective-xx)</a>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-10T01:27:00+08:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系，不能用SeaJS的风格来使用RequireJS吧。</p>
-
-<p>今天粗略看了下SeaJS的源码，不对源码的细节进行分析，仅仅对其模块的组织和加载原理做简单的分析，知道了原理剩下的就是代码效率和浏览器兼容性的问题了。</p>
-
-<p>主要解决一下问题：</p>
-
-<ol>
-<li>怎么用SeaJS</li>
-<li>怎么解析、加载和执行模块</li>
-<li>模块标识符（依赖名）的path解析</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/09/10/inspect-seajs/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/05/settimeout-and-setinterval/">setTimeout和setInterval</a></h1>
-    
-    
-      <p class="meta">
-        
+    </p>
+  </footer>
+</article>
 
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
-
-<h3>setInterval:</h3>
-
-<p>可以定期按照一定的频率做一个事情，比如funA。但是如果funA中抛出了异常会怎样呢？  firefox和chrome不会因为抛出异常而做出什么奇怪的事情，毕竟调用setInterval只是告诉浏览器我要定期做一个事情，哪怕这个事情出错了；但是IE却在出现异常后停止继续定期做这个事情，所以千万要保证funA中的事情一定不要有异常出现。</p>
-
-<h3>setTimeout:</h3>
-
-<p>延时一段时间做某个事情funcB。比如：</p>
-
-<p>setTimeout(tick, 1000)会在1秒之后将tick加入到事件队列中准备执行，并且tick方法的arguments是空的，但是在firefox13以下的tick的arguments却不一定是空的，有可能会有一个表示延时时间的数值(小于0)来表示执行该函数比预期时间推后了多少。新版本的firefox已经解决了该问题，但是还是不要试图在tick方法中根据arguments的数量来决定行为。</p>
 </div>
-  
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/04/status-of-thread/">Thread的状态</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
-
-<p>Thread的状态是由Thread.State枚举表示的，有下面的6个值：</p>
-
-<h3>NEW</h3>
-
-<p>当线程刚被new出来，并且没有start的时候处于NEW状态</p>
-
-<h3>BLOCKED</h3>
-
-<p>线程被阻塞，一般是由于锁的原因等待进入临界区时候的状态</p>
-
-<h3>RUNNABLE</h3>
-
-<p>正在运行，就算是没有获得CPU时间片的线程也是在RUNNABLE</p>
-
-<h3>WAITING</h3>
-
-<p>顾名思义，线程处于等待状态。它正在等待其他的操作被触发，比如wait()后等待notify()或者notifyAll()；Thread.join()后等待目标线程被结束；LockSupport.park()后等待LockSupport.unpark()。</p>
-
-<p>注意，在调用wait()后会首先进入WAITING状态，如果被notify()了，并且无法获得锁并进入临界区，那么就在BLOCKED；如果进入临界区了，那么就是RUNNABLE</p>
-
-<h3>TIMED_WAITING</h3>
-
-<p>相比WAITING状态，只是多了一个时间参数，比如Thread.sleep(10)，object.wait(10)等等。</p>
-
-<h3>TERMINATED</h3>
-
-<p>运行完毕</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/">理解GC暂停 - Hotspot中的minor Gc[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-16T02:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots.html">原文链接</a></p>
-
-<p>当JVM进行垃圾搜集的时候会Stop-The-World暂停，它们是java应用程序的天敌。Hotspot JVM多种先进的、被优化的垃圾收集器，但是要想找到一个最优的配置需要首先了解垃圾搜集算法的机制。这篇文章介绍了GC在STW时怎么使用CPU，并且还介绍了一个新生代的垃圾搜集算法。</p>
-
-<h2>堆结构</h2>
-
-<p>大多数现代GC算法都是分代收集的，这意味着java的堆被划分为了多个空间。不同的空间用其中保存的对象的年龄划分。对象首先被分配到新生代，然后经过多次存活后，最终被放到了老年代。这个是基于“大多数的对象在创建后很快就会消亡”的假设。所有的Hotspot垃圾收集器都将内存划分为5个部分（对于G1收集器，空间可能不是连续的）。</p>
-
-<p><img src="/images/2013/08/java_heap_struct.png"></p>
-
-<ol>
-<li>Eden:eden区是对象被分配的地方</li>
-<li>Survivor: Survivor区被用来在young gc或者minor gc中接收存活的对象</li>
-<li>Tenured:Tenured区是保存长时间存活的对象</li>
-<li>Permanent:Permanent是供JVM自己使用，比如classes或者被JIT编译后的代码，它的行为和tenured区类似，因此在文章的后面我们将忽略该区域。</li>
-</ol>
-
-
-<p>Eden和2个Survivor区在一起被称作新生代（yound space)。</p>
-
-<h3>Hotspot GC算法</h3>
-
-<ol>
-<li>串行垃圾收集(-XX:+UseSerialGC)</li>
-<li>新生代并行，老年代串行的分代收集(-XX:+UseParallelGC)</li>
-<li>新生代和老年代都并行的分代收集(-XX:+UseParallelOldGC)</li>
-<li>CMS收集算法和串行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:-UseParNewGC)</li>
-<li>CMS收集算法和并行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:+UseParNewGC)</li>
-<li>G1收集算法(-XX:+UseG1GC)</li>
-</ol>
-
-
-<p>除了G1之外，其他所有的垃圾收集算法在新生代部分都使用了类似的算法（串行或者并行）</p>
-
-<h3>写屏障(Write barrier)</h3>
-
-<p>分代垃圾收集器的关键点在于，是否有必要每次都对整个java堆进行垃圾收集，还是对其中的一部分进行收集（比如新生代)。但是JVM为了实现这个效果，需要实现一个特殊的机制“写屏障”。在Hotspot中实现了两种类型的写屏障：dirty cards和snaphot-at-the-beginning(SATB)。SATB被用于G1算法中（该文没有对其描述）。其他所有的垃圾收集算法都使用dirty cards。</p>
-
-<h3>Dirty cards写屏障(卡片标记)</h3>
-
-<p>Dirty cards写屏障的原理非常简单。每当应用程序改变内存中的引用时，都需要标记该内存页是脏(dirty)的。JVM中有一个特殊的卡片表(card table)，每512字节的页都对应其中的1个字节。</p>
-
-<p><img src="/images/2013/08/card-table.png"></p>
-
-<h3>新生代垃圾收集算法</h3>
-
-<p>绝大部分的对象会被首先分配到eden区（除了在一些特殊的情况下，对象可能会直接被分配到老年代）。为了更高效的分配内存，Hotspot使用了线程本地分配块（thread local allocation block, TLAB)来分配新的对象，但是TLAB本身又被分配在eden区。一旦eden区满了就会触发minor gc。minor gc的目标是清理eden区，释放内存。在这里使用的是拷贝算法，存活的对象被拷贝到另外的一块区域，之前的区域的所有空间被标记为可用（free）。但是在开始垃圾收集之前，JVM首先需要找到根（root）引用，所有用于minor gc的根引用是来自堆栈的引用或者来自老年代的引用。</p>
-
-<p>通常情况下，搜集来自于老年代的引用需要扫描整个老年代对象的所有引用，因此我们需要写屏障（write-barrier）。所有在新生代中的对象都是在上次写屏障被复位之后分配的，也就意味着非脏(no-dirty)页是不可能引用新生代的对象，最后意味着我们没必要扫描整个老年代，而只需要扫描dirty pages中的对象即可。</p>
-
-<p><img src="/images/2013/08/dirty-pages.png"></p>
-
-<p>最开始的dirty cards是空的，并且开始young gc后，JVM拷贝eden和其中一个survivor中存活的对象到另外一个survivor区。JVM只需要花费时间在存活对象上，拷贝和再分配（relocate）对象也需要更新指向它们的引用。</p>
-
-<p><img src="/images/2013/08/dirty-pages1.png"></p>
-
-<p>当JVM更新移动后的对象的引用时，内存也同时也被修改了，自然会打上dirty的标记。最终在我们下次开始young gc的时候，只有位于dirty pages中的页才有可能引用新生代的对象。</p>
-
-<p><img src="/images/2013/08/dirty-pages2.png"></p>
-
-<h3>对象升级</h3>
-
-<p>如果对象没有在young gc中被清除，那么最终会被拷贝到老年代。对象升级会在下述情况下发生：</p>
-
-<ol>
-<li>-XX:+AlwaysTenure:让JVM直接将eden中的对象升级到老年代，而不通过survivor区（survivor区在这里不再使用）</li>
-<li>其中一个survivor区已经满了，那么所有剩下的存活对象都直接升级到老年代。</li>
-<li>如果对象在新生代的垃圾收集中存活了足够多的周期，就会被升级到老年代（存活周期数通过–XX:MaxTenuringThreshol选项和-XX:TargetSurvivorRatio选项调整）</li>
-</ol>
-
-
-<h3>对象直接被分配到老年代</h3>
-
-<p>如果我们可以将存活时间较长的对象直接分配到老年代，那么我们会获得性能提升。但是很不幸，我们无法告诉JVM这么做。但是仍然还是有一些情况，对象可以直接被分配到老年代：</p>
-
-<ol>
-<li>-XX:PretenureSizeThreshold=<n>：告诉JVM如果对象的大小大于<n>时，就可以直接将该对象分配到老年代。</li>
-<li>如果对象的大小大于了eden区，那么也会直接分配到老年代。</li>
-</ol>
-
-
-<p>不同于应用程序对象，系统级的对象会直接分配到永久带。</p>
-
-<h3>并行执行</h3>
-
-<p>在young gc中的大部分任务都可以并行执行。如果有多个CPU可用，那么JVM可以充分利用它们以减少STW的时间。可以通过选项–XX:ParallelGCTreads=<n>来告诉JVM使用多少个线程来执行GC。默认情况下，JVM会使用当前可用的CPU数量作为GC的线程数。但是串行版的收集器会忽律给选项，因为它只使用一个CPU线程。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-cms-in-hotspot/">理解GC暂停 - Hotspot中的CMS[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-16T01:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots_02.html">原文链接</a></p>
-
-<p>Concurrent-Mark-Sweep(CMS)是Hotspot JVM中的一个短停顿垃圾回收器。CMS在回收内存时做的大部分工作都可以和应用程序并发执行（不用暂停应用程序）。但是仍然需要短暂的Stop-The-World暂停。这篇文章会介绍这个暂停的原因以及如何减少这样的暂停。</p>
-
-<h2>CMS基础</h2>
-
-<p>Hotspot中的CMS收集器是分代搜集的，因此整个java堆被分为了新生代和老年代，并且它们可以独立进行搜集。对于新生代Hotspot通常使用的是拷贝算法。要想开启CMS收集器，需要在命令行参数里指定-XX:+UseConcMarkSweepGC选项。</p>
-
-<p>CMS被用来搜集老年代，一个CMS搜集周期包括以下阶段：</p>
-
-<ol>
-<li>Inital mark:CMS在这个阶段搜集所有的根(root)引用，并且是STW的。</li>
-<li>Concurrent mark:这个阶段会与应用程序并发执行，在该阶段垃圾收集器会遍历老年代的所有对象(从root开始)，将存活的对象标记出来。</li>
-<li>Concurrent pre clean:这是另外一个并发阶段，主要也是用于标记操作，它会找到从上次标记(mark)之后改变了的引用。这个阶段最主要的目的是减少remark阶段的STW时间。</li>
-<li>Remark：一旦Concurrent mark结束了，垃圾收集器需要进入STW暂停，在暂停的时候找到所有从上次mark之后所有被改变了的引用。</li>
-<li>Concurrent sweep:垃圾收集器在该阶段会扫描整个老年代，并且回收不再使用的内存。</li>
-<li>Concurrent reset：在CMS周期结束后，一些数据结构需要在下次周期开始之前被重置。</li>
-</ol>
-
-
-<p>不同于其他大多数垃圾收集器，CMS不会对老年代的堆内存进行整理。CMS没有对内存对象进行移动以便让为使用的空间保持连续，它会维护所有空闲内存段的列表。这样CMS避免了对内存重新布局的开销（对内存重新布局需要STW），但是负面效果就是会产生内存碎片。为了减少产生内存碎片的风险，CMS会对对象尺寸进行统计，并且针对对象的不同尺寸来维护空闲列表。</p>
-
-<h2>CMS暂停时间</h2>
-
-<p>CMS本身只有两个暂停点，但是你的应用程序执行新生代的垃圾回收时同样会进行暂停。</p>
-
-<h2>Inital mark</h2>
-
-<p>在inital mark阶段，CMS会遍历老年代的所有根引用。这包括：</p>
-
-<ol>
-<li>来自于线程栈的引用</li>
-<li>来自于新生代的引用</li>
-</ol>
-
-
-<p>来自于线程栈的引用会搜集的很快（不超过1毫秒），但是搜集来自于新生代的引用就依赖于新生代对象的多少了。通常inital mark会在新生代gc完毕后开始，所以eden区这个时候时空的，并且其中一个survivor区里面也仅仅包含了存活下来的对象。Survivor区通常很小，因此在young gc完成后执行inital mark会很快，不超过毫秒。但是，如果inital mark在eden区满的时候开启，那么将会花费很长的时间（往往比young gc本身都还要长）</p>
-
-<p>一旦CMS收集器被触发了，JVM会等待一段时间，让young gc完成后再开始inital mark。JVM配置参数-XX:CMSWaitDuration=<t>可以用来配置CMS等待多长时间才开始inital mark。如果你不希望长时间的inital mark暂停，那么你可以配置该选项，让等待时间略微长于你的应用中执行一次young gc所需要的时间。</p>
-
-<h2>Remark</h2>
-
-<p>大多数的标记（marking）可以和应用程序并行执行，但是也不是绝对的，因为有可能应用会在mark阶段修改对象引用图。当concurrent mark结束后，垃圾收集器会暂停应用程序，并且进行重复的标记以保证所有可达的的对象都已经标记为存活状态。但是收集器不需要遍历整个对象图，它仅仅需要遍历哪些自从上次标记（marking）阶段之后被修改过的引用（确切的说是从上次pre clean阶段之后）。卡片表（card table)被用来标记那些老年代中被修改的内存区域，但是新生代和堆栈部分还是需要被重新扫描一遍。</p>
-
-<p>通常情况下remark阶段大部分时间被花费在了扫描新生代部分。如果在开始remark之前对新生代进行了gc，那么这个时间会大大缩短。我们可以加上-XX:+CMSScanvengeBeforeRemark选项来让JVM在开始remark之前强制进行新生代的gc。就算新生代是空的，remark阶段还是会对老年代中已经修改的引用进行扫描，这个所花费的时间和新生代gc暂停时间差不多。</p>
-
-<h2>什么时候会触发CMS</h2>
-
-<p>不同于其他老年代STW收集器，CMS搜集周期在老年代满了之前就需要开始（其他老年代收集器只需要老年代满的时候出发，而CMS需要在老年代没满的时候就触发）。CMS收集器在老年代的可用空间达到一定的阈值时（这个阈值可根据JVM在运行中搜集的统计信息或者参数来决定），并且CMS可能会推迟到下一次young gc触发之后才开始。普通的对象只会在yong gc的过程中被分配到老年代，因此CMS一般是在yong gc发生之后才开始，并且这样也会让initial mark变得很小。但是在某些情况下，对象可能会直接被分配在老年代，并且CMS开始的时候eden区可能具有很多对象。这个时候inital mark会多耗费10-100倍的时间，这个情况是非常糟糕的。通常这种情况只会在分配很大对象的时候（好几M大小的数组）。为了避免这种长暂停，你可以配置-XX:CMSWaitDuration选项。</p>
-
-<h2>配置CMS开始的固定阈值</h2>
-
-<p>你可以配置固定的老年代充满比例阈值来触发CMS gc：</p>
-
-<pre><code>‑XX:+UseCMSInitiatingOccupancyOnly 
-‑XX:CMSInitiatingOccupancyFraction=70(这会告诉JVM只有当超过70%的老年代被使用后才触发CMS)
-</code></pre>
-
-<h2>显式触发CMS</h2>
-
-<p>你可以配置JVM，只要代码调用System.gc()方法后就触发CMS：<code>-XX:+ExplicitGCInvokesConcurrent</code></p>
-
-<h2>CMS和Full gc</h2>
-
-<p>如果CMS不能释放足够的老年代内存，JVM会启用整理式的搜集算法(Compacting)。整理收集器会强迫进入STW暂停，因此它只会出现在紧急情况下。通常大家都不希望进行full gc和较长时间的STW暂停。当CMS不能足够快的释放老年代内存，或者CMS启动的太晚了，或者因为老年代的内存碎片（没有足够的连续空间存放对象）时才会发生full gc。又或者你没有配置足够的堆内存，那么在full gc之后就会抛出OutOfMemoryException。</p>
-
-<h2>永久带gc</h2>
-
-<p>CMS结束后会触发full gc的一个原因是因为永久带的垃圾问题。默认的，CMS不会对永久带进行搜集。如果你的应用程序使用了多个classloader，或者反射，你可能会需要开启对永久带的垃圾回收。JVM选项-XX:+CMSClassUnloadingEnabled会允许CMS对永久带进行垃圾搜集。需要注意的是，位于永久带的对象可能会具有老年代对象的引用，如果永久带并没有满，这些从永久带到老年代的引用会导致一些已经死掉(dead)的对象在CMS周期内不可达，除非开启了class unloading。</p>
-
-<h2>有效使用多核</h2>
-
-<p>CMS具有多个阶段，有些是可以并发执行的，另外的是需要STW暂停的，但是可以并行执行以压缩程序暂停时间。</p>
-
-<pre><code>-XX:+CMSConcurrentMTEnabled:允许CMS在concurrent阶段使用多核。
--XX:ConcGCThreads=&lt;n&gt;:指定concurrent阶段使用的线程数量
--XX:ParallelGCThreads=&lt;n&gt;:指定在STW暂停中并行工作的线程数（默认是机器的物理核心数）
--XX:+UseParNewGC:让JVM在新生代使用并行收集器，配合老年代的CMS。
-</code></pre>
-</div>
-  
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/blog/page/2/">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
 <aside class="sidebar">
   
     <section>
@@ -1146,6 +491,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 
   
 </aside>
+
 
     </div>
   </div>

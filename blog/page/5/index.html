@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="Jetty有一个口号：“不要将你的应用部署到Jetty中，而是将Jetty部署到你的应用中”。Jetty提供了另一种开发和部署web应用的思维，使用jetty的嵌入式模式就是将一个http模块放入到你的应用中，而不需要将你的应用放入到http服务器中。 将Jetty嵌入到应用中通常需要下面的步骤 &hellip;">
+  <meta name="description" content="Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。 但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,75 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/27/start-jar-in-jetty/">Jetty中的Start.jar</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-27T03:27:00+08:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。</p>
+
+<p>但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的。如果用了maven，那么maven会自动帮你管理这些jar的依赖关系，但是如果是用控制台或者shell来运行jetty，仍然需要设置classpath。</p>
+
+<p>start.jar是一个可执行的jar文件，它可以帮助你配置好运行jetty所需要的classpath，然后运行jetty的主程序。start.jar中包含了一个start.config文件，并且它可以用来控制start.jar的行为，因此你可以直接这样运行start.jar:</p>
+
+<pre><code>java -jar start.jar
+</code></pre>
+
+<p>可以加上&mdash;dry-run参数来让start.jar输出配置好的java运行命令，其中就包括了classpath的配置，该参数仅仅是用于输出命令行，不会真正启动jetty：</p>
+
+<pre><code>java -jar start.jar --dry-run
+</code></pre>
+
+<p>会产生类似的输出：</p>
+
+<pre><code>/usr/lib/jvm/java-1.5.0-sun-1.5.0.19/jre/bin/java \
+-Djetty.home=/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution \
+-cp /home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/resources:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-xml-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/servlet-api-2.5.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-http-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-continuation-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-server-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-security-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlet-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-webapp-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-deploy-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlets-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-util-7.0.0.RC6-SNAPSHOT.jar:\
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-io-7.0.0.RC6-SNAPSHOT.jar \
+org.eclipse.jetty.xml.XmlConfiguration \
+/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/etc/jetty.xml
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -523,55 +592,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/ssh-without-password/">Linux下ssh免输入密码方法</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T04:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。</p>
-
-<p>若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)，需要以下步骤：</p>
-
-<p>1.登陆A，并切换到zhangsan: <code>su - zhangsan</code>;</p>
-
-<p>2.生成公钥和私钥：<code>ssh-keygen -t dsa</code>。其中-t参数后面可以为dsa或rsa，具体类型根据机器环境决定，现在大部分应该是dsa。接下来一路回车后会在~zhangsan/.ssh/目录下生成id_dsa和id_dsa.pub文件，其中id_dsa.pub文件就是公钥文件，需要拷贝到目标及其B上的。</p>
-
-<p>3.拷贝公钥到目标机器:
-<code>scp id_dsa.pub zhangsan@B:/home/zhangsan/.ssh/id_dsa.pub.A</code></p>
-
-<p>4.追加到目标机器~/.ssh/authorized_keys中: <code>~/.ssh/cat id_dsa.pub.A &gt;&gt; ~/.ssh/authorized_keys</code></p>
-
-<p>5.Done</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -589,6 +609,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
@@ -602,10 +626,6 @@
     
       <li class="post">
         <a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a>
       </li>
     
   </ul>

@@ -219,12 +219,18 @@
         <lastmod>2014-04-09T22:06:12+08:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/
+        </loc>
+        <lastmod>2014-04-13T10:43:48+08:00</lastmod>
+    </url>
+    <url>
         <loc>http://shenzhang.github.io/blog/archives/</loc>
-        <lastmod>2014-04-09T22:06:12+08:00</lastmod>
+        <lastmod>2014-04-13T10:43:48+08:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/</loc>
-        <lastmod>2014-04-09T22:06:12+08:00</lastmod>
+        <lastmod>2014-04-13T10:43:48+08:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/robots.txt</loc>
