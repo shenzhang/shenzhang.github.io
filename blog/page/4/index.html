@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="mac中默认的jdk是1.6的，而且该版本是由Apple自己提供的，估计是定制性比较高，但是jdk中没有src.zip源码文件，因此决定安装oracle的官方版本。oracle目前仅仅提供了1.7+的mac版，下载安装后发现安装的jdk的目录结构和传统win或linux上的不太一样， &hellip;">
+  <meta name="description" content="hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。 -XX:+UseSerialGC 串行垃圾搜集算法，具体表现为： 新生代： [DefNew: 34944K-& &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,185 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/23/gc-in-hotspot/">hotspot中的不同GC算法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。</p>
+
+<h2>-XX:+UseSerialGC</h2>
+
+<p>串行垃圾搜集算法，具体表现为：</p>
+
+<p>新生代：</p>
+
+<pre><code>[DefNew: 34944K-&gt;3031K(39296K), 0.0264555 secs] 34944K-&gt;3031K(126720K), 0.0265033 secs] [Times: user=0.03 sys=0.00, real=0.03 secs] 
+</code></pre>
+
+<p>老年代：</p>
+
+<pre><code>[GC [DefNew: 37824K-&gt;37824K(39296K), 0.0000274 secs][Tenured: 84770K-&gt;87423K(87424K), 0.6707186 secs] 122594K-&gt;90531K(126720K), [Perm : 2963K-&gt;2963K(12288K)], 0.6708503 secs] [Times: user=0.67 sys=0.00, real=0.67 secs] 
+</code></pre>
+
+<p>Full:</p>
+
+<pre><code>[Full GC [Tenured: 87423K-&gt;87423K(87424K), 0.9254085 secs] 126719K-&gt;106207K(126720K), [Perm : 2962K-&gt;2962K(12288K)], 0.9254837 secs] [Times: user=0.92 sys=0.00, real=0.92 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelGC</h2>
+
+<p>并行垃圾搜集算法，新生代使用并行，老年代使用Mark-Sweep-Compact(标记，清除，压缩）</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 35680K-&gt;5432K(38208K)] 35680K-&gt;5636K(125632K), 0.0153779 secs] [Times: user=0.01 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;7374K(38080K)] [PSOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;94798K(125504K) [PSPermGen: 2963K-&gt;2963K(12288K)], 0.4979593 secs] [Times: user=0.50 sys=0.00, real=0.50 secs]
+</code></pre>
+
+<h2>-XX:+UseParallelOldGC</h2>
+
+<p>并行垃圾搜集，老年代和新生代都是并行垃圾搜集</p>
+
+<p>新生代：</p>
+
+<pre><code>[GC [PSYoungGen: 27552K-&gt;2144K(34432K)] 74201K-&gt;50809K(121856K), 0.0170400 secs] [Times: user=0.06 sys=0.00, real=0.02 secs]
+</code></pre>
+
+<p>full：</p>
+
+<pre><code>[Full GC [PSYoungGen: 32768K-&gt;18745K(38080K)] [ParOldGen: 87423K-&gt;87423K(87424K)] 120191K-&gt;106169K(125504K) [PSPermGen: 2962K-&gt;2962K(12288K)], 0.9138238 secs] [Times: user=3.13 sys=0.00, real=0.92 secs] 
+</code></pre>
+
+<h2>-XX:+UseConcMarkSweepGC</h2>
+
+<p>标记清除算法，每次只清除一部分死亡对象，基本不会造成stop the world，但是会有内存碎片可以配合以下选项来对碎片问题进行优化：</p>
+
+<pre><code>-XX:+UseCMSCompactAtFullCollection:让full gc的时候，顺便对内存进行整理
+-XX:+CMSFullGCsBeforeCompact: 多少次full gc后，再执行full gc时就进行内存整理
+</code></pre>
+
+<p>从算法行为上来说有4种类型：</p>
+
+<ol>
+<li>Mark-sweep:标记清除，缺点是会有大量内存碎片</li>
+<li>复制算法(copying)：简单高效，把存货的对象从一个区域复制到另一个区域，但是在存活率较高的情况下效率会变低（某个对象总是存活，那么自然就要来回复制，如果这些对象生命周期都很短，那么在GC的时候直接就不用复制到另一个区域了）</li>
+<li>标记整理（Mark-compact)：同标记清除类似，但是后续操作不是清除死亡的对象，而是把所有存活的对象往内存一边移动，将另外以便的内存所有都清理掉。</li>
+<li>分代搜集(具体到每一代又采用了上述三种算法）。</li>
+</ol>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/18/launchd-in-macos/">Launchd in MacOS</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-18T01:27:00+08:00" pubdate data-updated="true">Jul 18<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>在《mac下jdk7的乱码分析》中提到了/etc/launchd.conf文件可以作为mac中的系统启动配置文件，类似于/etc/rc.local或init文件，因此对mac的launchd框架做了下了解，边看wiki边把自己的理解记录下来。</p>
+
+<p>launchd是一个开源的服务管理框架，由apple的Dave Zarzycki设计和开发，可以管理系统范围内的服务、应用、进程以及脚本。launchd可以用来代替：init, rc, init.d脚本,rc.d脚本,SystemStarter, inetd/xinetd, crond/atd, watchdogd。确实感觉非常强大，apple设计它就是用来代替这些传统linux组件的，好处显而易见，首先可以让系统管理更加简单，其次就是提高运行效率特别是可以显著缩短开机时间。另外launchd框架不仅仅可以用于osx中，还可以在其他的系统中使用。</p>
+
+<p>在launchd系统中有两个重要的组件：launchd服务和launchctl接口</p>
+
+<p>launchd服务作为传统init进程，在mac中的PID为1，是系统启动的第一个进程，并且由它负责将系统启动起来。在/Libaray/LaunchAgents和/Libaray/LaunchDaemons目录中有一些配置文件用来控制lauchd启动服务的参数。</p>
+
+<p>launchctl接口是一个命令行的应用程序，可以与launchd服务通信是launchd服务提供的用户接口，可以控制launchd管辖的服务，启动或停止任务，获取或设置一些系统参数，比如ulimit的参数就可以通过launchctl来控制。</p>
+
+<h2>launchd</h2>
+
+<p>launchd主要有两个职责：开机的时候启动系统；加载和管理所有的服务。</p>
+
+<p>OSX的启动顺序大致如下：</p>
+
+<ol>
+<li><a href="http://en.wikipedia.org/wiki/Open_Firmware">Open Firmware</a>激活，初始化硬件并加载BootX.</li>
+<li><a href="http://en.wikipedia.org/wiki/BootX_(Apple\">BootX</a>)加载内核，并且加载需要的内核扩展(kexts)</li>
+<li>内核加载launchd</li>
+<li>launchd运行/etc/rc，扫描/System/Library/LaunchAgents和/System/Library/LaunchDaemons目录，根据需要读取其中的plist文件配置，最后启动登陆窗口</li>
+</ol>
+
+
+<p>在第四步，launchd会扫描一些不同的目录，但是主要包括两类：LaunchDaemons和LaunchAgents。LaunchDaemons中包含了那些需要以root身份运行的，并且是作为后台服务的进程；LaunchAgents包含了很多任务(agent应用)，会运行在用户环境。</p>
+
+<p>最重要的是launchd不同于SystemStarter，它不会在系统启动的时候真正启动所有的服务，它的思想类似与xinetd，是一种按需加载。在系统启动的时候，它会扫描所有jobs的plist文件，如果plist中包含了OnDemand键的话，那么该服务就不会在启动的时候立刻加载，launchd会一直保持监听状态，如果有其他程序需要该服务，那么launchd就会立刻将它启动起来，如果不再有需要了，launchd又会将它关闭。如果一个服务已经启动了，launchd又会像watchlog一样对这些服务保持监控，如果有哪个服务出现异常launchd还会重新启动它。</p>
+
+<h2>launchctl</h2>
+
+<p>在OSX中，可以使用launchctl来集中对服务进行管理。可以通过控制台、标准输入或者交互模式来对launchctl发送命令，一些永久的命令还可以写在/etc/launchd.conf中，或者对于不同的用户写在~/.launchd.conf中(不是所有的OSX都支持)。更多launchctl的参数可以参见man手册。</p>
+
+<h2>Property list</h2>
+
+<p>Property list(plist)文件被用来向launchd提供程序的启动配置，当launchd扫描这个文件或者通过launchctl提交一个job，launchd就会读取这个job对应的plist文件来决定怎样启动它。常用的plist参数包括：</p>
+
+<pre><code>Label:job的名称，模式是plist文件的名称，比如说fish.plist，那么默认的Label就是fish
+Program:程序的路径
+ProgramArguments:运行参数。（Program或者ProgramArguments必须要至少指定一个）
+UserName:以哪个用户来运行该job
+RunAtLoad:是否加载之后就立刻运行(默认是NO）
+WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired的目录。
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -422,101 +601,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/03/connectors-in-jetty/">Jetty的连接器(Connectors)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
-
-<h2>连接器的类型</h2>
-
-<ul>
-<li>SelectChannelConnector</li>
-<li>SocketConnector</li>
-<li>SslSelectChannelConnector</li>
-<li>SslSocketConnector</li>
-<li>Ajp13SocketConnector</li>
-</ul>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/03/connectors-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/03/autovaccum-in-postgresql/">Postgresql中的autovaccum</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-03T02:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用<code>/dt+ table_name</code> 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。</p>
-
-<p>问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/03/autovaccum-in-postgresql/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -534,6 +618,14 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
@@ -543,14 +635,6 @@
     
       <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
       </li>
     
   </ul>

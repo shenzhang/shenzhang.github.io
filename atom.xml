@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-04-13T21:21:13+08:00</updated>
+  <updated>2014-05-03T00:44:57+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -12,6 +12,438 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Java中的Reference对象[译]]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/"/>
+    <updated>2014-04-27T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/04/27/java-reference-objects</id>
+    <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[深入解析OutOfMemoryError[译]]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error/"/>
+    <updated>2014-04-24T01:27:00+08:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error</id>
+    <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.outOfMemory">原文链接</a></p>
+
+<p>在Java中，所有对象都存储在堆中。他们通过<code>new</code>关键字来进行分配，JVM会检查是否所有线程都无法在访问他们了，并且会将他们进行回收。在大多数时候程序员都不会有一丝一毫的察觉，这些工作都被静悄悄的执行。但是，有时候在发布前的最后一天，程序挂了。</p>
+
+<pre><code>Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+</code></pre>
+
+<p><code>OutOfMemoryError</code>是一个让人很郁闷的异常。它通常说明你干了写错误的事情：没必要的长时间保存一些没必要的数据，或者同一时间处理了过多的数据。有些时候，这些问题并不一定受你的控制，比如说一些第三方的库对一些字符串做了缓存，或者一些应用服务器在部署的时候并没有进行清理。并且，对于堆中已经存在的对象，我们往往拿他们没办法。</p>
+
+<p>这篇文章分析了导致<code>OutOfMemoryError</code>的不同原因，以及你该怎样应对这种原因的方法。以下分析仅限于Sun Hotspot虚拟机，但是大多数结论都适用于其他任何的JVM实现。它们大多数基于网上的文章以及我自己的经验。我没有直接做JVM开发的工作，因此结论并不代表JVM的作者。但是我确实曾经遇到过并解决了很多内存相关的问题。</p>
+
+<!-- more -->
+
+
+<h2>垃圾回收介绍</h2>
+
+<p>我在<a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">这篇文章</a>中已经详细介绍了垃圾回收的过程。简单的说，标记-清除算法(mark-sweep collect)以<code>garbage collection roots</code>作为扫描的起点，并对整个对象图进行扫描，对所有可达的对象进行标记。那些没有被标记的对象会被清除并回收。</p>
+
+<p>Java的垃圾回收算法过程意味着如果出现了OOM，那么说明你在不停的往对象图中添加对象并且没有移除它们。这通常是因为你在往一个集合类中添加了很多对象，比如Map，并且这个集合对象是static的。或者，这个集合类被保存在了<code>ThreadLocal</code>对象中，而这个对应的Thread却又长时间的运行，一直不退出。</p>
+
+<p>这与C和C++的内存泄露完全不一样。在这些语言中，如果一些方法调用了malloc()或者new，并且在方法退出的时候没有调用相应的free()或者delete，那么内存就会产生泄露。这些是真正意义上得泄露，你在这个进程范围内不可能再恢复这些内存，除非使用一些特定的工具来保证每一个内存分配方法都有其对应的内存释放操作相对应。</p>
+
+<p>在java中，“泄露”这个词往往被误用了。因为从JVM的角度来说，所有的内存都是被良好管理的。问题仅仅是作为程序员的你不知道这些内存是被哪些对象占用了。但是幸运的是，你还是有办法去找到和定位它们。</p>
+
+<p>在深入探讨之前，你还有最后一件关于垃圾收集的知识需要了解：JVM会尽最大的能力去释放内存，直到发生OOM。这就意味着OOM不能通过简单的调用<code>System.gc()</code>来解决，你需要找到这些“泄露”点，并自己处理它们。</p>
+
+<h2>设置堆大小</h2>
+
+<p>学院派的人非常喜欢说<a href="http://java.sun.com/docs/books/jls/third_edition/html/j3TOC.html">Java语言规范</a>并没有对垃圾收集器进行任何约定，你甚至可以实现一个从来不释放内存的JVM(实际是毫无意义的)。<a href="http://java.sun.com/docs/books/jvms/second_edition/html/Overview.doc.html#15730">Java虚拟机规范</a>中提到堆是由垃圾回收器进行管理，但是却没有说明任何相关细节。仅仅说了我刚才提到的那句话：垃圾回收会发生在OOM之前。</p>
+
+<p>实际上，Sun Hotspot虚拟机使用了一个固定大小的堆空间，并且允许在最小空间和最大空间之间进行自动增长。<strong>如果你没有指定最小值和最大值，那么对于&#8217;client&#8217;模式将会默认使用2Mb最为最小值，64Mb最为最大值；对于&#8217;server&#8217;模式，JVM会根据当前可用内存来决定默认值</strong>。2000年后，默认的最大堆大小改为了64M，并且在当时已经认为足够大了(2000年前的时候默认值是16M)，但是对于现在的应用程序来说很容易就用完了。</p>
+
+<p>这意味着你需要显示的通过JVM参数来指定堆的最小值和最大值：</p>
+
+<pre><code>java -Xms256m -Xmx512m MyClass
+</code></pre>
+
+<p>这里有很多经验上得法则来设定最大值和最小值。显然，堆的最大值应该设定为足以容下整个应用程序所需要的全部对象。但是，将它设定为“刚刚好足够大”也不是一个很好的注意，因为这样会增加垃圾回收器的负载。因此，对于一个长时间运行的应用程序，你一般需要保持有20%-25%的空闲堆空间。（你得应用程序可能需要不同的参数设置，GC调优是一门艺术，并且不在该文章讨论范围内）</p>
+
+<p>让你奇怪的时，设置合适的堆的最小值往往比设置合适的最大值更加重要。垃圾回收器会尽可能的保证<strong>当前的</strong>的堆大小，而不是不停的增长堆空间。这会导致应用程序不停的创建和回收大量的对象，而不是获取新的堆空间，相对于初始(最小)堆空间。Java堆会尽量保持这样的堆大小，并且会不停的运行GC以保持这样的容量。因此，我认为在生产环境中，我们最好是将堆的最小值和最大值设置成一样的。</p>
+
+<p>你可能会困惑于为什么Java堆会有一个最大值上限：操作系统并不会分配真正的物理内存，除非他们真的被使用了。并且，实际使用的虚拟内存空间实际上会比Java堆空间要大。如果你运行在一个32位系统上，一个过大的堆空间可能会限制classpath中能够使用的jar的数量，或者你可以创建的线程数。</p>
+
+<p>另外一个原因是，一个受限的最大堆空间可以让你及时发现潜在的内存泄露问题。在开发环境中，对应用程序的压力往往是不够的，如果你在开发环境中就拥有一个非常大得堆空间，那么你很有可能永远不会发现可能的内存泄露问题，直到进入产品环境。</p>
+
+<h2>在运行时跟踪垃圾回收</h2>
+
+<p>所有的JVM实现都提供了<code>-verbos:gc</code>选项，它可以让垃圾回收器在工作的时候打印出日志信息：</p>
+
+<pre><code>java -verbose:gc com.kdgregory.example.memory.SimpleAllocator
+[GC 1201K-&gt;1127K(1984K), 0.0020460 secs]
+[Full GC 1127K-&gt;103K(1984K), 0.0196060 secs]
+[GC 1127K-&gt;1127K(1984K), 0.0006680 secs]
+[Full GC 1127K-&gt;103K(1984K), 0.0180800 secs]
+[GC 1127K-&gt;1127K(1984K), 0.0001970 secs]
+...
+</code></pre>
+
+<p>Sun的JVM提供了额外的两个参数来以内存带分类输出，并且会显示垃圾收集的开始时间：</p>
+
+<pre><code>java -XX:+PrintGCDetails -XX:+PrintGCTimeStamps com.kdgregory.example.memory.SimpleAllocator
+0.095: [GC 0.095: [DefNew: 177K-&gt;64K(576K), 0.0020030 secs]0.097: [Tenured: 1063K-&gt;103K(1408K), 0.0178500 secs] 1201K-&gt;103K(1984K), 0.0201140 secs]
+0.117: [GC 0.118: [DefNew: 0K-&gt;0K(576K), 0.0007670 secs]0.119: [Tenured: 1127K-&gt;103K(1408K), 0.0392040 secs] 1127K-&gt;103K(1984K), 0.0405130 secs]
+0.164: [GC 0.164: [DefNew: 0K-&gt;0K(576K), 0.0001990 secs]0.164: [Tenured: 1127K-&gt;103K(1408K), 0.0173230 secs] 1127K-&gt;103K(1984K), 0.0177670 secs]
+0.183: [GC 0.184: [DefNew: 0K-&gt;0K(576K), 0.0003400 secs]0.184: [Tenured: 1127K-&gt;103K(1408K), 0.0332370 secs] 1127K-&gt;103K(1984K), 0.0342840 secs]
+...
+</code></pre>
+
+<p>从上面的输出我们可以看出什么？首先，前面的几次垃圾回收发生的非常频繁。每行的第一个字段显示了JVM启动后的时间，我们可以看到在一秒钟内有上百次的GC。并且，还加入了每次GC执行时间的开始时间（在每行的最后一个字段），可以看出垃圾搜集器是在不停的运行的。</p>
+
+<p>但是在实时系统中，这会造成很大的问题，因为垃圾搜集器的执行会夺走很多的CPU周期。就像我之前提到的，这很可能是由于初始堆大小设置的太小了，并且GC日志显示了：每次堆的大小达到了1.1Mb，它就开始执行GC。如果你得系统也有类似的现象，请在改变自己的应用程序之前使用<code>-Xms</code>来增大初始堆大小。</p>
+
+<p>对于GC日志还有一些很有趣的地方：除了第一次垃圾回收，没有任何对象是存放在了新生代(&ldquo;DefNew&rdquo;)。这说明了这个应用程序分配了包含大量数据的数组，在显示世界里这是很少出现的。如果在一个实时系统中出现这样的状况，我想到的第一个问题是“这些数组拿来干什么用？”。</p>
+
+<h2>堆转储(Heap Dumps)</h2>
+
+<p>一个堆转储可以显示你在应用程序说使用的所有对象。从基础上讲，它仅仅反映了对象实例的数量和类文件所占用的字节数。当然你也可以将分配这些内存的代码一起dump出来，并且对比历史存货对象。但是，如果你要dump的数据信息越多，JVM的负载就会越大，因此这些技术仅仅应该使用在开发环境中。</p>
+
+<h3>怎样获得一个内存转储</h3>
+
+<p>命令行参数<code>-XX:+HeapDumpOnOutOfMemoryError</code>是最简单的方式生成内存转储。就像它的名字所说的，它会在内存被用完的时候(发生OOM)进行转储，这在产品环境非常好用。但是由于这个是一种事后转储（已经发生了OOM），它只能提供一种历史性的数据。它会产生一个二进制文件，你可以使用<a href="http://java.sun.com/javase/6/docs/technotes/tools/share/jhat.html">jhat</a>来操作该文件（这个工具在JDK1.6中已经提供，但是可以读取JDK1.5产生的文件）。</p>
+
+<p>你可以使用<a href="http://java.sun.com/javase/6/docs/technotes/tools/share/jmap.html">jmap</a>(JDK1.5之后就自带了)来为一个运行中得java程序产生堆转储，可以产生一个在<em>jhat</em>中使用的dump文件，或者是一个存文本的统计文件。统计图可以在进行分析时优先使用，特别是你要在一段时间内多次转储堆并进行分析和对比历史数据。</p>
+
+<p>从转储内容和JVM的负荷的扩展性上考虑的话，可以使用profilers。Profiles使用JVM的调试接口(debuging interface)来搜集对象的内存分配信息，包括具体的代码行和方法调用栈。这个是非常有用的：不仅仅可以知道你分配了一个数GB的数组，你还可以知道你在一个特定的地方分配了950MB的对象，并且直接忽略其他的对象。当然，这些结果肯定会对JVM有开销，包括CPU的开销和内存的开销(保存一些原始数据)。你不应该在产品环境中使用profiles。</p>
+
+<h3>堆转储分析：live objects</h3>
+
+<p>Java中的内存泄露是这样定义的：你在内存中分配了一些对象，但是并没有清除掉所有对它们的引用，也就是说垃圾搜集器不能回收它们。使用堆转储直方图可以很容易的查找这些泄露对象：它不仅仅可以告诉你在内存中分配了哪些对象，并且显示了这些对象在内存中所占用的大小。但是这种直方图最大的问题是：对于同一个类的所有对象都被聚合(group)在一起了，所以你还需要进一步做一些检测来确定这些内存在哪里被分配了。</p>
+
+<p>使用<em>jmap</em>并且加上<code>-histo</code>参数可以为你产生一个直方图，它显示了从程序运行到现在所有对象的数量和内存消耗，并且包含了已经被回收的对象和内存。如果使用<code>-histo:live</code>参数会显示当前还在堆中得对象数量及其内存消耗，不论这些对象是否要被垃圾搜集器进行回收。</p>
+
+<p>也就是说，如果你要得到一个当前时间下得准确信息，你需要在使用<em>jmap</em>之前强制执行一次垃圾回收。如果你的应用程序是运行在本地，最简单的方式是直接使用<a href="http://download.oracle.com/javase/6/docs/technotes/tools/share/jconsole.html">jconsole</a>：在&#8217;Memory&#8217;标签下，有一个&#8217;Perform GC&#8217;的按钮。如果应用程序是运行在服务端环境，并且JMX beans被暴露了，<code>MemoryMXBean</code>有一个<code>gc()</code>操作。如果上述的两种方案都没办法满足你得要求，你就只有等待JVM自己触发一次垃圾搜集过程了。如果你有一个很严重的内存泄露问题，那么第一次major collection很可能预示着不久后就会OOM。</p>
+
+<p>有两种方法使用<code>jmap</code>产生的直方图。其中最有效的方法，适用于长时间运行的程序，可以使用带<code>live</code>的命令行参数，并且在一段时间内多次使用该命令，检查哪些对象的数量在不断增长。但是，根据当前程序的负载，该过程可能会花费1个小时或者更多的时间。</p>
+
+<p>另外一个更加快速的方式是直接比较当前存活的对象数量和总的对象数量。如果有些对象占据了总对象数量的大部分，那么这些对象很有可能发生内存泄露。这里有一个例子，这个应用程序已经连续几周为100多个用户提供了服务，结果列举了前12个数量最多的对象。据我所知，这个程序没有内存泄露的问题，但是像其他应用程序一样做了常规性的内存转储分析操作。</p>
+
+<pre><code>~, 510&gt; jmap -histo 7626 | more
+
+ num     #instances         #bytes  class name
+----------------------------------------------
+   1:        339186       63440816  [C
+   2:         84847       18748496  [I
+   3:         69678       15370640  [Ljava.util.HashMap$Entry;
+   4:        381901       15276040  java.lang.String
+   5:         30508       13137904  [B
+   6:        182713       10231928  java.lang.ThreadLocal$ThreadLocalMap$Entry
+   7:         63450        8789976  &lt;constMethodKlass&gt;
+   8:        181133        8694384  java.lang.ref.WeakReference
+   9:         43675        7651848  [Ljava.lang.Object;
+  10:         63450        7621520  &lt;methodKlass&gt;
+  11:          6729        7040104  &lt;constantPoolKlass&gt;
+  12:        134146        6439008  java.util.HashMap$Entry
+
+~, 511&gt; jmap -histo:live 7626 | more
+
+ num     #instances         #bytes  class name
+----------------------------------------------
+   1:        200381       35692400  [C
+   2:         22804       12168040  [I
+   3:         15673       10506504  [Ljava.util.HashMap$Entry;
+   4:         17959        9848496  [B
+   5:         63208        8766744  &lt;constMethodKlass&gt;
+   6:        199878        7995120  java.lang.String
+   7:         63208        7592480  &lt;methodKlass&gt;
+   8:          6608        6920072  &lt;constantPoolKlass&gt;
+   9:         93830        5254480  java.lang.ThreadLocal$ThreadLocalMap$Entry
+  10:        107128        5142144  java.lang.ref.WeakReference
+  11:         93462        5135952  &lt;symbolKlass&gt;
+  12:          6608        4880592  &lt;instanceKlassKlass&gt;
+</code></pre>
+
+<p>当我们要尝试寻找内存泄露问题，可以从消耗内存最多的对象着手。这听上去很明显，但是往往它们并不是内存泄露的根源。但是，它们任然是应该最先下手的地方，在这个例子中，最占用内存的是一些<code>char[]</code>的数组对象（总大小是60MB，基本上没有任何问题）。但是很奇怪的是当前存货(live)的对象竟然占了历史分配的总对象大小的三分之二。</p>
+
+<p>一般来说，一个应用程序会分配对象，并且在不久之后就会释放它们。如果保存一些对象的应用过长的时间，就很有可能会导致内存泄露。但是虽然是这么说的，实际上还是要具体情况具体分析，主要还是要看这个程序到底在做什么事情。字符数组对象(char[])往往和字符串对象(String)同时存在，大部分的应用程序都会在整个运行过程中一直保持着一些字符串对象的引用。例如，基于JSP的web应用程序在JSP页面中定义了很多HTML字符串表达式。这种特殊的应用程序提供HTML服务，但是它们需要保持字符串引用的需求却不一定那么清晰：它们提供的是目录服务，并不是静态文本。如果我遇到了OOM，我就会尝试找到这些字符串在哪里被分配，为什么没有被释放。</p>
+
+<p>另一个需要关注的是字节数组([B)。在JDK中有很多类都会使用它们（比如BufferedInputStream），但是却很少在应用程序代码中直接看到它们。通常它们会被用作缓存(buffer)，但是缓存的生命周期不会很长。在这个例子中我们看到，有一半的字节数组任然保持存活。这个是令人担忧的，并且它凸显了直方图的一个问题：所有的对象都按照它的类型被分组聚合了。对于应用程序对象(非JDK类型或者原始类型，在应用程序代码中定义的类)，这不是一个问题，因为它们会在程序的一个部分被集中分配。但是字节数组有可能会在任何地方被定义，并且在大多数应用程序中都被隐藏在一些库中。我们是否应当搜索调用了<code>new byte[]</code>或者<code>new ByteArrayOutputStream()</code>的代码？</p>
+
+<h3>堆转储分析：相关的原因和影响分析</h3>
+
+<p>为了找到导致内存泄露的最终原因，仅仅考虑按照类别(class)的分组的内存占用字节数是不够的。你还需要将应用程序分配的对象和内存泄露的对象关联起来考虑。一个方法是更加深入查看对象的数量，以便将具有关联性的对象找出来。下面是一个具有严重内存问题的程序的转储信息：</p>
+
+<pre><code> num     #instances         #bytes  class name
+----------------------------------------------
+   1:       1362278      140032936  [Ljava.lang.Object;
+   2:         12624      135469922  [B
+  ...
+   5:        352166       45077248  com.example.ItemDetails
+  ...
+   9:       1360742       21771872  java.util.ArrayList
+  ...
+  41:          6254         200128  java.net.DatagramPacket
+</code></pre>
+
+<p>如果你仅仅去看信息的前几行，你可能会去定位<code>Object[]</code>或者<code>byte[]</code>，这些都是徒劳的。真正的问题出在ItemDetails和DatagramPacket上：前者分配了大量的ArrayList，进而又分配了大量的Object[]；后者使用了大量的byte[]来保存从网络上接收到的数据。</p>
+
+<p>第一个问题，分配了大量的数组，实际上不是内存泄露。ArrayList的默认构造函数会分配容量是10的数组，但是程序本身一般只使用1个或者2个槽位，这对于64位JVM来说会浪费62个字节的内存空间。一个更好的涉及方案是仅仅在有需要的时候才使用List，这样对每个实例来说可以节约额外的48个字节。但是，对于这种问题也可以很轻易的通过加内存来解决，因为现在的内存非常便宜。</p>
+
+<p>但是对于datagram的泄露就比较麻烦（如同定位这个问题一样困难）：这表明接收到的数据没有被尽快的处理掉。</p>
+
+<p>为了跟踪问题的原因和影响，你需要知道你的程序是怎样在使用这些对象。不多的程序才会直接使用Object[]：如果确实要使用数组，程序员一般都会使用带类型的数组。但是，ArrayList会在内部使用。但是仅仅知道ArrayList的内存分配是不够的，你还需要顺着调用链往上走，看看谁分配了这些ArrayList。</p>
+
+<p>其中一个方法是对比相关的对象数量。在上面的例子中，byte[]和DatagramPackage的关系是很明显的：其中一个基本上是另外一个的两倍。但是ArrayList和ItemDetails的关系就不那么明显了。（实际上一个ItemDetails中会包含多个ArrayList）</p>
+
+<p>这往往是个陷阱，让你去关注那么数量最多的一些对象。我们有数百万的ArrayList对象，并且它们分布在不同的class中，也有可能集中在一小部分class中。尽管如此，数百万的对象引用是很容易被定位的。就算有10来个class可能会包含ArrayList，那么每个class的实体对象也会有十万个，这个是很容易被定位的。</p>
+
+<p>从直方图中跟踪这种引用关系链是需要花费大量精力的，幸运的是，<em>jmap</em>不仅仅可以提供直方图，它还可以提供可以浏览的堆转储信息。</p>
+
+<h3>堆转储分析：跟踪引用链</h3>
+
+<p>浏览堆转储引用链具有两个步骤：首先需要使用<code>-dump</code>参数来使用<em>jmap</em>，然后需要用<em>jhat</em>来使用转储文件。如果你确定要使用这种方法，请一定要保证有足够多的内存：一个转储文件通常都有数百M，<em>jhat</em>需要好几个G的内存来处理这些转储文件。</p>
+
+<pre><code>tmp, 517&gt; jmap -dump:live,file=heapdump.06180803 7626
+Dumping heap to /home/kgregory/tmp/heapdump.06180803 ...
+Heap dump file created
+
+tmp, 518&gt; jhat -J-Xmx8192m heapdump.06180803
+Reading from heapdump.06180803...
+Dump file created Sat Jun 18 08:04:22 EDT 2011
+Snapshot read, resolving...
+Resolving 335643 objects...
+Chasing references, expect 67 dots...................................................................
+Eliminating duplicate references...................................................................
+Snapshot resolved.
+Started HTTP server on port 7000
+Server is ready.
+</code></pre>
+
+<p>提供给你的默认URL显示了所有加载进系统的class，但是我觉得并不是很有用。相反，我直接使用<code>http://localhost:7000/histo/</code>，这个地址是一个直方图的视角来进行显示，并且是按照对象数量和占用的内存空间进行排序了的。</p>
+
+<p><img src="http://shenzhang.github.io/images/2014/04/jhat-histogram-large.gif"></p>
+
+<p>这个直方图里的每个class的名称都是一个链接，点击这个链接可以查看关于这个类型的详细信息。你可以在其中看到这个类的继承关系，它的成员变量，以及很多指向这个类的实体变量信息的链接。我不认为这个详细信息页面非常有用，而且实体变量的链接列表很占用很多的浏览器内存。</p>
+
+<p>为了能够跟踪你的内存问题，最有用的页面是&#8217;Reference by Type&#8217;。这个页面含有两个表格：入引用和出引用，他们都被引用的数量进行排序了。点击一个类的名字可以看到这个引用的信息。</p>
+
+<p>你可以在类的详细信息(class details)页面中找到这个页面的链接。</p>
+
+<h3>堆转储分析：内存分配情况</h3>
+
+<p>在大多数情况下，知道了是哪些对象消耗了大量的内存往往就可以知道它们为什么会发生内存泄露。你可以使用<em>jhat</em>来找到所有引用了他们的对象，并且你还可以看到使用了这些对象的引用的代码。但是在有些时候，这样还是不够的。</p>
+
+<p>比如说你有关于字符串对象的内存泄露问题，那么就很有可能会花费你好几天的时间去检查所有和字符串相关的代码。要解决这种问题，你就需要能够显示内存在哪里被分配的堆转储。但是需要注意的是，这种类型的堆转储会对你的应用程序产生更多的负载，因为负责转储的代理需要记录每一个<code>new</code>操作符。</p>
+
+<p>有许多交互式的程序可以做到这种级别的数据记录，但是我找到了一个更简单的方法，那就是使用内置的<em>hprof</em>代理来启动JVM。</p>
+
+<pre><code>java -Xrunhprof:heap=sites,depth=2 com.kdgregory.example.memory.Gobbler
+</code></pre>
+
+<p><em>hprof</em>有许多选项：不仅仅可以用多种方式输出内存使用情况，它还可以跟踪CPU的使用情况。当它运行的时候，我指定了一个事后的内存转储，它记录了哪些对象被分配，以及分配的位置。它的输出被记录在了<code>java.hprof.txt</code>文件中，其中关于堆转储的部分如下：</p>
+
+<pre><code>SITES BEGIN (ordered by live bytes) Tue Sep 29 10:43:34 2009
+          percent          live          alloc'ed  stack class
+ rank   self  accum     bytes objs     bytes  objs trace name
+    1 99.77% 99.77%  66497808 2059  66497808  2059 300157 byte[]
+    2  0.01% 99.78%      9192    1     27512    13 300158 java.lang.Object[]
+    3  0.01% 99.80%      8520    1      8520     1 300085 byte[]
+SITES END
+</code></pre>
+
+<p>这个应用程序没有分配多种不同类型的对象，也没有将它们分配到很多不同的地方。一般的转储有成百上千行的信息，显示了每一种类型的对象被分配到了哪里。幸运的是，大多数问题都会出现在开头的几行。在这个例子中，最突出的是64M的存活着的字节数组，并且每一个平均32K。</p>
+
+<p>大多数程序中都不会一直持有这么大得数据，这就表明这个程序没有很好的抽取和处理这些数据。你会发现这常常发生在读取一些大的字符串，并且保存了substring之后的字符串：很少有人知道<code>String.substring()</code>后会共享原始字符串对象的字节数组。如果你按照一行一行地读取了一个文件，但是却使用了每行的前五个字符，实际上你任然保存的是整个文件在内存中。</p>
+
+<p>转储文件也显示出这些数组被分配的数量和现在存活的数量完全相等。这是一种典型的泄露，并且我们可以通过搜索&#8217;trace&#8217;号来找到真正的代码：</p>
+
+<pre><code>TRACE 300157:
+    com.kdgregory.example.memory.Gobbler.main(Gobbler.java:22)
+</code></pre>
+
+<p>好了，这下就足够简单了：当我在代码中找到指定的代码行时，我发现这些数组被存放在了ArrayList中，并且它也一直没有出作用域。但是有时候，堆栈的跟踪并没有直接关联到你写的代码上：</p>
+
+<pre><code>TRACE 300085:
+    java.util.zip.InflaterInputStream.&lt;init&gt;(InflaterInputStream.java:71)
+    java.util.zip.ZipFile$2.&lt;init&gt;(ZipFile.java:348)
+</code></pre>
+
+<p>在这个例子中，你需要增加堆栈跟踪的深度，并且重新运行你的程序。但是这里有一个需要平衡的地方：当你获取到了更多的堆栈信息，你也同时增加了profile的负载。默认地，如果你没有指定<code>depth</code>参数，那么默认值就会是4。我发现当堆栈深度为2的时候就可以发现和定位我程序中得大部分问题了，当然我也使用过深度为12的参数来运行程序。</p>
+
+<p>另外一个增大堆栈深度的好处是，最后的报告结果会更加细粒度：你可能会发现你泄露的对象来自两到三个地方，并且它们都使用了相同的方法。</p>
+
+<h3>堆转储分析：位置、地点</h3>
+
+<p>当很多对象在分配的不久后就被丢弃时，分代垃圾搜集器就会开始运行。你可以使用同样的原则来找发现内存泄露：使用调试器，在对象被分配的地方打上断点，并且运行这段代码。在大多数时候，当它们被分配不久后就会加入到长时间存活(long-live)的集合中。</p>
+
+<h2>永久代</h2>
+
+<p>除了JVM中的新生代和老年代外，JVM还管理着一片叫‘永久代’的区域，它存储了class信息和字符串表达式等对象。通常，你不会观察到永久代中的垃圾回收；大多数的垃圾回收发生在应用程序堆中。但是不像它的名字，在永久代中的对象不会是永久不变的。举个例子，被应用程序classloader加载的class，当不再被classloader引用时就会被清理掉。当应用程序服务被频繁的热部署时就可能会发生：</p>
+
+<pre><code>Exception in thread "main" java.lang.OutOfMemoryError: PermGen space
+</code></pre>
+
+<p>这一这个信息：这个不管应用程序堆的事。当应用程序堆中还有很多空间时，也有可能用完永久代的空间。通常，这发生在重新部署EAR和WAR文件时，并且永久代还不够大到可以同时容纳新的class信息和老的class信息（老的class会一直被保存着直到所有的请求在使用完它们）。当在运行处于开发状态的应用时更容易发生。</p>
+
+<p>解决永久代错误的第一个方法就是增大永久大的空间，你可以使用<code>-XX:MaxPermSize</code>命令行参数。默认是64M，但是web应用程序或者IDE一般都需要256M。</p>
+
+<pre><code>java -XX:MaxPermSize=256m
+</code></pre>
+
+<p>但是在通常情况下并不是这么简单的。永久代的内存泄露一般都和在应用堆中的内存泄露原因一样：在一些地方的对象引用了并不该再引用的对象。以我的经验，很有可能有些对象直接引用了一些Class对象，或者在<code>java.lang.reflect</code>包下面的对象，而不是某些类的实例对象。正式因为web引用的classloader的组织方式，通常罪魁祸首都出现在服务的配置当中。</p>
+
+<p>例如，你使用了Tomcat，并且有一个目录里面有很多共享的jars：shared/lib。如果你在一个容器里同时运行好几个web应用，将一些公用的jar放在这个目录是很有道理的，因为这样的话这些class仅仅被加载一次，可以减少内存的使用量。但是，如果其中的一些库具有对象缓存的话，会发生什么事情呢？</p>
+
+<p>答案是这些被缓存了的对象的类永远不会被卸载，直到缓存释放了这些对象。解决方案就是将这些库移动到WAR或者EAR中。但是在某些时候情况也不会像这么简单：<a href="http://java.sun.com/javase/7/docs/api/java/beans/Introspector.html">JDKs bean introspector</a>会缓存住由root classloader加载的<code>BeanInfo</code>对象。并且任何使用了反射的库也会缓存这些对象，这样就导致你不能直到真正的问题所在。</p>
+
+<p>解决永久代的问题通常都是比较痛苦的。一般可以先考虑加上<code>-XX:+TraceClassLoading</code>和<code>-XX:+TraceClassUnloading</code>命令行选项以便找出那些被加载了但是没有被卸载的类。如果你加上了<code>-XX:+TraceClassResolution</code>命令行选项，你还可以看到哪些类访问了其他类，但是没有被正常卸载。</p>
+
+<p>这里有针对这三个选项的一个实例。第一行显示了<code>MyClassLoader</code>类从classpath中被加载了。因为它又从<code>URLClassLoader</code>继承，因此我们看到了接下来的&#8217;RESOLVE&#8217;消息，紧跟着又是一条&#8217;RESOLVE&#8217;消息，说明<code>Class</code>类也被解析了。</p>
+
+<pre><code>[Loaded com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader from file:/home/kgregory/Workspace/Website/programming/examples/bin/]
+RESOLVE com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader java.net.URLClassLoader
+RESOLVE java.net.URLClassLoader java.lang.Class URLClassLoader.java:188
+</code></pre>
+
+<p>所有的信息都在这里的，但是通常情况下将一些共享库移动到WAR/EAR中往往可以很快速的解决问题。</p>
+
+<h2>当堆内存还有空间时发生的OutOfMemoryError</h2>
+
+<p>就像你刚才看到的关于永久代的消息，也许应用程序堆中还有空闲空间，但是也任然可能会发生OOM。这里有几个例子：</p>
+
+<h3>连续的内存分配</h3>
+
+<p>当我描述分代的堆空间时，我一般会说对象会首先被分配在新生代，然后最终会被移动到老年代。但这不是绝对正确的：如果你的对象足够大，那么它就会直接被分配在老年代。一般用户自己定义的对象是不会（也不应该）达到这个临界值，但是数组却却有可能：在JDK1.5中，当数组的对象超过0.5M的时候就会被直接分配到老年代。</p>
+
+<p>在32位机器上，0.5M换算成<code>Object[]</code>数组的话就可以包含131,072个元素。这已经是很大的了，但是在企业级的应用中这是很有可能的。特别是当使用了<code>HashMap</code>时，它经常需要重新resize自己(里面的数组数据结构)。一些应用程序可能还需要更大的数组。</p>
+
+<p>当没有连续的堆空间来存放这些数组对象时（就算在垃圾回收并且对内存进行了紧凑之后），问题就产生了。这很少见，但是如果当前的程序已经很接近堆空间的上限时，这就变得很有可能了。增大堆空间上限是最好的解决方案，但是你也许可以试试事先分配好你的容器的大小。（后面的小对象可以不需要连续的内存空间）</p>
+
+<h3>线程</h3>
+
+<p>JavaDoc中对OOM的描述是，当垃圾搜集器不能在释放更多的内存空间时，JVM会抛出OOM。这里只对了一半：当JVM的内部代码收到来自操作系统的<code>ENOMEM</code>错误时，JVM也会抛出OOM。Unix程序员一般都知道，这里有很多地方可以收到<code>ENOMEN</code>错误，创建线程的过程是其中之一：</p>
+
+<pre><code>Exception in thread "main" java.lang.OutOfMemoryError: unable to create new native thread
+</code></pre>
+
+<p>在我的32位Linux系统中，使用JDK1.5，我可以最多开启5,550个线程直到抛出异常。但是实际上在堆中任然有很多空闲空间，这是怎么回事呢？</p>
+
+<p>在这个场景的背后，线程实际上是被操作系统所管理，而不是JVM，创建线程失败的可能原因有很多很多。在我的例子中，每一个线程都需要占用大概0.5M的虚拟内存作为它的栈空间，在5000个线程被创建之后，大约就有2G的内存空间被占用。有些操作系统就强制制定了一个进程所能创建的线程数的上限。</p>
+
+<p>最后，针对这个问题没有一个解决方案，除非更换你的应用程序。大多数程序是不需要创建这么多得线程的，它们会将大部分的时间都浪费在等待操作系统调度上。但是有些服务程序需要创建数千个线程去处理请求，但是它们中得大多数都是在等待数据。针对这种场景，NIO和selector就是一个不错的解决方案。</p>
+
+<h3>Direct ByteBuffers</h3>
+
+<p>从JDK1.4之后Java允许程序程序使用<a href="http://www.kdgregory.com/index.php?page=java.byteBuffer">bytebuffers</a>来访问堆外的内存空间（受限）。虽然<code>ByteBuffer</code>对象本身很小，但是堆外的内存可不一定很小：</p>
+
+<pre><code>Exception in thread "main" java.lang.OutOfMemoryError: Direct buffer memory
+</code></pre>
+
+<p>这里有多个原因会导致bytebuffer分配失败。通常情况下，你可能超过了最多的虚拟内存上限（仅限于32位系统），或者超过了所有物理内存和交换区内存的上限。除非你是在以很简单的方式处理超过你的机器内存上限的数据，否则你在使用direct buffer产生OOM的原因和你使用堆的原因基本上是一样的：你保持着一些你不该引用的数据。前面介绍的堆分析技术可以帮助你找到泄露点。</p>
+
+<h3>申请的内存超过物理内存</h3>
+
+<p>就像我前面提到的，你在启动一个JVM时，你需要指定堆的最小值和最大值。这就意味着，JVM会在运行期动态改变它对虚拟内存的需求。在一个内存受限的机器上，你可以同时运行多个JVM，甚至它们所有指定的最大值之和大于了物理内存和交换区的大小。当然，这就有可能会导致OOM，就算你的程序中存活的对象大小小于你指定的堆空间也是一样的。</p>
+
+<p>这种情况和跑多个C++程序使用完所有的物理内存的原因是一样的。使用JVM可能会让你产生一种假象，以为不会出现这种问题。唯一的解决方案是购买更多的内存，或者不要同时跑那么多程序。没有办法让JVM可以&#8217;快速失败&#8217;；但是在Linux上你可以申请比总内存更多的内存。</p>
+
+<h2>堆外内存的使用</h2>
+
+<p>最后一个需要注意的问题是：Java中得堆仅仅是所占用内存的一部分。JVM还会为它所创建的线程、内部代码、工作空间、共享库、direct buffer、内存映射文件分配内存。在32位的JVM中，这所有的内存都需要被映射到2G的虚拟内存空间中，这是非常有限的（特别是对于服务端或者后端应用程序）。在64位的JVM中，虚拟内存基本没存在什么限制，但是实际的物理内存（含交换区）可能会很稀缺。</p>
+
+<p>一般来说，虚拟内存不会造成什么大问题；操作系统和JVM可以很好的管理它们。通常情况下，你需要查看虚拟内存的映射情况主要是为了direct buffer所使用的大块的内存或者是内存映射文件。但是你还是很有必要知道什么是虚拟内存的映射。</p>
+
+<p>要查看在Linux上的虚拟内存映射情况可以使用<a href="http://linux.die.net/man/1/pmap">pmap</a>；在Windows中可以使用<a href="http://technet.microsoft.com/en-us/sysinternals/dd535533">VMMap</a>。下面是使用pmap来dump的一个Tomcat应用。实际的dump文件有好几百行，所展示的部分仅仅是比较有意思的部分：</p>
+
+<pre><code>08048000     60K r-x--  /usr/local/java/jdk-1.5/bin/java
+08057000      8K rwx--  /usr/local/java/jdk-1.5/bin/java
+081e5000   6268K rwx--    [ anon ]
+889b0000    896K rwx--    [ anon ]
+88a90000   4096K rwx--    [ anon ]
+88e90000  10056K rwx--    [ anon ]
+89862000  50488K rwx--    [ anon ]
+8c9b0000   9216K rwx--    [ anon ]
+8d2b0000  56320K rwx--    [ anon ]
+...
+afd70000    504K rwx--    [ anon ]
+afdee000     12K -----    [ anon ]
+afdf1000    504K rwx--    [ anon ]
+afe6f000     12K -----    [ anon ]
+afe72000    504K rwx--    [ anon ]
+...
+b0cba000     24K r-xs-  /usr/local/java/netbeans-5.5/enterprise3/apache-tomcat-5.5.17/server/lib/catalina-ant-jmx.jar
+b0cc0000     64K r-xs-  /usr/local/java/netbeans-5.5/enterprise3/apache-tomcat-5.5.17/server/lib/catalina-storeconfig.jar
+b0cd0000    632K r-xs-  /usr/local/java/netbeans-5.5/enterprise3/apache-tomcat-5.5.17/server/lib/catalina.jar
+b0d6e000    164K r-xs-  /usr/local/java/netbeans-5.5/enterprise3/apache-tomcat-5.5.17/server/lib/tomcat-ajp.jar
+b0d97000     88K r-xs-  /usr/local/java/netbeans-5.5/enterprise3/apache-tomcat-5.5.17/server/lib/tomcat-http.jar
+...
+b6ee3000   3520K r-x--  /usr/local/java/jdk-1.5/jre/lib/i386/client/libjvm.so
+b7253000    120K rwx--  /usr/local/java/jdk-1.5/jre/lib/i386/client/libjvm.so
+b7271000   4192K rwx--    [ anon ]
+b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
+...
+</code></pre>
+
+<p>dump文件展示给你了关于虚拟内存映射的4个部分：虚拟内存地址，大小，权限，源（从文件加载的部分）。最有意思的部分是它的权限部分，它表示了该内存段是否是只读的(r-)还是读写的(rw)。</p>
+
+<p>我会从读写段开始分析。所有的段都具有名字&#8221;[ anon ]&ldquo;，它在Linux中说明了该段不是由文件加载而来。这里还有很多被命名的读写段，它们和共享库关联。我相信这些库都具有每个进程的地址表。</p>
+
+<p>因为所有的读写段都具有相同的名字，一次要找出出问题的部分需要花费一点时间。对于Java堆，有4个相关的大块内存被分配（新生代有2个，老年代1个，永久代1个），他们的大小由GC和堆配置来决定。</p>
+
+<h2>其他问题</h2>
+
+<p>这部分的内容并不是对所有地方都适用。大部分都是我解决问题的过程中总结的实际经验。</p>
+
+<h3>不要被虚拟内存的统计信息所误导</h3>
+
+<p>有很多抱怨说Java是&#8217;memory hog&#8217;，经常被<em>top</em>命令的&#8217;VIRT&#8217;部分和Windows任务管理器的&#8217;Mem Usage&#8217;列所证实。需要澄清的是，有太多的东西都不会算进这个统计信息中，有些还是与其他程序共享的（比如说C的库）。实际上也有很多‘空’的区域在虚拟内存映射空间中：如果你适用<code>-Xms1000m</code>来启动JVM，就算你还没有开始分配对象，虚拟内存的大小也会超过1000m。</p>
+
+<p>一个更好的测量方法是使用驻留集的大小：你的应用程序真正使用的物理内存的页数，不包含共享页。这就是<em>top</em>命令中得&#8217;RES&#8217;列。但是，驻留集并不是对你的程序所需使用的总内存最好的测量方法。操作系统只有在你的程序真正需要使用它们的时候才会将它们放进进程的内存空间中，一般来说是在你的系统处于高负载的情况下才会出现，这会花费一段较长的时间。</p>
+
+<p>最后：始终使用工具来提供所需的详细信息来分析Java中的内存问题。并且只有当出现OOM的时候才考虑下结论。</p>
+
+<h3>OOM的罪魁祸首经常离它的抛出点很近</h3>
+
+<p>内存泄露一般在内存被分配之后不久发生。一个相似的结论是，OOM的根源一般都离它的抛出点很近，可以使用堆跟踪技术来首先进行分析。其基本原理是，内存泄露一般和产生大量的内存相关联。这说明了，导致泄露的代码具有更高的失败风险率，不管是因为其内存分配代码被调用的过于频繁，还是因为每次调用都分配的过大的内存。因此，可以优先考虑使用栈跟踪来定位问题。</p>
+
+<h3>和缓存相关的部分最值得怀疑</h3>
+
+<p>我在这篇文章中提到缓存了很多次：在我数十年的Java工作经历中发现，和内存泄露相关的类进场都是和缓存相关的。实际上缓存是很难编写的。</p>
+
+<p>使用缓存有很多很多很好的理由，并且使用自己写的缓存也有很多好的理由。如果你确定要使用缓存，请先回答下面的问题：</p>
+
+<ul>
+<li>哪些对象会被放进缓存？如果你所要缓存的对象都是同一种类型（或者具有继承关系），那么相比一个可以容纳各种类型的缓存来说更好跟踪问题。</li>
+<li>有多少对象会被同时放进缓存？如果你像让<code>ProductCache</code>缓存1000个对象，但是在内存分析结果中发现了10000个对象，那么这之间的关系就比较好定位。如果你指定了这个缓存最多的容量上限，那么你就可以很容易的计算出这个缓存最多需要多少内存。</li>
+<li>过期和清除策略是什么？每一个缓存为了控制存在于其中的对象的存货周期，都需要一个明确的驱逐策略。如果你没有指定一个明确的驱逐策略，那么有些对象就很有可能比它真正需要的存活周期要长，占用更多的内存，加重垃圾搜集器的负载（记住：在标记阶段需要的时间和存活对象的数量成正比）。</li>
+<li>是否会在缓存之外同时持有这些存活对象的引用？缓存最好的应用场景是，调用频繁，并且调用时间很短，并且所缓存的对象的获取代价很大。如果你需要创建一个对象，并且在整个应用程序的生命周期中都需要引用这个对象，那么就没有必要将这个对象放入缓存（也许使用池技术可以显示总得对象数量）。</li>
+</ul>
+
+
+<h3>注意对象的生命周期</h3>
+
+<p>一般来说对象可以被划分为两类：一类是伴随着整个程序的生命周期而存活；另外一来是仅仅存活并服务于一个单一的请求。搞清楚这个非常重要，你仅仅需要关心你认为是长时间存活的对象。</p>
+
+<p>一种方法是在程序启动的时候全部初始化好所有长时间(long-lived)存活的对象，不管他们是否要立刻被用到。另外一个方法是使用依赖注入框架，比如<code>Spring</code>。这不仅仅可以很方便的bean配置文件中找到所有long-lived的对象（不需要扫描整个classpath），还可以很清楚的知道这些对象在哪里被使用。</p>
+
+<h3>查找在方法参数中被错误使用的对象</h3>
+
+<p>在大部分场景中，在一个方法中被分配的对象都会在方法退出的时候被清理掉（除开被返回的对象）。当你都是用局部变量来保存这些对象的时候，这个规则很容易被遵守。但是，有时候任然会使用实体变量来保存这些对象，特别是在方法中会调用大量其他方法的时候，主要是为了避免过多和麻烦的方法参数传递。</p>
+
+<p>这样做不是一定会产生泄漏。后续的方法调用会重新对这些变量进行赋值，这样就可以让之前被创建的对象被回收。但是这样导致不必要的内存开销，并且让调试更加困难。但是从设计的角度出发，当我看到这样的代码时，我就会考虑将这个方法单独提出来形成一个独立的类。</p>
+
+<h3>J2EE：不要滥用session</h3>
+
+<p>session对象是用来在多个请求之间保存和共享用户相关的数据，主要是因为HTTP协议是无状态的。有时候它便成了一个用于缓存的临时性解决方案。</p>
+
+<p>这也不是说一定就会产生泄漏，因为web容器会在一段时间后让用户的session失效。但是它却显著提高了整个程序的内存占用量，这是很糟糕的。并且它非常难调试：就像我之前提到的，很难看出对象被哪些其他的对象所持有。</p>
+
+<h3>小心过量的垃圾搜集</h3>
+
+<p>虽然OOM很糟糕，但是如果不停的执行垃圾搜集将会更加糟糕：它会抢走本该属于你的程序的CPU时间。</p>
+
+<h3>有些时候你仅仅是需要更多的内存</h3>
+
+<p>就像我在开头的地方所说的，JVM是唯一的一个让你指定你的数据最大值（内存上限）的现代编程环境。因此，会有很多时候让你以为发生了内存泄露，但是实际上你仅仅需要增加你的堆大小。解决内存问题的第一步最好还是先增加你的内存上限。如果你真的遇到了内存泄露问题，那么无论你增加了多少内存，你最后都还是会得到OOM的错误。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jcl-over-slf4j]]></title>
@@ -2263,32 +2695,6 @@ setquota -n|-b val path
 <p>至于这个defaultContext是怎么实现的就依赖具体的容器了，只要符合jndi的规范就可以了，但是实际上规范中对这块的要求也是很少的，只是对一些概念和接口做了确定。</p>
 
 <p>回头看来其实jndi的初始化是很简单的，就是简单的指定一些环境变量，特别是<code>INITAL_CONTEXT_FACTORY(java.naming.factory.inital)</code>参数，特工一个真正Context的工厂就行了，连创建的过程都交给具体容器去实现了。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Jetty常用handler之GzipHandler]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/07/27/gziphandler-in-jetty/"/>
-    <updated>2013-07-27T04:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/07/27/gziphandler-in-jetty</id>
-    <content type="html"><![CDATA[<p><code>org.eclipse.jetty.server.handler.GzipHandler</code>提供了将response压缩成gzip格式的功能，该handler需要放在真正数据处理的handler(ServletHandler,ResourceHandler等)前面。</p>
-
-<p>它的实现原理也非常简单，实际上是将HttpServletResponse进行了一个包装，在后续的handler需要OutputStream或Writer的时候返回一个被Gzip流包装过的OutputStream，以便在输出流的时候对数据流进行压缩。除此之外，它还对request请求头做了检查，如果client不支持gzip格式，那么就不会做包装，直接交给后续handler。</p>
-
-<p>由于该handler通用性很强，因此也导致了它的效率不高，每次请求都需要做gzip压缩处理，没有任何缓存功能，服务端的开销会增大。如果使用了WebAppContext，那么该功能完全可以被DefaultServlet取代，DefaultServlet也会对client的gzip支持特性做检查，如果请求的是静态文件，DefaultServlet会优先检查是否存在.gz后缀的同名文件，有的话就直接用.gz文件进行返回，但是缺点是不支持动态响应的压缩功能。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Jetty常用handler之DebugHandler]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/07/27/debughandler-in-jetty/"/>
-    <updated>2013-07-27T03:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/07/27/debughandler-in-jetty</id>
-    <content type="html"><![CDATA[<p><code>org.eclipse.jetty.server.handler.DebugHandler</code>是一个内部逻辑非常简单的handler，主要用于输出调试信息，虽然doc中表示该handler可以用于生产环境，但是我觉得功能还是太简单，并且输出内容也不是很实用。</p>
-
-<p>该handler主要被放置在handler链的头部，它会在请求开始处理的时候向指定的OutputStream输出当前时间以及请求路径等信息，并且在该request处理完成后输出当前时间，主要用于分析不同资源的请求处理时长。可以调用<code>DebugHandler.setOutputStream</code>来指定输出目的地。</p>
-
-<p>显然这种将所有请求都进行输出的方式不但影响性能，同时对于大量的日志还需要专门的程序进行分析。更好的方式是直接设定输出阈值，处理时间超过了该阈值就进行输出，当然如果对于日志还有其他的分析目的就另当别论了，有点类似RequestLogHandler。</p>
 ]]></content>
   </entry>
   

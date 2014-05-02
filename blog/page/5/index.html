@@ -9,7 +9,11 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="由于有了自己的VPS，索性就搭了一个svn server方便管理下代码，这里记录下配置过程中出现的问题。 1.安装 在debian下直接用apt-cache search subversion搜索下，然后apt-get install subversion就可以了。 2.创建资源库 &hellip;">
+  <meta name="description" content="Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。 连接器的类型 SelectChannelConnector
+SocketConnector
+SslSelectChannelConnector
+SslSocketConnector
+Ajp13SocketConnector ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +67,101 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/connectors-in-jetty/">Jetty的连接器(Connectors)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Jetty提供了几种不同的连接器，你可以根据自己的需要配置不同的连接器。</p>
+
+<h2>连接器的类型</h2>
+
+<ul>
+<li>SelectChannelConnector</li>
+<li>SocketConnector</li>
+<li>SslSelectChannelConnector</li>
+<li>SslSocketConnector</li>
+<li>Ajp13SocketConnector</li>
+</ul>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/03/connectors-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/03/autovaccum-in-postgresql/">Postgresql中的autovaccum</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-03T02:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>今天一个线上系统出现了一个问题，表现就是和某个数据表A先关的操作变的突然很慢，经过前方的同事排查后发现这个表的数据文件突然变的很大，但是其数据记录只有8000+条，数据文件的大小是正常大小的几十倍导致对该表上的操作效率降低(使用<code>/dt+ table_name</code> 查看数据表大小)。排查监控日志发现有多次调用了全表更新的操作。</p>
+
+<p>问题的原因很简单，由于postgresql对数据记录的存放是多版本的以便实现不同的事务隔离级别，对数据进行更新时并不是对数据文件的对应数据记录进行直接修改，而是不断添加数据记录，每个数据记录都有不同的版本，版本号也是不断累加的。这样就导致数据文件不断膨胀。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/03/autovaccum-in-postgresql/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -508,131 +607,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/spring-for-redis/">Spring对redis的支持</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T07:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>spring-data项目提供了多种数据操作的包，其中spring-data-redis就提供了与redis交互的实现，现在最新的版本是1.0.4。</p>
-
-<p>spring-data-redis提供了对多种redis客户端的集成和抽象，比如jedis, jRedis, RJC, SRP等。并且提供了以下几个方面的支持：</p>
-
-<ol>
-<li>底层抽象：主要封装了配置和连接过程，以及异常的转换和翻译。</li>
-<li>高层抽象：以RedisTemplate的形式提供。</li>
-<li>可复用的工具类。</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/25/spring-for-redis/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/round-mode-in-java/">Java中的四舍五入</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T06:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>说四舍五入可能有点不太准确，应该说在精度范围之内的精度调整方法。</p>
-
-<p>主要在java.math.RoundingMode里定义：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UP</span><span class="o">),</span>
-</span><span class='line'><span class="n">DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_DOWN</span><span class="o">),</span>
-</span><span class='line'><span class="n">CEILING</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_CEILING</span><span class="o">),</span>
-</span><span class='line'><span class="n">FLOOR</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_FLOOR</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_UP</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_UP</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_DOWN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_DOWN</span><span class="o">),</span>
-</span><span class='line'><span class="n">HALF_EVEN</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_HALF_EVEN</span><span class="o">),</span>
-</span><span class='line'><span class="n">UNNECESSARY</span><span class="o">(</span><span class="n">BigDecimal</span><span class="o">.</span><span class="na">ROUND_UNNECESSARY</span><span class="o">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>UP:</strong>调整的方向是远离0，如：1.1 &ndash;> 2，-1.1 &ndash;> -2</p>
-
-<p><strong>DOWN:</strong>调整的方向是靠近0，如：1.6 &ndash;> 1，-1.6 &ndash;> -1</p>
-
-<p><strong>CEILING:</strong>调整的方向从数字大小的角度讲会变大，也就是说当大于0时等同于UP，当小于0时等同于DOWN，如：1.1->2，-1.1->1</p>
-
-<p><strong>FLOOR:</strong>与CEILING相反</p>
-
-<p><strong>HALF_UP:</strong>当尾数>=5时与UP相同，否则与DOWN相同</p>
-
-<p><strong>HALF_DOWN:</strong>与HALF_UP类似，只是条件是>5，不是>=5</p>
-
-<p><strong>HALF_EVEN:</strong>当尾数的前一位是奇数时，同HALF_UP，否则同HALF_DOWN</p>
-
-<p><strong>UNNECESSARY:</strong>说明该数字不需要四舍五入，如果超出了精度则throw ArithmeticException。</p>
-
-<p>更多例子可参见RoundingMode的javadoc.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -650,6 +624,14 @@ org.eclipse.jetty.xml.XmlConfiguration \
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
@@ -659,14 +641,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
     
       <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
       </li>
     
   </ul>

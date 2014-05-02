@@ -9,7 +9,8 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下： setInterval: 可以定期按照一定的频率做一个事情，比如funA。但是如果funA中抛出了异常会怎样呢？ &hellip;">
+  <meta name="description" content="原文链接
+">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval">
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects">
   <link href="/favicon.jpeg" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
@@ -66,7 +67,7 @@
   
   <header>
     
-      <h1 class="entry-title">setTimeout和setInterval</h1>
+      <h1 class="entry-title">Java中的Reference对象[译]</h1>
     
     
       <p class="meta">
@@ -82,24 +83,14 @@
   
 
 
-<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
-
-<h3>setInterval:</h3>
-
-<p>可以定期按照一定的频率做一个事情，比如funA。但是如果funA中抛出了异常会怎样呢？  firefox和chrome不会因为抛出异常而做出什么奇怪的事情，毕竟调用setInterval只是告诉浏览器我要定期做一个事情，哪怕这个事情出错了；但是IE却在出现异常后停止继续定期做这个事情，所以千万要保证funA中的事情一定不要有异常出现。</p>
-
-<h3>setTimeout:</h3>
-
-<p>延时一段时间做某个事情funcB。比如：</p>
-
-<p>setTimeout(tick, 1000)会在1秒之后将tick加入到事件队列中准备执行，并且tick方法的arguments是空的，但是在firefox13以下的tick的arguments却不一定是空的，有可能会有一个表示延时时间的数值(小于0)来表示执行该函数比预期时间推后了多少。新版本的firefox已经解决了该问题，但是还是不要试图在tick方法中根据arguments的数量来决定行为。</p>
+<div class="entry-content"><p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
 </div>
 
 
@@ -122,7 +113,7 @@
   
 
 
-<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
       
 
 
@@ -130,7 +121,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval/" data-via="" data-counturl="http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/" data-via="" data-counturl="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/" >Tweet</a>
   
   
   
@@ -139,10 +130,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/09/04/status-of-thread/" title="Previous Post: Thread的状态">&laquo; Thread的状态</a>
+        <a class="basic-alignment left" href="/blog/2014/04/24/understanding-out-of-memory-error/" title="Previous Post: 深入解析OutOfMemoryError[译]">&laquo; 深入解析OutOfMemoryError[译]</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013/09/10/inspect-seajs/" title="Next Post: SeaJS原理解析">SeaJS原理解析 &raquo;</a>
       
     </p>
   </footer>

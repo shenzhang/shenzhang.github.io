@@ -9,7 +9,8 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行， &hellip;">
+  <meta name="description" content="原文链接
+">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +64,92 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true">Apr 24<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://www.kdgregory.com/index.php?page=java.outOfMemory">原文链接</a></p>
+
+<p>在Java中，所有对象都存储在堆中。他们通过<code>new</code>关键字来进行分配，JVM会检查是否所有线程都无法在访问他们了，并且会将他们进行回收。在大多数时候程序员都不会有一丝一毫的察觉，这些工作都被静悄悄的执行。但是，有时候在发布前的最后一天，程序挂了。</p>
+
+<pre><code>Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+</code></pre>
+
+<p><code>OutOfMemoryError</code>是一个让人很郁闷的异常。它通常说明你干了写错误的事情：没必要的长时间保存一些没必要的数据，或者同一时间处理了过多的数据。有些时候，这些问题并不一定受你的控制，比如说一些第三方的库对一些字符串做了缓存，或者一些应用服务器在部署的时候并没有进行清理。并且，对于堆中已经存在的对象，我们往往拿他们没办法。</p>
+
+<p>这篇文章分析了导致<code>OutOfMemoryError</code>的不同原因，以及你该怎样应对这种原因的方法。以下分析仅限于Sun Hotspot虚拟机，但是大多数结论都适用于其他任何的JVM实现。它们大多数基于网上的文章以及我自己的经验。我没有直接做JVM开发的工作，因此结论并不代表JVM的作者。但是我确实曾经遇到过并解决了很多内存相关的问题。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/04/24/understanding-out-of-memory-error/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -885,191 +972,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/04/status-of-thread/">Thread的状态</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
-
-<p>Thread的状态是由Thread.State枚举表示的，有下面的6个值：</p>
-
-<h3>NEW</h3>
-
-<p>当线程刚被new出来，并且没有start的时候处于NEW状态</p>
-
-<h3>BLOCKED</h3>
-
-<p>线程被阻塞，一般是由于锁的原因等待进入临界区时候的状态</p>
-
-<h3>RUNNABLE</h3>
-
-<p>正在运行，就算是没有获得CPU时间片的线程也是在RUNNABLE</p>
-
-<h3>WAITING</h3>
-
-<p>顾名思义，线程处于等待状态。它正在等待其他的操作被触发，比如wait()后等待notify()或者notifyAll()；Thread.join()后等待目标线程被结束；LockSupport.park()后等待LockSupport.unpark()。</p>
-
-<p>注意，在调用wait()后会首先进入WAITING状态，如果被notify()了，并且无法获得锁并进入临界区，那么就在BLOCKED；如果进入临界区了，那么就是RUNNABLE</p>
-
-<h3>TIMED_WAITING</h3>
-
-<p>相比WAITING状态，只是多了一个时间参数，比如Thread.sleep(10)，object.wait(10)等等。</p>
-
-<h3>TERMINATED</h3>
-
-<p>运行完毕</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/">理解GC暂停 - Hotspot中的minor Gc[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-16T02:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots.html">原文链接</a></p>
-
-<p>当JVM进行垃圾搜集的时候会Stop-The-World暂停，它们是java应用程序的天敌。Hotspot JVM多种先进的、被优化的垃圾收集器，但是要想找到一个最优的配置需要首先了解垃圾搜集算法的机制。这篇文章介绍了GC在STW时怎么使用CPU，并且还介绍了一个新生代的垃圾搜集算法。</p>
-
-<h2>堆结构</h2>
-
-<p>大多数现代GC算法都是分代收集的，这意味着java的堆被划分为了多个空间。不同的空间用其中保存的对象的年龄划分。对象首先被分配到新生代，然后经过多次存活后，最终被放到了老年代。这个是基于“大多数的对象在创建后很快就会消亡”的假设。所有的Hotspot垃圾收集器都将内存划分为5个部分（对于G1收集器，空间可能不是连续的）。</p>
-
-<p><img src="/images/2013/08/java_heap_struct.png"></p>
-
-<ol>
-<li>Eden:eden区是对象被分配的地方</li>
-<li>Survivor: Survivor区被用来在young gc或者minor gc中接收存活的对象</li>
-<li>Tenured:Tenured区是保存长时间存活的对象</li>
-<li>Permanent:Permanent是供JVM自己使用，比如classes或者被JIT编译后的代码，它的行为和tenured区类似，因此在文章的后面我们将忽略该区域。</li>
-</ol>
-
-
-<p>Eden和2个Survivor区在一起被称作新生代（yound space)。</p>
-
-<h3>Hotspot GC算法</h3>
-
-<ol>
-<li>串行垃圾收集(-XX:+UseSerialGC)</li>
-<li>新生代并行，老年代串行的分代收集(-XX:+UseParallelGC)</li>
-<li>新生代和老年代都并行的分代收集(-XX:+UseParallelOldGC)</li>
-<li>CMS收集算法和串行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:-UseParNewGC)</li>
-<li>CMS收集算法和并行化的新生代收集器(-XX:+UseConcMarkSweep, -XX:+UseParNewGC)</li>
-<li>G1收集算法(-XX:+UseG1GC)</li>
-</ol>
-
-
-<p>除了G1之外，其他所有的垃圾收集算法在新生代部分都使用了类似的算法（串行或者并行）</p>
-
-<h3>写屏障(Write barrier)</h3>
-
-<p>分代垃圾收集器的关键点在于，是否有必要每次都对整个java堆进行垃圾收集，还是对其中的一部分进行收集（比如新生代)。但是JVM为了实现这个效果，需要实现一个特殊的机制“写屏障”。在Hotspot中实现了两种类型的写屏障：dirty cards和snaphot-at-the-beginning(SATB)。SATB被用于G1算法中（该文没有对其描述）。其他所有的垃圾收集算法都使用dirty cards。</p>
-
-<h3>Dirty cards写屏障(卡片标记)</h3>
-
-<p>Dirty cards写屏障的原理非常简单。每当应用程序改变内存中的引用时，都需要标记该内存页是脏(dirty)的。JVM中有一个特殊的卡片表(card table)，每512字节的页都对应其中的1个字节。</p>
-
-<p><img src="/images/2013/08/card-table.png"></p>
-
-<h3>新生代垃圾收集算法</h3>
-
-<p>绝大部分的对象会被首先分配到eden区（除了在一些特殊的情况下，对象可能会直接被分配到老年代）。为了更高效的分配内存，Hotspot使用了线程本地分配块（thread local allocation block, TLAB)来分配新的对象，但是TLAB本身又被分配在eden区。一旦eden区满了就会触发minor gc。minor gc的目标是清理eden区，释放内存。在这里使用的是拷贝算法，存活的对象被拷贝到另外的一块区域，之前的区域的所有空间被标记为可用（free）。但是在开始垃圾收集之前，JVM首先需要找到根（root）引用，所有用于minor gc的根引用是来自堆栈的引用或者来自老年代的引用。</p>
-
-<p>通常情况下，搜集来自于老年代的引用需要扫描整个老年代对象的所有引用，因此我们需要写屏障（write-barrier）。所有在新生代中的对象都是在上次写屏障被复位之后分配的，也就意味着非脏(no-dirty)页是不可能引用新生代的对象，最后意味着我们没必要扫描整个老年代，而只需要扫描dirty pages中的对象即可。</p>
-
-<p><img src="/images/2013/08/dirty-pages.png"></p>
-
-<p>最开始的dirty cards是空的，并且开始young gc后，JVM拷贝eden和其中一个survivor中存活的对象到另外一个survivor区。JVM只需要花费时间在存活对象上，拷贝和再分配（relocate）对象也需要更新指向它们的引用。</p>
-
-<p><img src="/images/2013/08/dirty-pages1.png"></p>
-
-<p>当JVM更新移动后的对象的引用时，内存也同时也被修改了，自然会打上dirty的标记。最终在我们下次开始young gc的时候，只有位于dirty pages中的页才有可能引用新生代的对象。</p>
-
-<p><img src="/images/2013/08/dirty-pages2.png"></p>
-
-<h3>对象升级</h3>
-
-<p>如果对象没有在young gc中被清除，那么最终会被拷贝到老年代。对象升级会在下述情况下发生：</p>
-
-<ol>
-<li>-XX:+AlwaysTenure:让JVM直接将eden中的对象升级到老年代，而不通过survivor区（survivor区在这里不再使用）</li>
-<li>其中一个survivor区已经满了，那么所有剩下的存活对象都直接升级到老年代。</li>
-<li>如果对象在新生代的垃圾收集中存活了足够多的周期，就会被升级到老年代（存活周期数通过–XX:MaxTenuringThreshol选项和-XX:TargetSurvivorRatio选项调整）</li>
-</ol>
-
-
-<h3>对象直接被分配到老年代</h3>
-
-<p>如果我们可以将存活时间较长的对象直接分配到老年代，那么我们会获得性能提升。但是很不幸，我们无法告诉JVM这么做。但是仍然还是有一些情况，对象可以直接被分配到老年代：</p>
-
-<ol>
-<li>-XX:PretenureSizeThreshold=<n>：告诉JVM如果对象的大小大于<n>时，就可以直接将该对象分配到老年代。</li>
-<li>如果对象的大小大于了eden区，那么也会直接分配到老年代。</li>
-</ol>
-
-
-<p>不同于应用程序对象，系统级的对象会直接分配到永久带。</p>
-
-<h3>并行执行</h3>
-
-<p>在young gc中的大部分任务都可以并行执行。如果有多个CPU可用，那么JVM可以充分利用它们以减少STW的时间。可以通过选项–XX:ParallelGCTreads=<n>来告诉JVM使用多少个线程来执行GC。默认情况下，JVM会使用当前可用的CPU数量作为GC的线程数。但是串行版的收集器会忽律给选项，因为它只使用一个CPU线程。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1085,6 +987,14 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
@@ -1094,14 +1004,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
     
       <li class="post">
         <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a>
       </li>
     
   </ul>
