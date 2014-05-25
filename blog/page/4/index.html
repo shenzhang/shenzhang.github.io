@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="hotspot的GC算法经历了很多个版本发展，在不同阶段也使用了不同的算法，这里仅仅描述了现在主流的hotspot版本(1.6)中常用的GC算法配置方法和表象，对算法的细节不进行描述。 -XX:+UseSerialGC 串行垃圾搜集算法，具体表现为： 新生代： [DefNew: 34944K-& &hellip;">
+  <meta name="description" content="hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。 当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置-XX: &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,173 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/24/jit-in-hotspot/">hotspot中的JIT</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。</p>
+
+<p>当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置<code>-XX:CompileThreshold=10000</code>来进行指定。</p>
+
+<p>在jvm运行的时候加上<code>-XX:+PrintCompilation</code>可以开启JIT编译信息，当有方法被JIT编译时，就会在stdout中输出，该选项可以更好的进行调试和优化。</p>
+
+<p>但是有一个例外，当一个方法body很大时，jvm不一定会对它进行JIT编译，在hotspot中这个方法的大小是8000字节，但是我们可以通过加上<code>-XX:-DontCompileHugeMethods</code>参数禁止这种策略，保证所有方法都可以被JIT编译，但是最好不要关闭这个特性！</p>
+
+<p>因此很多时候我们总是担心过多的调用很多小方法会影响执行效率，其实jvm会用jit来帮我们做很多优化，而且就像上面提到的并不是将多个小方法合并到一个大方法中就一定会有更好的效果，可能会被jvm坑了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/23/stop-suspend-resume-of-thread/">Thread中的stop, Suspend, Resume方法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-23T02:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这三个方法都被标记为了deprecated，下面就来分析下原因。</p>
+
+<h2>stop()和stop(Throwable e)</h2>
+
+<p>这个方法会无条件的终止一个子线程，并且在子线程的当前执行的地方抛出传入的异常。如果调用stop()函数，则e = ThreadDeath异常。这个异常会一直向上传播，最终导致所有该子线程所具有的锁都被释放。</p>
+
+<p><em>废弃原因：</em>
+该方法太过于暴力，可能会让某些处于锁保护的关键区域（对象初始化）还没有完毕就退出，进一步导致这些对象或者操作处于一种不一致的状态，并暴露给系统的其他部分。</p>
+
+<h2>suspend,resume</h2>
+
+<p>这两个方法需要配合起来，suspend会暂时挂起一个线程，resume可以恢复挂起的线程</p>
+
+<p><em>废弃原因：</em>
+这两个方法会非常容易导致死锁。因为suspend在挂起一个线程的时候不会释放当前线程上的锁，如果该线程在被resume之前刚好需要请求这些锁，那么resume将永远不会执行，死锁就发生了。下面是我随便写的demo，本来想看看效果，但是却不幸的发生了死锁，可见该方法多么危险：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">import</span> <span class="nn">java.util.concurrent.TimeUnit</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ThreadDemo</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">ThreadDemo</span> <span class="n">thread</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ThreadDemo</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">setDaemon</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">suspend</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;suspended&quot;</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">thread</span><span class="o">.</span><span class="na">resume</span><span class="o">();</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;resumed&quot;</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">thread</span><span class="o">.</span><span class="na">isAlive</span><span class="o">());</span>
+</span><span class='line'>      <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>      <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>      <span class="k">while</span> <span class="o">(!</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;running &quot;</span> <span class="o">+</span> <span class="n">i</span><span class="o">++);</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>调试发现主线程阻塞到了System.out.println(&ldquo;suspended&rdquo;)处，并且产生了死锁，分析原因如下：
+子线程调用了out.println()，但是该方法会请求out对象上的锁：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">println</span><span class="o">(</span><span class="n">String</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">print</span><span class="o">(</span><span class="n">x</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">newLine</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>子线程被suspend后该锁却并没有释放，主线程又接着调用out.pritln(&ldquo;suspended&rdquo;)，自然会被block，然后产生死锁！</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -512,95 +679,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/config-form-size-for-jetty/">配置jetty的表单大小(Form Size)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/config-form-size-for-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/customize-error-page-in-jetty/">Jetty自定义错误页面</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T01:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>以下方法可以用来配置自定义错误页面：</p>
-
-<ol>
-<li>在web.xml中定义错误页面</li>
-<li>在context文件中定义错误页面</li>
-<li>实现自定义的错误处理handler</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/customize-error-page-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -618,6 +696,14 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
@@ -627,14 +713,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
     
       <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
   </ul>

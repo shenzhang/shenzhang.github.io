@@ -9,7 +9,8 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接 介绍 我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。 &hellip;">
+  <meta name="description" content="Placeholder
+">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +64,78 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-25T01:27:00+08:00" pubdate data-updated="true">May 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content">Placeholder
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-25T00:27:00+08:00" pubdate data-updated="true">May 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content">Placeholder
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -886,104 +959,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-10T01:27:00+08:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系，不能用SeaJS的风格来使用RequireJS吧。</p>
-
-<p>今天粗略看了下SeaJS的源码，不对源码的细节进行分析，仅仅对其模块的组织和加载原理做简单的分析，知道了原理剩下的就是代码效率和浏览器兼容性的问题了。</p>
-
-<p>主要解决一下问题：</p>
-
-<ol>
-<li>怎么用SeaJS</li>
-<li>怎么解析、加载和执行模块</li>
-<li>模块标识符（依赖名）的path解析</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/09/10/inspect-seajs/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/05/settimeout-and-setinterval/">setTimeout和setInterval</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
-
-<h3>setInterval:</h3>
-
-<p>可以定期按照一定的频率做一个事情，比如funA。但是如果funA中抛出了异常会怎样呢？  firefox和chrome不会因为抛出异常而做出什么奇怪的事情，毕竟调用setInterval只是告诉浏览器我要定期做一个事情，哪怕这个事情出错了；但是IE却在出现异常后停止继续定期做这个事情，所以千万要保证funA中的事情一定不要有异常出现。</p>
-
-<h3>setTimeout:</h3>
-
-<p>延时一段时间做某个事情funcB。比如：</p>
-
-<p>setTimeout(tick, 1000)会在1秒之后将tick加入到事件队列中准备执行，并且tick方法的arguments是空的，但是在firefox13以下的tick的arguments却不一定是空的，有可能会有一个表示延时时间的数值(小于0)来表示执行该函数比预期时间推后了多少。新版本的firefox已经解决了该问题，但是还是不要试图在tick方法中根据arguments的数量来决定行为。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -999,6 +974,14 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
@@ -1008,14 +991,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
     
       <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
   </ul>

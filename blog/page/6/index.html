@@ -9,7 +9,9 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="spring-data项目提供了多种数据操作的包，其中spring-data-redis就提供了与redis交互的实现，现在最新的版本是1.0.4。 spring-data-redis提供了对多种redis客户端的集成和抽象，比如jedis, jRedis, RJC, SRP等。 &hellip;">
+  <meta name="description" content="原文链接 在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术： 加锁顺序
+加锁时限
+死锁检测 ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +65,101 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T02:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html">原文链接</a></p>
+
+<p>在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术：</p>
+
+<ol>
+<li>加锁顺序</li>
+<li>加锁时限</li>
+<li>死锁检测</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/prevent-deadlock/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/deadlock/">死锁[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T01:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html">原文链接</a></p>
+
+<p>死锁是两个或更多线程阻塞着等待其它处于死锁状态的线程所持有的锁。死锁通常发生在多个线程同时但以不同的顺序请求同一组锁的时候。</p>
+
+<p>例如，如果线程1锁住了A，然后尝试对B进行加锁，同时线程2已经锁住了B，接着尝试对A进行加锁，这时死锁就发生了。线程1永远得不到B，线程2也永远得不到A，并且它们永远也不会知道发生了这样的事情。为了得到彼此的对象（A和B），它们将永远阻塞下去。这种情况就是一个死锁。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/deadlock/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -452,78 +549,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2000/01/01/java8-stampedlock/">Blog Template</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2000-01-01T01:27:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content">This is a template file
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2000/01/01/java8-invokedynamic/">Blog Template</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2000-01-01T01:27:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content">This is a template file
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
     <a href="/blog/archives">Blog Archives</a>
@@ -539,6 +564,14 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
@@ -548,14 +581,6 @@
     
       <li class="post">
         <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a>
       </li>
     
   </ul>
