@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接
-">
+  <meta name="description" content="原文链接 介绍 我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -94,8 +93,21 @@
 
 
   <div class="entry-content"><p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
+
+<h2>介绍</h2>
+
+<p>我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。我从来没有意识到在内存管理中需要花费多大的经历，因为它不需要我做任何事情。</p>
+
+<p>随后我遇到了我的第一次OOM。它仅仅显示在控制台中，并且没有任何堆栈信息，因为堆栈跟踪信息需要内存开销。调试这个错误是非常痛苦的，因为没有任何工具可以使用，甚至是<code>malloc</code>日志。在2000年的Java调试的状况就是如此，非常原始。</p>
+
+<p>我记不清造成这次OOM的原因是什么了，当然我并没有使用<code>reference</code>对象来解决这个问题。它们没有在我的常用工具箱中，直到1年以后，当我在写一个数据库缓存，并且打算尝试使用它们以减少缓存的内存开销。但是发现它们并不是那么有效，原因我会在后面分析。但是当它们进入到我的工具箱之后，我发现了很多关于这些reference对象的用法，并且可以让我更好的理解JVM。</p>
+
 </div>
   
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/04/27/java-reference-objects/">Read on &rarr;</a>
+    </footer>
   
 
 

@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接
-">
+  <meta name="description" content="原文链接 介绍 我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -91,6 +90,43 @@
 
 
 <div class="entry-content"><p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
+
+<h2>介绍</h2>
+
+<p>我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。我从来没有意识到在内存管理中需要花费多大的经历，因为它不需要我做任何事情。</p>
+
+<p>随后我遇到了我的第一次OOM。它仅仅显示在控制台中，并且没有任何堆栈信息，因为堆栈跟踪信息需要内存开销。调试这个错误是非常痛苦的，因为没有任何工具可以使用，甚至是<code>malloc</code>日志。在2000年的Java调试的状况就是如此，非常原始。</p>
+
+<p>我记不清造成这次OOM的原因是什么了，当然我并没有使用<code>reference</code>对象来解决这个问题。它们没有在我的常用工具箱中，直到1年以后，当我在写一个数据库缓存，并且打算尝试使用它们以减少缓存的内存开销。但是发现它们并不是那么有效，原因我会在后面分析。但是当它们进入到我的工具箱之后，我发现了很多关于这些reference对象的用法，并且可以让我更好的理解JVM。</p>
+
+<!-- more -->
+
+
+<h2>Java堆和对象生命周期</h2>
+
+<p>对于一个刚刚接触Java的C++程序员来说，堆和栈的关系是很难被理解的。在C++中对象可以使用<code>new</code>关键字将其分配在堆中，或者使用自动的分配方法将其分配在栈中。将一个<code>Integer</code>对象分配在栈中在C++里是完全合法的。但是对于Java编译器，却会出现语法错误：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Integer</span> <span class="n">foo</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>不同于C++，在Java中所有的对象都被分配到堆上，并且需要<code>new</code>关键字来创建。局部变量被存放在栈中，但是它们仅仅是保存了指向这个对象的指针，不是这个对象本身。看下面这个Java方法，它分配了一个<code>Integer</code>对象，并且解析一个<code>String</code>对象来获得其值：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">foo</span><span class="o">(</span><span class="n">String</span> <span class="n">bar</span><span class="o">)</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>    <span class="n">Integer</span> <span class="n">baz</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Integer</span><span class="o">(</span><span class="n">bar</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>下面的这幅图显示了在这个方法中堆和栈之间的关系。栈被分为了很多“帧”，它包含了调用树中的每个方法的参数和局部变量。这些变量指向了很多其他对象：在这个例子中，参数<code>bar</code>和局部变量<code>baz</code>指向了位于堆中的变量：</p>
+
+<p><img src="/images/2014/05/stack_and_heap.gif"></p>
 </div>
 
 
