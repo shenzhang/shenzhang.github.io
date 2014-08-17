@@ -2,258 +2,266 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>http://shenzhang.github.io/blog/2000/01/01/template-blog/</loc>
-        <lastmod>2014-04-06T13:08:51+08:00</lastmod>
+        <lastmod>2014-04-06T15:08:51+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/lock-in-java/</loc>
-        <lastmod>2014-04-06T11:36:13+08:00</lastmod>
+        <lastmod>2014-04-06T13:36:13+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/charset-in-mysql/</loc>
-        <lastmod>2014-04-06T23:27:18+08:00</lastmod>
+        <lastmod>2014-04-07T01:27:18+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/can-not-connect-mysql/</loc>
-        <lastmod>2014-04-06T13:08:27+08:00</lastmod>
+        <lastmod>2014-04-06T15:08:27+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/ssh-without-password/</loc>
-        <lastmod>2014-04-06T13:12:26+08:00</lastmod>
+        <lastmod>2014-04-06T15:12:26+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/debug-parameter-in-javac/</loc>
-        <lastmod>2014-04-06T13:15:35+08:00</lastmod>
+        <lastmod>2014-04-06T15:15:35+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/round-mode-in-java/</loc>
-        <lastmod>2014-04-06T13:18:47+08:00</lastmod>
+        <lastmod>2014-04-06T15:18:47+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/spring-for-redis/</loc>
-        <lastmod>2014-04-06T13:30:20+08:00</lastmod>
+        <lastmod>2014-04-06T15:30:20+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/26/deadlock/</loc>
-        <lastmod>2014-04-06T13:35:54+08:00</lastmod>
+        <lastmod>2014-04-06T15:35:54+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/26/prevent-deadlock/</loc>
-        <lastmod>2014-04-06T13:56:12+08:00</lastmod>
+        <lastmod>2014-04-06T15:56:12+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/26/dir-structure-of-jetty/</loc>
-        <lastmod>2014-04-06T23:34:18+08:00</lastmod>
+        <lastmod>2014-04-07T01:34:18+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/26/jetty-runner/</loc>
-        <lastmod>2014-04-06T23:40:31+08:00</lastmod>
+        <lastmod>2014-04-07T01:40:31+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/26/recompile-and-redeploy-in-jsp/</loc>
-        <lastmod>2014-04-06T23:52:00+08:00</lastmod>
+        <lastmod>2014-04-07T01:52:00+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/27/embed-jetty/</loc>
-        <lastmod>2014-04-07T00:01:28+08:00</lastmod>
+        <lastmod>2014-04-07T02:01:28+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/06/27/start-jar-in-jetty/</loc>
-        <lastmod>2014-04-07T00:05:46+08:00</lastmod>
+        <lastmod>2014-04-07T02:05:46+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/03/subversion-setup-in-linux/</loc>
-        <lastmod>2014-04-07T14:13:28+08:00</lastmod>
+        <lastmod>2014-04-07T16:13:28+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/03/autovaccum-in-postgresql/</loc>
-        <lastmod>2014-04-07T14:15:39+08:00</lastmod>
+        <lastmod>2014-04-07T16:15:39+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/03/connectors-in-jetty/</loc>
-        <lastmod>2014-04-07T14:20:07+08:00</lastmod>
+        <lastmod>2014-04-07T16:20:07+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/04/customize-error-page-in-jetty/</loc>
-        <lastmod>2014-04-07T14:25:02+08:00</lastmod>
+        <lastmod>2014-04-07T16:25:02+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/04/config-form-size-for-jetty/</loc>
-        <lastmod>2014-04-07T14:40:22+08:00</lastmod>
+        <lastmod>2014-04-07T16:40:22+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/04/listening-80port-for-non-root-user/</loc>
-        <lastmod>2014-04-07T14:36:25+08:00</lastmod>
+        <lastmod>2014-04-07T16:36:25+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/05/request-log-in-jetty/</loc>
-        <lastmod>2014-04-07T14:44:39+08:00</lastmod>
+        <lastmod>2014-04-07T16:44:39+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/05/config-virtual-host-in-jetty/</loc>
-        <lastmod>2014-04-07T14:50:26+08:00</lastmod>
+        <lastmod>2014-04-07T16:50:26+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/06/classloader-in-jetty/</loc>
-        <lastmod>2014-04-07T15:01:24+08:00</lastmod>
+        <lastmod>2014-04-07T17:01:24+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/10/pagetable/</loc>
-        <lastmod>2014-04-07T15:06:21+08:00</lastmod>
+        <lastmod>2014-04-07T17:06:21+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/13/charset-for-jdk7-in-macos/</loc>
-        <lastmod>2014-04-07T15:10:08+08:00</lastmod>
+        <lastmod>2014-04-07T17:10:08+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/18/launchd-in-macos/</loc>
-        <lastmod>2014-04-07T23:18:06+08:00</lastmod>
+        <lastmod>2014-04-08T01:18:06+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/23/gc-in-hotspot/</loc>
-        <lastmod>2014-04-08T20:16:36+08:00</lastmod>
+        <lastmod>2014-04-08T22:16:36+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/23/stop-suspend-resume-of-thread/</loc>
-        <lastmod>2014-04-08T20:22:40+08:00</lastmod>
+        <lastmod>2014-04-08T22:22:40+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/24/jit-in-hotspot/</loc>
-        <lastmod>2014-04-08T20:25:11+08:00</lastmod>
+        <lastmod>2014-04-08T22:25:11+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/24/open-file-in-java/</loc>
-        <lastmod>2014-04-08T20:34:03+08:00</lastmod>
+        <lastmod>2014-04-08T22:34:03+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/25/collection-for-reference-in-java/</loc>
-        <lastmod>2014-04-08T20:39:17+08:00</lastmod>
+        <lastmod>2014-04-08T22:39:17+10:00</lastmod>
     </url>
     <url>
         <loc>
             http://shenzhang.github.io/blog/2013/07/25/deadlock-during-static-initialize-in-java/
         </loc>
-        <lastmod>2014-04-08T20:42:14+08:00</lastmod>
+        <lastmod>2014-04-08T22:42:14+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/26/bug-about-background-image-in-ie6/</loc>
-        <lastmod>2014-04-08T20:47:10+08:00</lastmod>
+        <lastmod>2014-04-08T22:47:10+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/26/scopehandler-in-jetty/</loc>
-        <lastmod>2014-04-08T20:50:16+08:00</lastmod>
+        <lastmod>2014-04-08T22:50:16+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/27/defaulthandler-in-jetty/</loc>
-        <lastmod>2014-04-08T21:07:52+08:00</lastmod>
+        <lastmod>2014-04-08T23:07:52+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/27/debughandler-in-jetty/</loc>
-        <lastmod>2014-04-08T21:16:26+08:00</lastmod>
+        <lastmod>2014-04-08T23:16:26+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/27/gziphandler-in-jetty/</loc>
-        <lastmod>2014-04-08T21:18:10+08:00</lastmod>
+        <lastmod>2014-04-08T23:18:10+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/07/27/inspect-jndi/</loc>
-        <lastmod>2014-04-08T21:25:36+08:00</lastmod>
+        <lastmod>2014-04-08T23:25:36+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/05/fist-view-of-zookeeper/</loc>
-        <lastmod>2014-04-08T21:30:42+08:00</lastmod>
+        <lastmod>2014-04-08T23:30:42+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/12/timeout-in-different-browser/</loc>
-        <lastmod>2014-04-09T21:12:09+08:00</lastmod>
+        <lastmod>2014-04-09T23:12:09+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot/</loc>
-        <lastmod>2014-04-09T21:16:58+08:00</lastmod>
+        <lastmod>2014-04-09T23:16:58+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot/</loc>
-        <lastmod>2014-04-09T21:20:40+08:00</lastmod>
+        <lastmod>2014-04-09T23:20:40+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/14/garbage-collection-in-hotspot/</loc>
-        <lastmod>2014-04-09T21:29:34+08:00</lastmod>
+        <lastmod>2014-04-09T23:29:34+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/14/how-to-implement-lock-in-jvm/</loc>
-        <lastmod>2014-04-09T21:31:40+08:00</lastmod>
+        <lastmod>2014-04-09T23:31:40+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/16/gc-stop-cms-in-hotspot/</loc>
-        <lastmod>2014-04-09T21:34:53+08:00</lastmod>
+        <lastmod>2014-04-09T23:34:53+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/</loc>
-        <lastmod>2014-04-09T21:44:07+08:00</lastmod>
+        <lastmod>2014-04-09T23:44:07+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/04/status-of-thread/</loc>
-        <lastmod>2014-04-09T21:46:01+08:00</lastmod>
+        <lastmod>2014-04-09T23:46:01+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval/</loc>
-        <lastmod>2014-04-09T21:47:41+08:00</lastmod>
+        <lastmod>2014-04-09T23:47:41+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/10/inspect-seajs/</loc>
-        <lastmod>2014-04-09T21:55:53+08:00</lastmod>
+        <lastmod>2014-04-09T23:55:53+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/11/jasmine/</loc>
-        <lastmod>2014-04-09T21:59:29+08:00</lastmod>
+        <lastmod>2014-04-09T23:59:29+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/12/add-source-to-repository/</loc>
-        <lastmod>2014-04-09T22:01:56+08:00</lastmod>
+        <lastmod>2014-04-10T00:01:56+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/13/scope-in-maven/</loc>
-        <lastmod>2014-04-09T22:03:31+08:00</lastmod>
+        <lastmod>2014-04-10T00:03:31+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2013/09/15/something-about-maven/</loc>
-        <lastmod>2014-04-09T22:06:12+08:00</lastmod>
+        <lastmod>2014-04-10T00:06:12+10:00</lastmod>
     </url>
     <url>
         <loc>
             http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/
         </loc>
-        <lastmod>2014-04-13T10:43:48+08:00</lastmod>
+        <lastmod>2014-04-13T12:43:48+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j/</loc>
-        <lastmod>2014-04-13T21:20:34+08:00</lastmod>
+        <lastmod>2014-04-13T23:20:34+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error/</loc>
-        <lastmod>2014-05-03T00:43:57+08:00</lastmod>
+        <lastmod>2014-05-03T02:43:57+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/</loc>
-        <lastmod>2014-06-14T00:38:19+08:00</lastmod>
+        <lastmod>2014-06-14T02:38:19+10:00</lastmod>
+    </url>
+    <url>
+        <loc>http://shenzhang.github.io/blog/2014/05/04/introspector-in-java/</loc>
+        <lastmod>2014-05-05T00:49:14+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2014/05/25/java8-stampedlock/</loc>
-        <lastmod>2014-05-25T11:27:54+08:00</lastmod>
+        <lastmod>2014-05-25T13:27:54+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/2014/05/25/java8-invokedynamic/</loc>
-        <lastmod>2014-05-25T11:27:16+08:00</lastmod>
+        <lastmod>2014-05-25T13:27:16+10:00</lastmod>
+    </url>
+    <url>
+        <loc>http://shenzhang.github.io/blog/2014/08/17/inside-angular-source-1/</loc>
+        <lastmod>2014-08-17T22:25:50+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/blog/archives/</loc>
-        <lastmod>2014-06-14T00:38:19+08:00</lastmod>
+        <lastmod>2014-08-17T22:25:50+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/</loc>
-        <lastmod>2014-06-14T00:38:19+08:00</lastmod>
+        <lastmod>2014-08-17T22:25:50+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/robots.txt</loc>
-        <lastmod>2014-04-06T00:57:34+08:00</lastmod>
+        <lastmod>2014-04-06T02:57:34+10:00</lastmod>
     </url>
 </urlset>

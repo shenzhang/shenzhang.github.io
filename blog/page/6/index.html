@@ -9,9 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接 在有些情况下死锁是可以避免的。本文将展示三种用于避免死锁的技术： 加锁顺序
-加锁时限
-死锁检测 ">
+  <meta name="description" content="如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试Jetty Runner. Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等）， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -71,6 +69,92 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/06/26/jetty-runner/">使用Jetty Runner来运行jetty</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T04:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试<a href="http://repo2.maven.org/maven2/org/mortbay/jetty/jetty-runner/">Jetty Runner</a>.</p>
+
+<p>Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等），当然还有最重要的jetty的基本功能的模块，并且Jetty Runner提供了很多默认的jetty参数，然后接收用户的输入参数并启动一个嵌入式的jetty。</p>
+
+<p><em>最好使用8.1+的版本，否则并不包含el的依赖</em></p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/jetty-runner/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/dir-structure-of-jetty/">Jetty的目录结构</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T03:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/dir-structure-of-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/06/26/prevent-deadlock/">避免死锁[译]</a></h1>
     
     
@@ -87,7 +171,7 @@
   
 
 
-<time datetime="2013-06-26T02:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+<time datetime="2013-06-26T02:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
         
       </p>
     
@@ -137,7 +221,7 @@
   
 
 
-<time datetime="2013-06-26T01:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+<time datetime="2013-06-26T01:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
         
       </p>
     
@@ -182,7 +266,7 @@
   
 
 
-<time datetime="2013-06-25T07:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T07:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -232,7 +316,7 @@
   
 
 
-<time datetime="2013-06-25T06:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T06:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -307,7 +391,7 @@
   
 
 
-<time datetime="2013-06-25T05:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T05:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -353,7 +437,7 @@
   
 
 
-<time datetime="2013-06-25T04:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T04:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -402,7 +486,7 @@
   
 
 
-<time datetime="2013-06-25T03:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T03:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -448,7 +532,7 @@
   
 
 
-<time datetime="2013-06-25T02:27:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+<time datetime="2013-06-25T02:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
         
       </p>
     
@@ -468,88 +552,9 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/lock-in-java/">Java中的锁</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T02:26:00+08:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://tutorials.jenkov.com/java-concurrency/locks.html">原文链接</a></p>
-
-<p>锁像synchronized同步块一样，是一种线程同步机制，但比Java中的synchronized同步块更复杂。因为锁（以及其它更高级的线程同步机制）是由synchronized同步块的方式实现的，所以我们还不能完全摆脱synchronized关键字。</p>
-
-<p>自Java 5开始，java.util.concurrent.locks包中包含了一些锁的实现，因此你不用去实现自己的锁了。但是你仍然需要去了解怎样使用这些锁，且了解这些实现背后的理论也是很有用处的。可以参考我对java.util.concurrent.locks.Lock的介绍，以了解更多关于锁的信息。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/25/lock-in-java/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2000/01/01/template-blog/">Blog Template</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2000-01-01T01:27:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is a template file</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/blog/page/7/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -564,6 +569,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
       </li>
     
@@ -572,15 +581,11 @@
       </li>
     
       <li class="post">
+        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
   </ul>

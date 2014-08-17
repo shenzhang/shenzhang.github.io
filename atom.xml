@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-06-14T00:38:48+08:00</updated>
+  <updated>2014-08-17T22:26:15+10:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -14,27 +14,45 @@
 
   
   <entry>
+    <title type="html"><![CDATA[AngularJS源代码分析1]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/08/17/inside-angular-source-1/"/>
+    <updated>2014-08-17T01:27:00+10:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/08/17/inside-angular-source-1</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[深入分析invokeDynamic]]></title>
     <link href="http://shenzhang.github.io/blog/2014/05/25/java8-invokedynamic/"/>
-    <updated>2014-05-25T01:27:00+08:00</updated>
+    <updated>2014-05-25T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/05/25/java8-invokedynamic</id>
-    <content type="html"><![CDATA[Placeholder
+    <content type="html"><![CDATA[<p>Placeholder</p>
 ]]></content>
   </entry>
   
   <entry>
     <title type="html"><![CDATA[StampedLock源码分析]]></title>
     <link href="http://shenzhang.github.io/blog/2014/05/25/java8-stampedlock/"/>
-    <updated>2014-05-25T00:27:00+08:00</updated>
+    <updated>2014-05-25T00:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/05/25/java8-stampedlock</id>
-    <content type="html"><![CDATA[Placeholder
+    <content type="html"><![CDATA[<p>Placeholder</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Java中的Introspector]]></title>
+    <link href="http://shenzhang.github.io/blog/2014/05/04/introspector-in-java/"/>
+    <updated>2014-05-04T01:27:00+10:00</updated>
+    <id>http://shenzhang.github.io/blog/2014/05/04/introspector-in-java</id>
+    <content type="html"><![CDATA[<p>This is the placeholder for Introspector in Java.</p>
 ]]></content>
   </entry>
   
   <entry>
     <title type="html"><![CDATA[Java中的Reference对象[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/"/>
-    <updated>2014-04-27T01:27:00+08:00</updated>
+    <updated>2014-04-27T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/27/java-reference-objects</id>
     <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
 
@@ -749,7 +767,7 @@
   <entry>
     <title type="html"><![CDATA[深入解析OutOfMemoryError[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error/"/>
-    <updated>2014-04-24T01:27:00+08:00</updated>
+    <updated>2014-04-24T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error</id>
     <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.outOfMemory">原文链接</a></p>
 
@@ -1172,7 +1190,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
   <entry>
     <title type="html"><![CDATA[jcl-over-slf4j]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j/"/>
-    <updated>2014-04-13T02:27:00+08:00</updated>
+    <updated>2014-04-13T02:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j</id>
     <content type="html"><![CDATA[<p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
 
@@ -1226,7 +1244,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
   <entry>
     <title type="html"><![CDATA[哪个更快：Java堆还是本地内存[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/"/>
-    <updated>2014-04-13T01:27:00+08:00</updated>
+    <updated>2014-04-13T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory</id>
     <content type="html"><![CDATA[<p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
 
@@ -1553,7 +1571,7 @@ Native Avg Read:     138         140             138
   <entry>
     <title type="html"><![CDATA[maven杂谈(生命周期,插件绑定,effective-xx)]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/15/something-about-maven/"/>
-    <updated>2013-09-15T01:27:00+08:00</updated>
+    <updated>2013-09-15T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/15/something-about-maven</id>
     <content type="html"><![CDATA[<h2>1.生命周期</h2>
 
@@ -1665,7 +1683,7 @@ site-deploy
   <entry>
     <title type="html"><![CDATA[maven依赖的scope]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/13/scope-in-maven/"/>
-    <updated>2013-09-13T01:27:00+08:00</updated>
+    <updated>2013-09-13T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/13/scope-in-maven</id>
     <content type="html"><![CDATA[<p>maven中一些常用的scope及其介绍。</p>
 
@@ -1694,7 +1712,7 @@ site-deploy
   <entry>
     <title type="html"><![CDATA[如何针对缺少source包的jar添加source包]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/12/add-source-to-repository/"/>
-    <updated>2013-09-12T01:27:00+08:00</updated>
+    <updated>2013-09-12T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/12/add-source-to-repository</id>
     <content type="html"><![CDATA[<p>repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。</p>
 
@@ -1719,7 +1737,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[javascript测试框架jasmine]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/11/jasmine/"/>
-    <updated>2013-09-11T01:27:00+08:00</updated>
+    <updated>2013-09-11T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/11/jasmine</id>
     <content type="html"><![CDATA[<p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
 
@@ -1968,7 +1986,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[SeaJS原理解析]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/10/inspect-seajs/"/>
-    <updated>2013-09-10T01:27:00+08:00</updated>
+    <updated>2013-09-10T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/10/inspect-seajs</id>
     <content type="html"><![CDATA[<p>对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系，不能用SeaJS的风格来使用RequireJS吧。</p>
 
@@ -2289,7 +2307,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[setTimeout和setInterval]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval/"/>
-    <updated>2013-09-05T01:27:00+08:00</updated>
+    <updated>2013-09-05T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval</id>
     <content type="html"><![CDATA[<p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
 
@@ -2308,7 +2326,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[Thread的状态]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/04/status-of-thread/"/>
-    <updated>2013-09-04T01:27:00+08:00</updated>
+    <updated>2013-09-04T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/04/status-of-thread</id>
     <content type="html"><![CDATA[<p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
 
@@ -2345,7 +2363,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[理解GC暂停 - Hotspot中的minor gc[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/"/>
-    <updated>2013-08-16T02:27:00+08:00</updated>
+    <updated>2013-08-16T02:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/16/gc-stop-minor-gc-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots.html">原文链接</a></p>
 
@@ -2439,7 +2457,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[理解GC暂停 - Hotspot中的CMS[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/16/gc-stop-cms-in-hotspot/"/>
-    <updated>2013-08-16T01:27:00+08:00</updated>
+    <updated>2013-08-16T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/16/gc-stop-cms-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots_02.html">原文链接</a></p>
 
@@ -2526,7 +2544,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[JVM是如何实现锁[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/14/how-to-implement-lock-in-jvm/"/>
-    <updated>2013-08-14T01:27:00+08:00</updated>
+    <updated>2013-08-14T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/14/how-to-implement-lock-in-jvm</id>
     <content type="html"><![CDATA[<p><a href="http://slava-technical.blogspot.de/2011/04/how-does-jvm-handle-locks.html">原文链接</a></p>
 
@@ -2549,7 +2567,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[Hotspot JVM中的垃圾收集器[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/14/garbage-collection-in-hotspot/"/>
-    <updated>2013-08-14T01:27:00+08:00</updated>
+    <updated>2013-08-14T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/14/garbage-collection-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2011/12/garbage-collection-in-hotspot-jvm.html">原文连接</a>，该文和我的<a href="http://shenzhang.github.io/blog/2013/07/23/gc-in-hotspot">这篇文章</a>非常非常类似，纯属巧合。另外也可以看看<a href="http://hllvm.group.iteye.com/group/topic/38223#post-248757">这篇文章</a>对不同垃圾算法的描述。</p>
 
@@ -2675,7 +2693,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[Hotspot的垃圾回收：串行、并行和CMS[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot/"/>
-    <updated>2013-08-13T01:27:00+08:00</updated>
+    <updated>2013-08-13T01:27:00+10:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/13/serial-paiallel-cms-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://www.tikalk.com/java/garbage-collection-serial-vs-parallel-vs-concurrent-mark-sweep">原文链接</a></p>
 
@@ -2725,114 +2743,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 <pre><code>-XX:UserParNewGC：让新生代使用多个线程
 -XX:+UseConcMarkSweepGC:在老年代使用CMS（一个线程，仅仅在inital mark和remark阶段才发生STW)
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Hotspot中的safepoints[译]]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot/"/>
-    <updated>2013-08-13T01:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/08/13/safepoints-in-hotspot</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2012/10/safepoints-in-hotspot-jvm.html">原文链接</a></p>
-
-<p>术语Stop-The-World(STW)通常和垃圾搜集相关。虽然GC是STW暂停的最主要原因，但并不是唯一的原因。</p>
-
-<h2>Safepoints</h2>
-
-<p>在Hotspot虚拟机中Stop-The-World暂停机制被称作safepoint。在safepoint期间，所有运行java代码的线程都会被挂起。运行本地代码的线程都会继续执行，直到与JVM进行交互（比如调用java的方法或者从本地代码返回到java代码）。</p>
-
-<p>在暂停所有的线程时，要求safepoint的发起者具有JVM数据的排他访问权限，这样就可以做很多疯狂的事情，比如在堆中移动数据或者替换正在运行的方法中的代码。</p>
-
-<h2>Safepoint是怎么工作的？</h2>
-
-<p>Hotspot JVM中的safepoint是一种协作性的协议。所有的应用程序线程会检查safepoint的状态，当需要进入safepoint的时候，线程会暂停自己并且保持在一个安全的状态下。</p>
-
-<p>对于已经被编译的代码（JIT编译），JIT编译器会在某些代码点插入safepoint检查代码（一般是在调用返回的时候或者是循环退出的时候）。对于解释执行的代码，JVM有两个字节码分发表(byte code dispatch table)，当需要进入safepoint的时候，JVM会在这两个表之间切换以便做safepoint检查。</p>
-
-<p>safepoint状态检查实现的非常巧妙，普通的内存变量检查需要内存屏障的支持。safepoint检查以读取内存屏障的方式实现。当需要safepoint的时候，JVM取消对应用程序线程中导致页错误的地址映射（由JVM直接处理）。这样，Hotspot可以让经过JIT编译的代码保持CPU流水线的友好性，同时也保证了正确的内存语义。</p>
-
-<h2>什么时候会触发safepoints</h2>
-
-<p>下面是Hotspot JVM中会触发safepoints的一些原因：</p>
-
-<ol>
-<li>垃圾回收</li>
-<li>代码优化</li>
-<li>刷新缓存</li>
-<li>类重定义(比如hotswap或者instrumentation)</li>
-<li>撤销偏向锁</li>
-<li>多种调试操作(比如死锁检查，运行栈dump)</li>
-</ol>
-
-
-<h2>safepoints问题排查</h2>
-
-<p>通常情况下safepoints会经常存在并一直工作者，因此你并不需要怎么关系它（大多数情况下，除了GC，都非常快速和短暂）。如果由于偶然的因素破坏了safepoint的正常工作，就会让事情变得很糟，因此下面是一些有用的诊断方法：</p>
-
-<ol>
-<li><p><code>-XX:+PrintGCApplicationStoppedTime</code>:该选项会报告所有safepoints的暂停时间（与GC相关的或者不相关的）。但是不幸的是，这个选项的输出缺少时间戳信息，但是它仍然可以帮助定位问题。</p></li>
-<li><p><code>-XX:+PrintSafepointStatistics和-XX:PrintSafepointStatisticsCount=1</code>:这两个选项会强制JVM在safepoint后报告发生safepoint的原因及耗时（仅会输出到stdout，不会输出到GC日志(log)里）</p></li>
-</ol>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[不同浏览器支持的最小时间精度]]></title>
-    <link href="http://shenzhang.github.io/blog/2013/08/12/timeout-in-different-browser/"/>
-    <updated>2013-08-12T01:27:00+08:00</updated>
-    <id>http://shenzhang.github.io/blog/2013/08/12/timeout-in-different-browser</id>
-    <content type="html"><![CDATA[<p>最近在实现一个灵活的div滚动条方案，主要用于解决windows下滚动条的美化问题，以及IE下对滚动条位置计算的不足。其中需要对div的内容大小进行持续监视，找了一个jquery的mutate插件，但是该插件的代码实在不敢恭维，于是对其进行了一些优化，减少了很多不必要的jquery对象创建过程。</p>
-
-<p>该插件的原理非常简单，直接使用的setTimeout对检测属性进行监控，并且时间间隔是1ms，最初担心性能问题，但是发现实际上由于浏览器对时间的精度不会很高(不到1ms)，因此没有什么影响。但是还是对各浏览器的精度做了个简单测试,代码很简单：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">var</span> <span class="nx">begin</span> <span class="o">=</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span><span class='line'><span class="kd">function</span> <span class="nx">test</span><span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">begin</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>      <span class="nx">begin</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">();</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="nx">count</span><span class="o">++</span><span class="p">;</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="nx">count</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">((</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">()</span> <span class="o">-</span> <span class="nx">begin</span><span class="p">)</span> <span class="o">/</span> <span class="nx">count</span><span class="p">);</span>
-</span><span class='line'>      <span class="k">return</span><span class="p">;</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'>  <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">test</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</span><span class='line'><span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="nx">$</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>  <span class="nx">test</span><span class="p">();</span>
-</span><span class='line'><span class="p">});</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>最后的结果为：</p>
-
-<pre><code>chrome: 4-5ms
-firefox: 5-6ms
-ie: 15ms
-</code></pre>
-
-<p>因此，最后将检测间隔设置成了50，既可以避免潜在的性能问题，也不会影响表现效果。</p>
 ]]></content>
   </entry>
   

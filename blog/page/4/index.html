@@ -9,7 +9,10 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="hotspot中有两个jit，一个是工作在client模式，一个是工作在server模式，server模式的jit要比client复杂的多，它做了更多的优化工作。 当一个方法被重复执行很多次之后，JIT会考虑将他进行编译成机器码执行，而不再是解释执行。具体的执行次数可以通过设置-XX: &hellip;">
+  <meta name="description" content="jdk1.2之后提供了四个可以直接和GC交互的Reference: FinalReference
+SoftReference
+WeakReference
+PhantomReference ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +72,122 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/07/25/collection-for-reference-in-java/">Reference的回收机制及利用价值</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T01:27:00+10:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>jdk1.2之后提供了四个可以直接和GC交互的Reference:</p>
+
+<ul>
+<li>FinalReference</li>
+<li>SoftReference</li>
+<li>WeakReference</li>
+<li>PhantomReference</li>
+</ul>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/25/collection-for-reference-in-java/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/24/open-file-in-java/">Java中的文件打开操作</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-24T02:27:00+10:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>java中的文件操作一般都是要通过FileOutputStream/FileInputStream，这两个类可以获得channel通过NIO的手段来操作，或者是通过RandomAccessFile.getChannel()来获得channel并使用NIO。</p>
+
+<p>其实不论FileOutputStream还是RandomAccessFile，都会有一个打开文件的动作，打开文件的结果都会是产生一个FileDescriptor，可以通过<code>FileOutputStream.getDescrptor()</code>或<code>RandomAccessFile.getDescriptor()</code>来获得。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * The system dependent file descriptor.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">FileDescriptor</span> <span class="n">fd</span><span class="o">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就如同名字所表示的，这个就是一个文件描述符，或者在windows里面讲就是一个文件句柄（HANDLE），所有的系统调用都需要这个文件描述符作为参数。</p>
+
+<p>再来看以下几个构造函数：</p>
+
+<p><em>RandomAccessFile(String name, String mode):</em> 该方法会调用RandomAccessFile(File name, String mode)</p>
+
+<p><em>RandomAccessFile(File name, String mode):</em> 根据File对象打开文件，产生FileDescriptor，但是目标File不会做改动，position的位置在0</p>
+
+<p><em>FileOutputStream(File file):</em> 该方法会调用FileOutputStream(File file, false)</p>
+
+<p><em>FileOutputStream(File file, boolean append):</em> 根据File打开文件,如果append = true，目标file不变，position在文件尾；如果append = false,目标文件会被truncate为0，等同于删除并重新创建了这个文件，也就是清空这个文件。并在最后都生成对应的FileDescriptor</p>
+
+<p><em>FileOutputStream(FileDescriptor fd):</em> 由于参数是FileDescriptor，说明这个文件已经是被打开了的，因此该构造函数实际上不会做任何操作，只是将这个fd保存下来，供以后的操作使用。</p>
+
+<p>因此，我们最经常使用的FileOutputStream(File file)这个构造函数是会自动将文件进行truncate操作的，这个需要注意。</p>
+
+<p>对文件的操作实际上都是使用FileDescriptor，因此普通文件操作和获得channel后的nio操作都共享一个fd，也就是说在普通写操作后，对应channel.getPosition也会同样被移动了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/07/24/jit-in-hotspot/">hotspot中的JIT</a></h1>
     
     
@@ -85,7 +204,7 @@
   
 
 
-<time datetime="2013-07-24T01:27:00+08:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
+<time datetime="2013-07-24T01:27:00+10:00" pubdate data-updated="true">Jul 24<span>th</span>, 2013</time>
         
       </p>
     
@@ -129,7 +248,7 @@
   
 
 
-<time datetime="2013-07-23T02:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+<time datetime="2013-07-23T02:27:00+10:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
         
       </p>
     
@@ -252,7 +371,7 @@
   
 
 
-<time datetime="2013-07-23T01:27:00+08:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
+<time datetime="2013-07-23T01:27:00+10:00" pubdate data-updated="true">Jul 23<span>rd</span>, 2013</time>
         
       </p>
     
@@ -353,7 +472,7 @@
   
 
 
-<time datetime="2013-07-18T01:27:00+08:00" pubdate data-updated="true">Jul 18<span>th</span>, 2013</time>
+<time datetime="2013-07-18T01:27:00+10:00" pubdate data-updated="true">Jul 18<span>th</span>, 2013</time>
         
       </p>
     
@@ -431,7 +550,7 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   
 
 
-<time datetime="2013-07-13T01:27:00+08:00" pubdate data-updated="true">Jul 13<span>th</span>, 2013</time>
+<time datetime="2013-07-13T01:27:00+10:00" pubdate data-updated="true">Jul 13<span>th</span>, 2013</time>
         
       </p>
     
@@ -472,7 +591,7 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   
 
 
-<time datetime="2013-07-10T01:27:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+<time datetime="2013-07-10T01:27:00+10:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
         
       </p>
     
@@ -515,7 +634,7 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   
 
 
-<time datetime="2013-07-06T01:27:00+08:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
+<time datetime="2013-07-06T01:27:00+10:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
         
       </p>
     
@@ -563,7 +682,7 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   
 
 
-<time datetime="2013-07-05T02:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
+<time datetime="2013-07-05T02:27:00+10:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
         
       </p>
     
@@ -589,96 +708,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-05T01:27:00+08:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如<a href="http://www.webalizer.org/">webalizer</a>.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/05/request-log-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/04/listening-80port-for-non-root-user/">非root用户监听80端口</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
-
-<ol>
-<li>ipchains</li>
-<li>iptables</li>
-<li>配置jetty的SetUID</li>
-<li>xinetd</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/04/listening-80port-for-non-root-user/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -696,6 +725,10 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
       </li>
     
@@ -704,15 +737,11 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
       </li>
     
       <li class="post">
+        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
   </ul>

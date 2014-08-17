@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系， &hellip;">
+  <meta name="description" content="repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。 那么可以自己准备对应的源码包：hadoop-core-1.0.4-srouces.jar并安装到本地仓库中。 mvn &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +69,99 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/09/12/add-source-to-repository/">如何针对缺少source包的jar添加source包</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-12T01:27:00+10:00" pubdate data-updated="true">Sep 12<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。</p>
+
+<p>那么可以自己准备对应的源码包：hadoop-core-1.0.4-srouces.jar并安装到本地仓库中。</p>
+
+<pre><code>mvn install:install-file -Dfile=e:\hadoop-core-1.0.4-sources.jar -DgroupId=org.apache.hadoop -DartifactId=hadoop-core -Dversion=1.0.4 -DgeneratePom=false -Dpackaging=java-source
+</code></pre>
+
+<p>注意<code>packaging=java-source</code>，不要使用<code>packaging=jar</code></p>
+
+<p>从中我们可以推测maven打包和依赖查找的机制：</p>
+
+<p>我们发布一个包，指定了groupId, artifacteId, version, packaging，那么maven会自动帮我们给要发布的文件重命名：</p>
+
+<pre><code>packaging=jar =&gt; artifacteId-version.jar
+packaging=java-srouce =&gt; artifacteId-version-sources.jar
+packaging=java-doc =&gt; artifacteId-version-doc.jar
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/11/jasmine/">Javascript测试框架jasmine</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-11T01:27:00+10:00" pubdate data-updated="true">Sep 11<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/09/11/jasmine/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/09/10/inspect-seajs/">SeaJS原理解析</a></h1>
     
     
@@ -85,7 +178,7 @@
   
 
 
-<time datetime="2013-09-10T01:27:00+08:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
+<time datetime="2013-09-10T01:27:00+10:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
         
       </p>
     
@@ -137,7 +230,7 @@
   
 
 
-<time datetime="2013-09-05T01:27:00+08:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
+<time datetime="2013-09-05T01:27:00+10:00" pubdate data-updated="true">Sep 5<span>th</span>, 2013</time>
         
       </p>
     
@@ -183,7 +276,7 @@
   
 
 
-<time datetime="2013-09-04T01:27:00+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
+<time datetime="2013-09-04T01:27:00+10:00" pubdate data-updated="true">Sep 4<span>th</span>, 2013</time>
         
       </p>
     
@@ -247,7 +340,7 @@
   
 
 
-<time datetime="2013-08-16T02:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
+<time datetime="2013-08-16T02:27:00+10:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
         
       </p>
     
@@ -368,7 +461,7 @@
   
 
 
-<time datetime="2013-08-16T01:27:00+08:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
+<time datetime="2013-08-16T01:27:00+10:00" pubdate data-updated="true">Aug 16<span>th</span>, 2013</time>
         
       </p>
     
@@ -482,7 +575,7 @@
   
 
 
-<time datetime="2013-08-14T01:27:00+08:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
+<time datetime="2013-08-14T01:27:00+10:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
         
       </p>
     
@@ -532,7 +625,7 @@
   
 
 
-<time datetime="2013-08-14T01:27:00+08:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
+<time datetime="2013-08-14T01:27:00+10:00" pubdate data-updated="true">Aug 14<span>th</span>, 2013</time>
         
       </p>
     
@@ -685,7 +778,7 @@
   
 
 
-<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
+<time datetime="2013-08-13T01:27:00+10:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
         
       </p>
     
@@ -747,168 +840,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/13/safepoints-in-hotspot/">Hotspot中的safepoints[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-13T01:27:00+08:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.ragozin.info/2012/10/safepoints-in-hotspot-jvm.html">原文链接</a></p>
-
-<p>术语Stop-The-World(STW)通常和垃圾搜集相关。虽然GC是STW暂停的最主要原因，但并不是唯一的原因。</p>
-
-<h2>Safepoints</h2>
-
-<p>在Hotspot虚拟机中Stop-The-World暂停机制被称作safepoint。在safepoint期间，所有运行java代码的线程都会被挂起。运行本地代码的线程都会继续执行，直到与JVM进行交互（比如调用java的方法或者从本地代码返回到java代码）。</p>
-
-<p>在暂停所有的线程时，要求safepoint的发起者具有JVM数据的排他访问权限，这样就可以做很多疯狂的事情，比如在堆中移动数据或者替换正在运行的方法中的代码。</p>
-
-<h2>Safepoint是怎么工作的？</h2>
-
-<p>Hotspot JVM中的safepoint是一种协作性的协议。所有的应用程序线程会检查safepoint的状态，当需要进入safepoint的时候，线程会暂停自己并且保持在一个安全的状态下。</p>
-
-<p>对于已经被编译的代码（JIT编译），JIT编译器会在某些代码点插入safepoint检查代码（一般是在调用返回的时候或者是循环退出的时候）。对于解释执行的代码，JVM有两个字节码分发表(byte code dispatch table)，当需要进入safepoint的时候，JVM会在这两个表之间切换以便做safepoint检查。</p>
-
-<p>safepoint状态检查实现的非常巧妙，普通的内存变量检查需要内存屏障的支持。safepoint检查以读取内存屏障的方式实现。当需要safepoint的时候，JVM取消对应用程序线程中导致页错误的地址映射（由JVM直接处理）。这样，Hotspot可以让经过JIT编译的代码保持CPU流水线的友好性，同时也保证了正确的内存语义。</p>
-
-<h2>什么时候会触发safepoints</h2>
-
-<p>下面是Hotspot JVM中会触发safepoints的一些原因：</p>
-
-<ol>
-<li>垃圾回收</li>
-<li>代码优化</li>
-<li>刷新缓存</li>
-<li>类重定义(比如hotswap或者instrumentation)</li>
-<li>撤销偏向锁</li>
-<li>多种调试操作(比如死锁检查，运行栈dump)</li>
-</ol>
-
-
-<h2>safepoints问题排查</h2>
-
-<p>通常情况下safepoints会经常存在并一直工作者，因此你并不需要怎么关系它（大多数情况下，除了GC，都非常快速和短暂）。如果由于偶然的因素破坏了safepoint的正常工作，就会让事情变得很糟，因此下面是一些有用的诊断方法：</p>
-
-<ol>
-<li><p><code>-XX:+PrintGCApplicationStoppedTime</code>:该选项会报告所有safepoints的暂停时间（与GC相关的或者不相关的）。但是不幸的是，这个选项的输出缺少时间戳信息，但是它仍然可以帮助定位问题。</p></li>
-<li><p><code>-XX:+PrintSafepointStatistics和-XX:PrintSafepointStatisticsCount=1</code>:这两个选项会强制JVM在safepoint后报告发生safepoint的原因及耗时（仅会输出到stdout，不会输出到GC日志(log)里）</p></li>
-</ol>
-
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/12/timeout-in-different-browser/">不同浏览器支持的最小时间精度</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-12T01:27:00+08:00" pubdate data-updated="true">Aug 12<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>最近在实现一个灵活的div滚动条方案，主要用于解决windows下滚动条的美化问题，以及IE下对滚动条位置计算的不足。其中需要对div的内容大小进行持续监视，找了一个jquery的mutate插件，但是该插件的代码实在不敢恭维，于是对其进行了一些优化，减少了很多不必要的jquery对象创建过程。</p>
-
-<p>该插件的原理非常简单，直接使用的setTimeout对检测属性进行监控，并且时间间隔是1ms，最初担心性能问题，但是发现实际上由于浏览器对时间的精度不会很高(不到1ms)，因此没有什么影响。但是还是对各浏览器的精度做了个简单测试,代码很简单：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">var</span> <span class="nx">begin</span> <span class="o">=</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span><span class='line'><span class="kd">function</span> <span class="nx">test</span><span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">begin</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>      <span class="nx">begin</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">();</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="nx">count</span><span class="o">++</span><span class="p">;</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="nx">count</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">((</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">()</span> <span class="o">-</span> <span class="nx">begin</span><span class="p">)</span> <span class="o">/</span> <span class="nx">count</span><span class="p">);</span>
-</span><span class='line'>      <span class="k">return</span><span class="p">;</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'>  <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">test</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</span><span class='line'><span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="nx">$</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>  <span class="nx">test</span><span class="p">();</span>
-</span><span class='line'><span class="p">});</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>最后的结果为：</p>
-
-<pre><code>chrome: 4-5ms
-firefox: 5-6ms
-ie: 15ms
-</code></pre>
-
-<p>因此，最后将检测间隔设置成了50，既可以避免潜在的性能问题，也不会影响表现效果。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -926,6 +857,10 @@ ie: 15ms
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
       </li>
     
@@ -934,15 +869,11 @@ ie: 15ms
       </li>
     
       <li class="post">
+        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
   </ul>

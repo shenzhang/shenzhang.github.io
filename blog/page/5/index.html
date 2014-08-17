@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="Jetty对浏览器或者其他客户端post给server的数据大小做了限制，这可以从一定程度上保护jetty免受DOS的攻击。jetty默认允许post的数据大小是200000字节，但是可以针对不同的webapp或者所有app来设置这个参数。 ">
+  <meta name="description" content="请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如webalizer. ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +69,96 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/07/05/request-log-in-jetty/">Jetty的RequestLog(请求日志)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-05T01:27:00+10:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如<a href="http://www.webalizer.org/">webalizer</a>.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/05/request-log-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/04/listening-80port-for-non-root-user/">非root用户监听80端口</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-04T03:27:00+10:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>在linux中80端口是受到保护的，只有root才可以使用(1024以下的端口)。但是出于安全考虑，应用服务器是不应该使用root用户来运行的，一旦server或者应用本身有安全漏洞并加以利用执行攻击脚本，其脚本也会具有root权限，这样危害是巨大的。这里介绍了集中常用的方法来在非root环境下使用80端口：</p>
+
+<ol>
+<li>ipchains</li>
+<li>iptables</li>
+<li>配置jetty的SetUID</li>
+<li>xinetd</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/04/listening-80port-for-non-root-user/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/07/04/config-form-size-for-jetty/">配置jetty的表单大小(Form Size)</a></h1>
     
     
@@ -85,7 +175,7 @@
   
 
 
-<time datetime="2013-07-04T03:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+<time datetime="2013-07-04T03:27:00+10:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
         
       </p>
     
@@ -126,7 +216,7 @@
   
 
 
-<time datetime="2013-07-04T01:27:00+08:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
+<time datetime="2013-07-04T01:27:00+10:00" pubdate data-updated="true">Jul 4<span>th</span>, 2013</time>
         
       </p>
     
@@ -174,7 +264,7 @@
   
 
 
-<time datetime="2013-07-03T04:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+<time datetime="2013-07-03T04:27:00+10:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
         
       </p>
     
@@ -226,7 +316,7 @@
   
 
 
-<time datetime="2013-07-03T02:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+<time datetime="2013-07-03T02:27:00+10:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
         
       </p>
     
@@ -269,7 +359,7 @@
   
 
 
-<time datetime="2013-07-03T01:27:00+08:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
+<time datetime="2013-07-03T01:27:00+10:00" pubdate data-updated="true">Jul 3<span>rd</span>, 2013</time>
         
       </p>
     
@@ -356,7 +446,7 @@ fish = rw
   
 
 
-<time datetime="2013-06-27T03:27:00+08:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
+<time datetime="2013-06-27T03:27:00+10:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
         
       </p>
     
@@ -425,7 +515,7 @@ org.eclipse.jetty.xml.XmlConfiguration \
   
 
 
-<time datetime="2013-06-27T01:27:00+08:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
+<time datetime="2013-06-27T01:27:00+10:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
         
       </p>
     
@@ -478,7 +568,7 @@ org.eclipse.jetty.xml.XmlConfiguration \
   
 
 
-<time datetime="2013-06-26T06:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+<time datetime="2013-06-26T06:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
         
       </p>
     
@@ -511,92 +601,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/26/jetty-runner/">使用Jetty Runner来运行jetty</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-26T04:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试<a href="http://repo2.maven.org/maven2/org/mortbay/jetty/jetty-runner/">Jetty Runner</a>.</p>
-
-<p>Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等），当然还有最重要的jetty的基本功能的模块，并且Jetty Runner提供了很多默认的jetty参数，然后接收用户的输入参数并启动一个嵌入式的jetty。</p>
-
-<p><em>最好使用8.1+的版本，否则并不包含el的依赖</em></p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/26/jetty-runner/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/26/dir-structure-of-jetty/">Jetty的目录结构</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-26T03:27:00+08:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>本文主要针对jetty作为独立web容器使用时（非嵌入式）的目录结构做简单介绍。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/26/dir-structure-of-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -614,6 +618,10 @@ org.eclipse.jetty.xml.XmlConfiguration \
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
       </li>
     
@@ -622,15 +630,11 @@ org.eclipse.jetty.xml.XmlConfiguration \
       </li>
     
       <li class="post">
+        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/24/understanding-out-of-memory-error/">深入解析OutOfMemoryError[译]</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/13/commons-logging-over-slf4j/">Jcl-over-slf4j</a>
       </li>
     
   </ul>
