@@ -17,6 +17,7 @@ categories:
 ##2.如何给Spring配置类型转换器
 
 提到类型转换，目前大多数情况你只需要考虑ConversionService，PropertyEditor就不要再考虑了。这里分三种情况：
+
 ###2.1 产品代码使用
 这个是最简单的，直接在配置文件中定义个DefaultConversionService或者GenericConversionService，然后再注入到你的产品代码中。
 
@@ -149,3 +150,21 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 
 ##4.到底应该在前台做验证还是后台做验证？
 
+对用户的输入数据进行验证是任何web应用都需要的，因为不但非法的用户输入不能够正常进行业务流程，甚至会破坏系统的正常运行。不管是前台还是后台，市面上都充斥着五花八门的框架，很多框架都提供了验证的功能，那么验证逻辑是放在前台还是后台呢？其实优缺点也是很明显的，将验证功能放在前台不但可以避免没必要的网络开销，使用灵活的js代码直接面对用户可以做出各种复杂的验证逻辑，并且验证结果也可以随心所欲的方便控制；将验证功能放在后台可以最大程度的保护应用，因为没有人能够保证后台收到的请求一定是来自正常的前台应用。因此我觉得关键部分的验证逻辑不管前台做不做，后台是一定要有的，并且从整个应用来看验证方式一定要统一，不要给用户造成困扰。
+
+前面提到了前台的验证逻辑是可以随心所欲的，那么后台呢？当然，如果你说你直接操纵HttpServletRequest，那么你也可以根据自己的需要很容易的实现各种验证逻辑。但是在Spring MVC这种框架下怎么更加灵活的控制validation呢？
+
+当request到来时经过DataBinder的两个阶段，第一是convert到command对象中；第二个是对command对象的字段进行验证，不管是使用jsr303也好，还是写自己的注解或者代码逻辑也好，只要是已经转换到了command对象中，其他的验证逻辑是非常好写的，这里往往更多的关注业务逻辑的合法性。但是如何验证第一个步骤中存在的潜在问题呢，举个最基本的例子，如何验证一个日期类型的输入参数是一个合法的日期格式，如何验证一个目标字段是int类型的参数真正是一个数字类型？如果你什么都不做，那么在前台的<form:errors/>标签中就会显示出一大堆java exception的信息，这显然是我们不希望看到的。
+
+好吧，还是回到DataBinder吧。针对发生在第一阶段转换过程中得任何异常都会被转换为TypeMismatchException，顾名思义就是类型不匹配导致的转换出错。这种类型的异常会直接对应到message的errorCode:
+
+1. code + “.” + object name + “.” + field
+2. code + “.” + field
+3. code + “.” + field type
+4. code
+
+其中code=typeMismatch。这个翻译过程实际上就是由默认的MessageCodesResolver生成的，该过程在最开头小伙伴的文章中有说明。
+
+OK，拿到了Exception并且翻译成了error code，然后又怎么办呢？这个就是由DataBinder中得`BindingErrorProcessor`来决定的了，实际上该接口也是非常简单的，默认实现就是将刚才得到的error code封装成Error对象加入到BindingResult中。
+
+有了MessageCodesResolver和BindingErrorProcessor，我想就应该可以非常容易的驾驭Spring MVC的验证逻辑了，难能可贵的是这些对象都可以很容易的配置到不同Controller对应的DataBinder中去。
