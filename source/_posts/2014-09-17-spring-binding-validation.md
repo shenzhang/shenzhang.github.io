@@ -25,6 +25,7 @@ categories:
 
 Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanFactory通过读取配置文件然后在创建出来的。那么自然类型转换的过程也发生在其中，和类型转换相关的对象也由BeanFactory，实际上是在AbstractBeanFactroy中：
 
+```java
 	/** Spring 3.0 ConversionService to use instead of PropertyEditors */
 	private ConversionService conversionService;
 
@@ -38,9 +39,11 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 	/** Custom PropertyEditors to apply to the beans of this factory */
 	private final Map<Class<?>, Class<? extends PropertyEditor>> customEditors =
 			new HashMap<Class<?>, Class<? extends PropertyEditor>>(4);
-			
+```
+
 那当我们在使用ApplicationContext的时候，它是怎样将ConversionService初始化进去的呢？在AbstractApplicationContext中找到了答案：
 
+``` java
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// Initialize conversion service for this context.
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
@@ -51,7 +54,8 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 
 		...
 	}
-	
+```
+
 实际上它就是在容器初始化要完成的时候检查容器内是由有名字是*conversionService*的ConversionSrervice对象，如果有的话就初始化给BeanFactory，就是这么简单。因此如果你加入自定义的转换逻辑，那么自己去申明一个ConversionService对象就完了。
 
 ###2.3 供Spring MVC对HttpRequest参数到Model对象的转换器
@@ -61,6 +65,7 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 
 我们当然也可以通过直接在`<mvc:annotation-driven/>`显示指定来改变这个默认ConversionService，如下：
 
+``` xml
 	<mvc:annotation-driven conversion-service="conversionService"/>
 	<!-- conversion service -->
 	<bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
@@ -70,6 +75,7 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 			</set>
 		</property>
 	</bean>
+```
 
 上面的代码就相当于扩充了原有的默认的实现。其实`AnnotationDrivenBeanDefinitionParser`会先检测是否有conversion-service属性，如果有就用属性指定的ConversionService，没有就自己提供一个默认的，很简单吧。
 
@@ -79,20 +85,24 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 
 看看Validator的接口：
 
+``` java
 	public interface Validator {
 		boolean supports(Class<?> clazz);
 		void validate(Object target, Errors errors);
 	}
-	
+```
+
 估计和你想象中得出入不大，但是实际上独立起来看是有点别扭的，因为不你清楚Errors是什么。因此大多数时候Validator是DataBinder一起使用，我想这也是为什么DataBinder也在包org.springframework.validation下面。下面的代码就是基本的使用模式：
 
+``` java
         DataBinder binder = new DataBinder(object);
         binder.addValidators(...);
         binder.setConversionService(...);  // If you want to convert and bind data
         binder.bind(...);  // If you want to convert and bind data
         binder.validate();
         BindingResult result = binder.getBindingResult();
-        
+```
+
 拿到了最后的BindingResult是不是就觉得和MVC中的BindingResult很相似了，实际上他们就是一个东西。Spring MVC也是使用上面的模式来做HttpRequest的数据绑定和验证。
 
 当然你可以独立使用上面的模板来在产品代码中做数据验证，但是大部分时候对它的了解还是更多的有助于理解Spring MVC的验证过程。从上面的模板来看只有Spring MVC中得Validator是如何进行配置的没有说了，那就先来讲讲它。
@@ -101,6 +111,7 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 
 再回到前面的DataBinder模板，我们说Spring MVC也是使用类似的模板来做数据绑定和验证的，那么其DataBinder是怎么创建和配置的呢？我们首先需要看DefaultDataBinderFactory类，顾名思义该类就是专门用来创建WebDataBinder的工厂类，其核心方法是：
 
+``` java
 	@Override
 	public final WebDataBinder createBinder(NativeWebRequest webRequest, Object target, String objectName)
 			throws Exception {
@@ -111,13 +122,15 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 		initBinder(dataBinder, webRequest);
 		return dataBinder;
 	}
+```
 	
 基本上就分为3个步骤：
 
 1.创建WebDataBinder。这个没什么好说的，基本上就是直接new出来
 
 2.使用initializer来初始化。这个initializer就是前面一直提到的`ConfigurableWebBindingInitializer`，它就相当于把在配置过程中解析到的关于ConversionService和Validator先存起来，然后到需要用到DataBinder的时候再设置进去。看看它还干了什么：
-	
+
+``` java	
 	@Override
 	public void initBinder(WebDataBinder binder, WebRequest request) {
 		binder.setAutoGrowNestedPaths(this.autoGrowNestedPaths);
@@ -143,6 +156,7 @@ Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanF
 			}
 		}
 	}
+```
 	
 从其中就可以看到熟悉的MessageCodesResolver和另外一个东西BindingErrorProcessor。这两个东西后面再讲。
 
