@@ -9,10 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="jdk1.2之后提供了四个可以直接和GC交互的Reference: FinalReference
-SoftReference
-WeakReference
-PhantomReference ">
+  <meta name="description" content="java中的死锁是各式各样的，但是类的静态初始化块死锁却很少被人提到。 实际上jvm对同一个类的静态初始化块的初始化肯定是原子的，而且是限于当前线程内部，死锁主要是发生在不同类静态初始化交叉引用的并发初始化场景。 举个例子，类B的static块应用了C，C的static块引用了B， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -66,6 +63,130 @@ PhantomReference ">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/25/deadlock-during-static-initialize-in-java/">Java中的静态初始化块死锁</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-25T04:27:00+10:00" pubdate data-updated="true">Jul 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>java中的死锁是各式各样的，但是类的静态初始化块死锁却很少被人提到。</p>
+
+<p>实际上jvm对同一个类的静态初始化块的初始化肯定是原子的，而且是限于当前线程内部，死锁主要是发生在不同类静态初始化交叉引用的并发初始化场景。</p>
+
+<p>举个例子，类B的static块应用了C，C的static块引用了B，显然这发生了循环引用，但是如果这种引用发生在同一个线程内，那么jvm可以很好的处理这种循环引用，一般后引用的类会优先初始化，也就是说实际初始化顺序是B > C。</p>
+
+<p>但是，如果这种循环引用出现在了多个线程内，那么就有可能发生死锁，比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">B</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;BB&quot;</span><span class="o">;</span>
+</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before B init&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B timeout&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after B init&quot;</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">C</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;CC&quot;</span><span class="o">;</span>
+</span><span class='line'>  <span class="kd">static</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;before C init&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C timeout&quot;</span><span class="o">);</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">String</span> <span class="n">n</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="na">name</span><span class="o">;</span>
+</span><span class='line'>      
+</span><span class='line'>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;after C init&quot;</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个时候线程b中引用了B对象，线程c引用了C对象，在两个线程的sleep时间到了后就发生了死锁，因为B的初始化锁被线程b占有，C的初始化锁被c占有。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -661,53 +782,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-05T02:27:00+10:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
-1.多个名字对应一个IP地址
-2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名</p>
-
-<p>Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常，只有一个IP地址的机器会配置多个主机名或者域名给这个IP地址，部署在该机器的web应用需要给不同的主机名同时提供服务。另外一种情况是给不同的主机名提供不同的web服务。</p>
-
-<p>不管使用xml文件还是通过编程的模式给Jetty设置虚拟主机最终实际上都是使用<code>ContextHandler.setVitualHosts</code>方法。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/05/config-virtual-host-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -725,6 +799,10 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
       </li>
     
@@ -738,10 +816,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
     
       <li class="post">
         <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
   </ul>

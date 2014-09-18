@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。 那么可以自己准备对应的源码包：hadoop-core-1.0.4-srouces.jar并安装到本地仓库中。 mvn &hellip;">
+  <meta name="description" content="maven中一些常用的scope及其介绍。 compile: maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用. runtime: &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,62 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/13/scope-in-maven/">Maven依赖的scope</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T01:27:00+10:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>maven中一些常用的scope及其介绍。</p>
+
+<h3>compile:</h3>
+
+<p>maven的默认依赖scope，并且会应用于所有的classpath，也就是说不论在compile, test compile, 还是直接用mvn来运行(runtime)都会起作用.</p>
+
+<h3>runtime:</h3>
+
+<p>在compile相关的阶段都不会起作用，仅仅是在运行(runtime)或者测试(test)的时候有效。</p>
+
+<h3>provided:</h3>
+
+<p>和compile类似，但是往往这些依赖不需要随应用一起发布，一般是由外部环境或者容器来提供，不需要自己准备，比如说servlet-api, jsp-api这些都可以由container提供。</p>
+
+<h3>test:</h3>
+
+<p>这个最好理解，仅仅是在测试的时候有用，compile和runtime都不需要</p>
+
+<h3>system:</h3>
+
+<p>有些依赖是仓库没有的，那么可以通过使用system范围来告诉maven在指定的本地路径上查找依赖。因此需要在dependency中指定systemPath元素，告诉maven依赖的具体位置。一般来说是不应该使用该范围的，很可能大家不能共享你的配置。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -757,89 +813,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/08/13/serial-paiallel-cms-in-hotspot/">Hotspot的垃圾回收：串行、并行和CMS[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-13T01:27:00+10:00" pubdate data-updated="true">Aug 13<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://www.tikalk.com/java/garbage-collection-serial-vs-parallel-vs-concurrent-mark-sweep">原文链接</a></p>
-
-<p>串行(Serial)，并行(Parallel)和CMS（Concurrent-Mark-Sweep)垃圾搜集算法到底有什么不同呢？</p>
-
-<p>首先，让我们看看哪些算法是用于新生代，哪些算法是用于老年代：</p>
-
-<h3>以下算法用于新生代：</h3>
-
-<pre><code>-XX:+UseSerialGC 
--XX:+UseParallelGC 
--XX:+UseParNewGC
-</code></pre>
-
-<h3>以下算法用于老年代:</h3>
-
-<pre><code>-XX:+UseParallelOldGC 
--XX:+UseConcMarkSweepGC
-</code></pre>
-
-<h3>串行和并行收集器有什么不同</h3>
-
-<p>串行和并行垃圾收集器在GC的时候都会造成Stop-The-World，串行收集器默认是一个拷贝算法，并且使用单个线程来完成GC操作；并行收集器采用多个线程完成GC操作。</p>
-
-<h3>并行收集器和CMS有什么不同</h3>
-
-<p>CMS会通过以下步骤（所有步骤都使用一个线程完成）</p>
-
-<ol>
-<li>inital mark</li>
-<li>concurrent marking</li>
-<li>remark</li>
-<li>concurrent sweeping</li>
-</ol>
-
-
-<p><em>主要有两点不同：</em></p>
-
-<ol>
-<li>并行收集器使用多个线程，CMS只使用单个线程</li>
-<li>并行收集器会Stop-The-World，但是CMS仅仅在inital mark和remark阶段会STW,concrrent marking和concurrent sweeping阶段时，GC线程会和应用程序线程并发运行。</li>
-</ol>
-
-
-<h3>如果你想将GC定制化为并行化和并发化，那么可以使用下面的参数:</h3>
-
-<pre><code>-XX:UserParNewGC：让新生代使用多个线程
--XX:+UseConcMarkSweepGC:在老年代使用CMS（一个线程，仅仅在inital mark和remark阶段才发生STW)
-</code></pre>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -857,6 +830,10 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
       </li>
     
@@ -870,10 +847,6 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
     
       <li class="post">
         <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
   </ul>

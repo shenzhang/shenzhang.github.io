@@ -9,7 +9,9 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="请求日志记录了所有服务器已经处理过的请求。每个请求都会对应一个请求日志，而且通常是标准的NCSA格式，因此他们可以非常容易的被一些分析工具分析，比如webalizer. ">
+  <meta name="description" content="虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
+1.多个名字对应一个IP地址
+2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名 Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +65,53 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/05/config-virtual-host-in-jetty/">Jetty配置虚拟主机</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-05T02:27:00+10:00" pubdate data-updated="true">Jul 5<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
+1.多个名字对应一个IP地址
+2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名</p>
+
+<p>Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常，只有一个IP地址的机器会配置多个主机名或者域名给这个IP地址，部署在该机器的web应用需要给不同的主机名同时提供服务。另外一种情况是给不同的主机名提供不同的web服务。</p>
+
+<p>不管使用xml文件还是通过编程的模式给Jetty设置虚拟主机最终实际上都是使用<code>ContextHandler.setVitualHosts</code>方法。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/05/config-virtual-host-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -547,60 +596,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Jsp的编译过程和热部署原理</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-26T06:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。</p>
-
-<p>首先简要说明下jsp文件的响应过程：</p>
-
-<ol>
-<li>client发起http请求，如index.jsp</li>
-<li>servlet容器将这个请求交给JspServlet处理</li>
-<li>JspServlet根据request的目标文件index.jsp，对其进行翻译，生成对应的符合servlet规范的源文件index_jsp.java</li>
-<li>使用一个java编译器对index_jsp.java进行编译，并生成index_jsp.class文件</li>
-<li>使用一个特殊的classload装载这个index_jsp.class文件，并通过反射创建对应的servlet对象</li>
-<li>调用这个servlet对象的service方法</li>
-<li>完成response的输出</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -618,6 +613,10 @@ org.eclipse.jetty.xml.XmlConfiguration \
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
       </li>
     
@@ -631,10 +630,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
     
       <li class="post">
         <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
   </ul>

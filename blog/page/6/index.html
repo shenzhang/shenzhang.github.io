@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="如果想非常快速并且方便的运行你的webapp，并且不想下载、安装、管理你的jetty分发包，那么可以试试Jetty Runner. Jetty Runner实际上就是将很多运行webapp所依赖的包打在一起（比如servlet api、jsp api、jsp的一个实现、mail等）， &hellip;">
+  <meta name="description" content="我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,60 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Jsp的编译过程和热部署原理</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-26T06:27:00+10:00" pubdate data-updated="true">Jun 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>我们在使用jsp文件时，当应用已经启动后再修改jsp文件，所做的修改很快就能反映到输出页面上，难道jsp文件是在每次请求的时候都重新进行解析的吗？显然不是这样的，否则jsp的效率和普通模版技术就没有区别了。实际上是jsp技术或者说jsp规范的实现者天然就实现了jsp的热部署问题。</p>
+
+<p>首先简要说明下jsp文件的响应过程：</p>
+
+<ol>
+<li>client发起http请求，如index.jsp</li>
+<li>servlet容器将这个请求交给JspServlet处理</li>
+<li>JspServlet根据request的目标文件index.jsp，对其进行翻译，生成对应的符合servlet规范的源文件index_jsp.java</li>
+<li>使用一个java编译器对index_jsp.java进行编译，并生成index_jsp.class文件</li>
+<li>使用一个特殊的classload装载这个index_jsp.class文件，并通过反射创建对应的servlet对象</li>
+<li>调用这个servlet对象的service方法</li>
+<li>完成response的输出</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/06/26/recompile-and-redeploy-in-jsp/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -511,47 +565,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/25/charset-in-mysql/">Linux下mysql编码设置</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T02:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（windows下的默认编码是gbk，一般不会有问题），主要有两种方法：</p>
-
-<p>1.在创建数据库是显示指定编码：<code>create database db1 character set utf8</code>;</p>
-
-<p>2.在/etc/my.cnf中的[mysqld]部分加入<code>character-set-server=utf8</code>,最后在[client]部分加入<code>default-character-set=utf8</code>。
-注：网上部分帖子说在[mysqld]部分加入default-character-set=utf8是不可行的，至少在mysql5.5之后的版本是无法启动的，可以通过mysqld &mdash;verbose &mdash;help查看具体的参数信息，或者mysql在新的版本中将<code>default-character-set</code>换成了<code>character-set-server</code>。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/7/">&larr; Older</a>
@@ -569,6 +582,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
       </li>
     
@@ -582,10 +599,6 @@
     
       <li class="post">
         <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
   </ul>

@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="原文链接 锁像synchronized同步块一样，是一种线程同步机制，但比Java中的synchronized同步块更复杂。因为锁（以及其它更高级的线程同步机制）是由synchronized同步块的方式实现的，所以我们还不能完全摆脱synchronized关键字。 自Java 5开始，java. &hellip;">
+  <meta name="description" content="在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（ &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +69,47 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/06/25/charset-in-mysql/">Linux下mysql编码设置</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T02:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（windows下的默认编码是gbk，一般不会有问题），主要有两种方法：</p>
+
+<p>1.在创建数据库是显示指定编码：<code>create database db1 character set utf8</code>;</p>
+
+<p>2.在/etc/my.cnf中的[mysqld]部分加入<code>character-set-server=utf8</code>,最后在[client]部分加入<code>default-character-set=utf8</code>。
+注：网上部分帖子说在[mysqld]部分加入default-character-set=utf8是不可行的，至少在mysql5.5之后的版本是无法启动的，可以通过mysqld &mdash;verbose &mdash;help查看具体的参数信息，或者mysql在新的版本中将<code>default-character-set</code>换成了<code>character-set-server</code>。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2013/06/25/lock-in-java/">Java中的锁</a></h1>
     
     
@@ -104,6 +145,42 @@
     <footer>
       <a rel="full-article" href="/blog/2013/06/25/lock-in-java/">Read on &rarr;</a>
     </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2000/01/01/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2000-01-01T01:27:00+10:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is a template file</p>
+</div>
+  
   
 
 
@@ -160,6 +237,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
       </li>
     
@@ -173,10 +254,6 @@
     
       <li class="post">
         <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/27/java-reference-objects/">Java中的Reference对象[译]</a>
       </li>
     
   </ul>

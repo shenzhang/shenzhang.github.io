@@ -5,6 +5,10 @@
         <lastmod>2014-04-06T15:08:51+10:00</lastmod>
     </url>
     <url>
+        <loc>http://shenzhang.github.io/blog/2000/01/01/what-does-mvc-annotation-driven-do/</loc>
+        <lastmod>2014-08-28T23:20:43+10:00</lastmod>
+    </url>
+    <url>
         <loc>http://shenzhang.github.io/blog/2013/06/25/lock-in-java/</loc>
         <lastmod>2014-04-06T13:36:13+10:00</lastmod>
     </url>
@@ -253,12 +257,16 @@
         <lastmod>2014-08-17T22:25:50+10:00</lastmod>
     </url>
     <url>
+        <loc>http://shenzhang.github.io/blog/2014/09/17/spring-binding-validation/</loc>
+        <lastmod>2014-09-18T22:42:18+10:00</lastmod>
+    </url>
+    <url>
         <loc>http://shenzhang.github.io/blog/archives/</loc>
-        <lastmod>2014-08-17T22:25:50+10:00</lastmod>
+        <lastmod>2014-09-18T22:42:18+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/</loc>
-        <lastmod>2014-08-17T22:25:50+10:00</lastmod>
+        <lastmod>2014-09-18T22:42:18+10:00</lastmod>
     </url>
     <url>
         <loc>http://shenzhang.github.io/robots.txt</loc>
