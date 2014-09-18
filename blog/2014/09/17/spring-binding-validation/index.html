@@ -109,34 +109,59 @@
 
 <p>Spring容器的核心实际上是BeanFactory，所有的Bean可以理解成BeanFactory通过读取配置文件然后在创建出来的。那么自然类型转换的过程也发生在其中，和类型转换相关的对象也由BeanFactory，实际上是在AbstractBeanFactroy中：</p>
 
-<pre><code>/** Spring 3.0 ConversionService to use instead of PropertyEditors */
-private ConversionService conversionService;
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/** Spring 3.0 ConversionService to use instead of PropertyEditors */</span>
+</span><span class='line'><span class="kd">private</span> <span class="n">ConversionService</span> <span class="n">conversionService</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Custom PropertyEditorRegistrars to apply to the beans of this factory */</span>
+</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">PropertyEditorRegistrar</span><span class="o">&gt;</span> <span class="n">propertyEditorRegistrars</span> <span class="o">=</span>
+</span><span class='line'>      <span class="k">new</span> <span class="n">LinkedHashSet</span><span class="o">&lt;</span><span class="n">PropertyEditorRegistrar</span><span class="o">&gt;(</span><span class="mi">4</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** A custom TypeConverter to use, overriding the default PropertyEditor mechanism */</span>
+</span><span class='line'><span class="kd">private</span> <span class="n">TypeConverter</span> <span class="n">typeConverter</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Custom PropertyEditors to apply to the beans of this factory */</span>
+</span><span class='line'><span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">Class</span><span class="o">&lt;?&gt;,</span> <span class="n">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">PropertyEditor</span><span class="o">&gt;&gt;</span> <span class="n">customEditors</span> <span class="o">=</span>
+</span><span class='line'>      <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">Class</span><span class="o">&lt;?&gt;,</span> <span class="n">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">PropertyEditor</span><span class="o">&gt;&gt;(</span><span class="mi">4</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
 
-/** Custom PropertyEditorRegistrars to apply to the beans of this factory */
-private final Set&lt;PropertyEditorRegistrar&gt; propertyEditorRegistrars =
-        new LinkedHashSet&lt;PropertyEditorRegistrar&gt;(4);
-
-/** A custom TypeConverter to use, overriding the default PropertyEditor mechanism */
-private TypeConverter typeConverter;
-
-/** Custom PropertyEditors to apply to the beans of this factory */
-private final Map&lt;Class&lt;?&gt;, Class&lt;? extends PropertyEditor&gt;&gt; customEditors =
-        new HashMap&lt;Class&lt;?&gt;, Class&lt;? extends PropertyEditor&gt;&gt;(4);
-</code></pre>
 
 <p>那当我们在使用ApplicationContext的时候，它是怎样将ConversionService初始化进去的呢？在AbstractApplicationContext中找到了答案：</p>
 
-<pre><code>protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
-    // Initialize conversion service for this context.
-    if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &amp;&amp;
-            beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
-        beanFactory.setConversionService(
-                beanFactory.getBean(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class));
-    }
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">finishBeanFactoryInitialization</span><span class="o">(</span><span class="n">ConfigurableListableBeanFactory</span> <span class="n">beanFactory</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Initialize conversion service for this context.</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="n">beanFactory</span><span class="o">.</span><span class="na">containsBean</span><span class="o">(</span><span class="n">CONVERSION_SERVICE_BEAN_NAME</span><span class="o">)</span> <span class="o">&amp;&amp;</span>
+</span><span class='line'>          <span class="n">beanFactory</span><span class="o">.</span><span class="na">isTypeMatch</span><span class="o">(</span><span class="n">CONVERSION_SERVICE_BEAN_NAME</span><span class="o">,</span> <span class="n">ConversionService</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">beanFactory</span><span class="o">.</span><span class="na">setConversionService</span><span class="o">(</span>
+</span><span class='line'>              <span class="n">beanFactory</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">CONVERSION_SERVICE_BEAN_NAME</span><span class="o">,</span> <span class="n">ConversionService</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    ...
-}
-</code></pre>
 
 <p>实际上它就是在容器初始化要完成的时候检查容器内是由有名字是<em>conversionService</em>的ConversionSrervice对象，如果有的话就初始化给BeanFactory，就是这么简单。因此如果你加入自定义的转换逻辑，那么自己去申明一个ConversionService对象就完了。</p>
 
@@ -148,16 +173,26 @@ private final Map&lt;Class&lt;?&gt;, Class&lt;? extends PropertyEditor&gt;&gt; c
 
 <p>我们当然也可以通过直接在<code>&lt;mvc:annotation-driven/&gt;</code>显示指定来改变这个默认ConversionService，如下：</p>
 
-<pre><code>&lt;mvc:annotation-driven conversion-service="conversionService"/&gt;
-&lt;!-- conversion service --&gt;
-&lt;bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean"&gt;
-    &lt;property name="formatters"&gt;
-        &lt;set&gt;
-            &lt;bean class="org.springframework.format.datetime.DateFormatter" p:pattern="MM/dd/yyyy"/&gt;
-        &lt;/set&gt;
-    &lt;/property&gt;
-&lt;/bean&gt;
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;mvc:annotation-driven</span> <span class="na">conversion-service=</span><span class="s">&quot;conversionService&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'><span class="c">&lt;!-- conversion service --&gt;</span>
+</span><span class='line'><span class="nt">&lt;bean</span> <span class="na">id=</span><span class="s">&quot;conversionService&quot;</span> <span class="na">class=</span><span class="s">&quot;org.springframework.format.support.FormattingConversionServiceFactoryBean&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;property</span> <span class="na">name=</span><span class="s">&quot;formatters&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;set&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;bean</span> <span class="na">class=</span><span class="s">&quot;org.springframework.format.datetime.DateFormatter&quot;</span> <span class="na">p:pattern=</span><span class="s">&quot;MM/dd/yyyy&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/set&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/property&gt;</span>
+</span><span class='line'><span class="nt">&lt;/bean&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>上面的代码就相当于扩充了原有的默认的实现。其实<code>AnnotationDrivenBeanDefinitionParser</code>会先检测是否有conversion-service属性，如果有就用属性指定的ConversionService，没有就自己提供一个默认的，很简单吧。</p>
 
@@ -167,21 +202,33 @@ private final Map&lt;Class&lt;?&gt;, Class&lt;? extends PropertyEditor&gt;&gt; c
 
 <p>看看Validator的接口：</p>
 
-<pre><code>public interface Validator {
-    boolean supports(Class&lt;?&gt; clazz);
-    void validate(Object target, Errors errors);
-}
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">Validator</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kt">boolean</span> <span class="nf">supports</span><span class="o">(</span><span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">clazz</span><span class="o">);</span>
+</span><span class='line'>  <span class="kt">void</span> <span class="nf">validate</span><span class="o">(</span><span class="n">Object</span> <span class="n">target</span><span class="o">,</span> <span class="n">Errors</span> <span class="n">errors</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>估计和你想象中得出入不大，但是实际上独立起来看是有点别扭的，因为不你清楚Errors是什么。因此大多数时候Validator是DataBinder一起使用，我想这也是为什么DataBinder也在包org.springframework.validation下面。下面的代码就是基本的使用模式：</p>
 
-<pre><code>    DataBinder binder = new DataBinder(object);
-    binder.addValidators(...);
-    binder.setConversionService(...);  // If you want to convert and bind data
-    binder.bind(...);  // If you want to convert and bind data
-    binder.validate();
-    BindingResult result = binder.getBindingResult();
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="n">DataBinder</span> <span class="n">binder</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DataBinder</span><span class="o">(</span><span class="n">object</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">binder</span><span class="o">.</span><span class="na">addValidators</span><span class="o">(...);</span>
+</span><span class='line'>    <span class="n">binder</span><span class="o">.</span><span class="na">setConversionService</span><span class="o">(...);</span>  <span class="c1">// If you want to convert and bind data</span>
+</span><span class='line'>    <span class="n">binder</span><span class="o">.</span><span class="na">bind</span><span class="o">(...);</span>  <span class="c1">// If you want to convert and bind data</span>
+</span><span class='line'>    <span class="n">binder</span><span class="o">.</span><span class="na">validate</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">BindingResult</span> <span class="n">result</span> <span class="o">=</span> <span class="n">binder</span><span class="o">.</span><span class="na">getBindingResult</span><span class="o">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>拿到了最后的BindingResult是不是就觉得和MVC中的BindingResult很相似了，实际上他们就是一个东西。Spring MVC也是使用上面的模式来做HttpRequest的数据绑定和验证。</p>
 
@@ -191,17 +238,28 @@ private final Map&lt;Class&lt;?&gt;, Class&lt;? extends PropertyEditor&gt;&gt; c
 
 <p>再回到前面的DataBinder模板，我们说Spring MVC也是使用类似的模板来做数据绑定和验证的，那么其DataBinder是怎么创建和配置的呢？我们首先需要看DefaultDataBinderFactory类，顾名思义该类就是专门用来创建WebDataBinder的工厂类，其核心方法是：</p>
 
-<pre><code>@Override
-public final WebDataBinder createBinder(NativeWebRequest webRequest, Object target, String objectName)
-        throws Exception {
-    WebDataBinder dataBinder = createBinderInstance(target, objectName, webRequest);
-    if (this.initializer != null) {
-        this.initializer.initBinder(dataBinder, webRequest);
-    }
-    initBinder(dataBinder, webRequest);
-    return dataBinder;
-}
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Override</span>
+</span><span class='line'><span class="kd">public</span> <span class="kd">final</span> <span class="n">WebDataBinder</span> <span class="nf">createBinder</span><span class="o">(</span><span class="n">NativeWebRequest</span> <span class="n">webRequest</span><span class="o">,</span> <span class="n">Object</span> <span class="n">target</span><span class="o">,</span> <span class="n">String</span> <span class="n">objectName</span><span class="o">)</span>
+</span><span class='line'>      <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">WebDataBinder</span> <span class="n">dataBinder</span> <span class="o">=</span> <span class="n">createBinderInstance</span><span class="o">(</span><span class="n">target</span><span class="o">,</span> <span class="n">objectName</span><span class="o">,</span> <span class="n">webRequest</span><span class="o">);</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">initializer</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">this</span><span class="o">.</span><span class="na">initializer</span><span class="o">.</span><span class="na">initBinder</span><span class="o">(</span><span class="n">dataBinder</span><span class="o">,</span> <span class="n">webRequest</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="n">initBinder</span><span class="o">(</span><span class="n">dataBinder</span><span class="o">,</span> <span class="n">webRequest</span><span class="o">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">dataBinder</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>基本上就分为3个步骤：</p>
 
@@ -209,32 +267,58 @@ public final WebDataBinder createBinder(NativeWebRequest webRequest, Object targ
 
 <p>2.使用initializer来初始化。这个initializer就是前面一直提到的<code>ConfigurableWebBindingInitializer</code>，它就相当于把在配置过程中解析到的关于ConversionService和Validator先存起来，然后到需要用到DataBinder的时候再设置进去。看看它还干了什么：</p>
 
-<pre><code>@Override
-public void initBinder(WebDataBinder binder, WebRequest request) {
-    binder.setAutoGrowNestedPaths(this.autoGrowNestedPaths);
-    if (this.directFieldAccess) {
-        binder.initDirectFieldAccess();
-    }
-    if (this.messageCodesResolver != null) {
-        binder.setMessageCodesResolver(this.messageCodesResolver);
-    }
-    if (this.bindingErrorProcessor != null) {
-        binder.setBindingErrorProcessor(this.bindingErrorProcessor);
-    }
-    if (this.validator != null &amp;&amp; binder.getTarget() != null &amp;&amp;
-            this.validator.supports(binder.getTarget().getClass())) {
-        binder.setValidator(this.validator);
-    }
-    if (this.conversionService != null) {
-        binder.setConversionService(this.conversionService);
-    }
-    if (this.propertyEditorRegistrars != null) {
-        for (PropertyEditorRegistrar propertyEditorRegistrar : this.propertyEditorRegistrars) {
-            propertyEditorRegistrar.registerCustomEditors(binder);
-        }
-    }
-}
-</code></pre>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Override</span>
+</span><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">initBinder</span><span class="o">(</span><span class="n">WebDataBinder</span> <span class="n">binder</span><span class="o">,</span> <span class="n">WebRequest</span> <span class="n">request</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">binder</span><span class="o">.</span><span class="na">setAutoGrowNestedPaths</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">autoGrowNestedPaths</span><span class="o">);</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">directFieldAccess</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">binder</span><span class="o">.</span><span class="na">initDirectFieldAccess</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">messageCodesResolver</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">binder</span><span class="o">.</span><span class="na">setMessageCodesResolver</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">messageCodesResolver</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">bindingErrorProcessor</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">binder</span><span class="o">.</span><span class="na">setBindingErrorProcessor</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">bindingErrorProcessor</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">validator</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">binder</span><span class="o">.</span><span class="na">getTarget</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span>
+</span><span class='line'>          <span class="k">this</span><span class="o">.</span><span class="na">validator</span><span class="o">.</span><span class="na">supports</span><span class="o">(</span><span class="n">binder</span><span class="o">.</span><span class="na">getTarget</span><span class="o">().</span><span class="na">getClass</span><span class="o">()))</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">binder</span><span class="o">.</span><span class="na">setValidator</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">validator</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">conversionService</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">binder</span><span class="o">.</span><span class="na">setConversionService</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">conversionService</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">propertyEditorRegistrars</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">for</span> <span class="o">(</span><span class="n">PropertyEditorRegistrar</span> <span class="n">propertyEditorRegistrar</span> <span class="o">:</span> <span class="k">this</span><span class="o">.</span><span class="na">propertyEditorRegistrars</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">propertyEditorRegistrar</span><span class="o">.</span><span class="na">registerCustomEditors</span><span class="o">(</span><span class="n">binder</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>从其中就可以看到熟悉的MessageCodesResolver和另外一个东西BindingErrorProcessor。这两个东西后面再讲。</p>
 
