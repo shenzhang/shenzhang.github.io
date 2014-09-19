@@ -9,9 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="虚拟主机是注册在DNS上的IP地址的别名。虚拟主机配置通常有两个模式：
-1.多个名字对应一个IP地址
-2.如果一个机器有多个网卡，那么可能会给每个网卡的IP地址都分配一个主机名 Jetty的用户在使用的时候通常会考虑多主机名的问题，也就是虚拟主机的问题。通常， &hellip;">
+  <meta name="description" content="页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，原文链接。 页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。 ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -65,6 +63,97 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T01:27:00+10:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
+
+<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/10/pagetable/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-06T01:27:00+10:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
+
+<ol>
+<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
+<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
+<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
+</ol>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/07/06/classloader-in-jetty/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -474,128 +563,6 @@ fish = rw
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/27/start-jar-in-jetty/">Jetty中的Start.jar</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-27T03:27:00+10:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty仅仅是一个Java的程序，只要设置好了classpath，就可以像运行其他java程序一样运行它。</p>
-
-<p>但是最困难的地方就是到底哪些jar包需要在jetty启动的时候被放进classpath中。和Jetty的发行包一起的有40+个jars，所以确切的知道你的应用具体需要哪些jar包是很困难的。如果用了maven，那么maven会自动帮你管理这些jar的依赖关系，但是如果是用控制台或者shell来运行jetty，仍然需要设置classpath。</p>
-
-<p>start.jar是一个可执行的jar文件，它可以帮助你配置好运行jetty所需要的classpath，然后运行jetty的主程序。start.jar中包含了一个start.config文件，并且它可以用来控制start.jar的行为，因此你可以直接这样运行start.jar:</p>
-
-<pre><code>java -jar start.jar
-</code></pre>
-
-<p>可以加上&mdash;dry-run参数来让start.jar输出配置好的java运行命令，其中就包括了classpath的配置，该参数仅仅是用于输出命令行，不会真正启动jetty：</p>
-
-<pre><code>java -jar start.jar --dry-run
-</code></pre>
-
-<p>会产生类似的输出：</p>
-
-<pre><code>/usr/lib/jvm/java-1.5.0-sun-1.5.0.19/jre/bin/java \
--Djetty.home=/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution \
--cp /home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/resources:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-xml-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/servlet-api-2.5.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-http-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-continuation-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-server-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-security-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlet-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-webapp-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-deploy-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-servlets-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-util-7.0.0.RC6-SNAPSHOT.jar:\
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/lib/jetty-io-7.0.0.RC6-SNAPSHOT.jar \
-org.eclipse.jetty.xml.XmlConfiguration \
-/home/gregw/src/jetty-7.0.0/jetty-distribution/target/distribution/etc/jetty.xml
-</code></pre>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/27/embed-jetty/">将jetty嵌入到应用中</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-27T01:27:00+10:00" pubdate data-updated="true">Jun 27<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Jetty有一个口号：“不要将你的应用部署到Jetty中，而是将Jetty部署到你的应用中”。Jetty提供了另一种开发和部署web应用的思维，使用jetty的嵌入式模式就是将一个http模块放入到你的应用中，而不需要将你的应用放入到http服务器中。</p>
-
-<p>将Jetty嵌入到应用中通常需要下面的步骤：</p>
-
-<ol>
-<li>创建一个server</li>
-<li>添加/配置Connectors</li>
-<li>添加/配置Handlers</li>
-<li>给Handlers添加/配置Servlets/Webapps</li>
-<li>启动server</li>
-<li>join(让主线程阻塞，防止退出)</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/06/27/embed-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -613,7 +580,15 @@ org.eclipse.jetty.xml.XmlConfiguration \
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a>
       </li>
     
       <li class="post">
@@ -622,14 +597,6 @@ org.eclipse.jetty.xml.XmlConfiguration \
     
       <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
       </li>
     
   </ul>

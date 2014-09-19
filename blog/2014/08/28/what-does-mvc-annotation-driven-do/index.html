@@ -1,0 +1,358 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>章显魅颖</title>
+  <meta name="author" content="zshen">
+
+  
+  <meta name="description" content="大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上&lt;mvc:annotation-driven/&gt;这句话，但是如果不加这句话一切有是可以正常word的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？ 其实如果用一句话来描述&lt;mvc: &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://shenzhang.github.io/blog/2014/08/28/what-does-mvc-annotation-driven-do">
+  <link href="/favicon.jpeg" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Keep going" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Keep going</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:shenzhang.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Mvc:annotation-driven到底帮我们做了什么</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-28T01:27:00+10:00" pubdate data-updated="true">Aug 28<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上<code>&lt;mvc:annotation-driven/&gt;</code>这句话，但是如果不加这句话一切有是可以正常word的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？</p>
+
+<p>其实如果用一句话来描述<code>&lt;mvc:annotation-driven/&gt;</code>到底干了什么，实际上它就是一个spring的自定义标签，帮助我们自动配置一些bean到spring容器中，这些bean又会被进一步的被其他bean发现，最终实现一些预定义的功能。当然它也提供了一些属性(attribute)可以供我们做细微的调整。说到这里就不得不提<em>DispatcherServlet.properties</em>文件，如果你还不知道它在哪里，你可以在spring-webmvc-x.x.x.jar中的org.springframework.web.servlet包种找到它。就像它的名字所说，该文件会被Spring MVC的入口DispatcherServlet在初始化的使用作为默认配置使用。看看它里面的内容主要包括以下类：</p>
+
+<ol>
+<li>LocaleResolver</li>
+<li>ThemeResolver</li>
+<li>HandlerMapping</li>
+<li>HandlerAdapter</li>
+<li>HandlerExceptionResolver</li>
+<li>RequestToViewNameTranslator</li>
+<li>ViewResolver</li>
+<li>FlashMapManager</li>
+</ol>
+
+
+<p>这些组件都是spring mvc中的核心组件，<em>DispatcherServlet.properties</em>中就定义这些组件的默认实现类(默认策略)。那么DispatcherServlet是怎么使用这些默认策略的呢？其中有如下函数来初始化各组件：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">initStrategies</span><span class="o">(</span><span class="n">ApplicationContext</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">initMultipartResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initLocaleResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initThemeResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerMappings</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerAdapters</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerExceptionResolvers</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initRequestToViewNameTranslator</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initViewResolvers</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initFlashMapManager</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>各种init函数，就拿initViewResolvers举例：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">private</span> <span class="kt">void</span> <span class="nf">initViewResolvers</span><span class="o">(</span><span class="n">ApplicationContext</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">detectAllViewResolvers</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="c1">// Find all ViewResolvers in the ApplicationContext, including ancestor contexts.</span>
+</span><span class='line'>          <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">&gt;</span> <span class="n">matchingBeans</span> <span class="o">=</span>
+</span><span class='line'>                  <span class="n">BeanFactoryUtils</span><span class="o">.</span><span class="na">beansOfTypeIncludingAncestors</span><span class="o">(</span><span class="n">context</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(!</span><span class="n">matchingBeans</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>              <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">ViewResolver</span><span class="o">&gt;(</span><span class="n">matchingBeans</span><span class="o">.</span><span class="na">values</span><span class="o">());</span>
+</span><span class='line'>              <span class="c1">// We keep ViewResolvers in sorted order.</span>
+</span><span class='line'>              <span class="n">OrderComparator</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>              <span class="n">ViewResolver</span> <span class="n">vr</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">VIEW_RESOLVER_BEAN_NAME</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>              <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="n">vr</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>          <span class="k">catch</span> <span class="o">(</span><span class="n">NoSuchBeanDefinitionException</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>              <span class="c1">// Ignore, we&#39;ll add a default ViewResolver later.</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="c1">// Ensure we have at least one ViewResolver, by registering</span>
+</span><span class='line'>      <span class="c1">// a default ViewResolver if no other resolvers are found.</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="n">getDefaultStrategies</span><span class="o">(</span><span class="n">context</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(</span><span class="n">logger</span><span class="o">.</span><span class="na">isDebugEnabled</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>              <span class="n">logger</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;No ViewResolvers found in servlet &#39;&quot;</span> <span class="o">+</span> <span class="n">getServletName</span><span class="o">()</span> <span class="o">+</span> <span class="s">&quot;&#39;: using default&quot;</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就是首先看看容器里有没有已经定义ViewResolver类，如果有就使用容器中定义的ViewResolver作为最终的ViewResolver，如果没有就使用<em>DispatcherServlet.properties</em>中定义的。其他的init函数也是类似的模式，首先看看是否有显示的定义，如果有就用定义好的，否则就用properties中的默认配置。好了，这下知道在零配置环境下spring mvc实际上默认的已经给我们提供了一套组件配置供我们正常使用了，如果代码出了什么问题这下知道从哪里下手查看配置了吧。</p>
+
+<p>总算可以回到主题<code>&lt;mvc:annotation-driven/&gt;</code>了。如果要查看它到底干了什么事情，只需要看该元素对应的handler即可，也就是<code>AnnotationDrivenBeanDefinitionParser</code>。从它的javadoc中可以看出主要做了下面这些配置：</p>
+
+<ol>
+<li>HandlerMapping: 将<code>RequestMappingHandlerMapping</code>和<code>BeanNameUrlHandlerMapping</code>配置到spring容器中。</li>
+<li>HandlerAdapter: 将<code>RequestMappingHandlerAdapter</code>，<code>HttpRequestHandlerAdapter</code>和<code>SimpleControllerHandlerAdapter</code>配置到spring容器中</li>
+<li>HandlerExceptionResolver: 这个组件是用来控制当出现异常的时候spring如何来处理。它将<code>ExceptionHandlerExceptionResolver</code>，<code>ResponseStatusExceptionResolver</code>和<code>DefaultHandlerExceptionResolver</code>配置到spring容器中作为异常处理器。</li>
+<li>ContentNegotiationManager:</li>
+<li>DefaultFormattingConversionService: 给Spring MVC配置的ConversionService，也是spring提供的默认FormattingConversionService。</li>
+<li>LocalValidatorFactoryBean: 提供自动检测jsr303实现的spring validator，主要会被用来spring mvc在收到请求，并在交给Controller的时候做数据绑定使用（数据绑定之后做数据验证）。</li>
+<li>HttpMessageConverters: 创建（发现）一组HttpMessageConverter，并把他们配置到RequestMappingHandlerAdapter中，供spring mvc使用。</li>
+</ol>
+
+
+<p>对于HttpMessageConverter，它到底是干什么的呢？用spring mvc写过REST的人可能略知一二，它是用来将特定的对象转换成字符串并最终作为http response返回的工具。实际上spring mvc中面向开发人员的业务逻辑处理主要集中在各种Controller的方法中，基本模式是接受代表着HttpRequest的各种输入参数，在方法体中进行业务逻辑处理，最后得到输出结果，并以返回值的形式交给spring mvc，spring mvc根据返回值的不同调用不同的处理逻辑并最终以http response的形式返回给客户端。大家都知道Controller中得返回值可以有很多种，比如字符串，ModelAndView，普通对象，等等，甚至void类型都是可以的。那么很容易想到spring mvc会根据返回值的类型做很多的if else，不同的类型调用不同的处理逻辑。那么当函数受<code>@ResponseBody</code>声明时，spring就会尝试用配置好的各种HttpMessageConverter来将返回值进行序列化。不同HttpMessageConverter能够处理的对象以及处理方式都是不一样的，spring会遍历各converter，如果该converter能够处理该对象则交由其处理。因此，很多基于spring的REST风格的应用常常会返回一个model对象，那么你就应该配置好正确的HttpMessageConverter，以便spring能够正确的将这些对象序列化回客户端。</p>
+
+<p>那么<code>&lt;mvc:annotation-driven/&gt;</code>是如何配置HttpMessageConverter的呢？</p>
+
+<ol>
+<li>首先它会看<code>&lt;mvc:annotation-driven/&gt;</code>中有没有显示指定message-converters，如果指定了那么就用指定的配置。</li>
+<li>如果没有显示指定，或者虽然显示指定了但是还是指定了<em>register-defaults</em>属性的话就会默认添加一些常用的converter，比如ByteArrayHttpMessageConverter，StringHttpMessageConverter，ResourceHttpMessageConverter，SourceHttpMessageConverter，AllEncompassingFormHttpMessageConverter。除此之外还会有一些自动发现的逻辑，比如自动发现jackson和jaxb的相关组件是否在classpath中，如果存在就会加入对应的converter。因此如果你想用jackson来序列化json或者使用jaxb序列化xml，你只需要将其实现类放入到classpath中，并且再声明<code>&lt;mvc:annotation-driven/&gt;</code>就自动配置好了。</li>
+</ol>
+
+
+<h3>意味着什么</h3>
+
+<p>前面介绍了<em>DispatcherServlet.properties</em>和<code>&lt;mvc:annotation-driven/&gt;</code>，实际上<em>DispatcherServlet.properties</em>的逻辑是固然存在的，我们没有办法控制；但是<code>&lt;mvc:annotation-driven/&gt;</code>我们可以选择声明或者不声明，如果声明了还可以在一定程度上控制它的行为。但是很显然如果我们使用spring mvc，是推荐声明<code>&lt;mvc:annotation-driven/&gt;</code>的，并且如果声明了<code>&lt;mvc:annotation-driven/&gt;</code>那么就会自动堆一些spring mvc的核心组件进行配置，也进而disable(覆盖)了很多<em>DispatcherServlet.properties</em>中的默认配置。</p>
+
+<p>比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中得默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是&lt;mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论&lt;mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上<code>&lt;mvc:annotation-driven/&gt;</code>，因为背后提供该服务的组件是不一样的。</p>
+
+<p>总之，当你在使用spring mvc的时候，虽然它帮我们做了很多事情，一切看起来都是work的，但是还是要清楚你的系统中有哪些组件在起作用，这样出了问题才知道如何定位问题。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-28T01:27:00+10:00" pubdate data-updated="true">Aug 28<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://shenzhang.github.io/blog/2014/08/28/what-does-mvc-annotation-driven-do/" data-via="" data-counturl="http://shenzhang.github.io/blog/2014/08/28/what-does-mvc-annotation-driven-do/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/08/17/inside-angular-source-1/" title="Previous Post: AngularJS源代码分析1">&laquo; AngularJS源代码分析1</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/09/17/spring-binding-validation/" title="Next Post: 再谈Spring的Binding和Validation">再谈Spring的Binding和Validation &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/17/inside-angular-source-1/">AngularJS源代码分析1</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - zshen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

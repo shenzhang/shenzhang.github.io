@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="在linux(debian)安装的mysql-server实例启动时的默认字符集是latin1。因此在创建数据库和表的默认编码也是latin1（除非显示指定character set）,这样会导致部分客户端在读取包含中文的结果集时产生乱码。因此我们需要改变linux下mysql的默认编码（ &hellip;">
+  <meta name="description" content="我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。 若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,101 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/25/ssh-without-password/">Linux下ssh免输入密码方法</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T04:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>我们在日常开发或者运维过程中需要在不同的主机之间切换或者scp，在内网可信网络环境下重复输入密码是件很繁琐和考验记忆的事情，因此我们可以在自己常用的机器之间通过使用ssh-keygen工具做ssh的授权配置来省去输入密码的过程。</p>
+
+<p>若要实现从A访问B不需要密码直接ssh(使用账户zhangsan)，需要以下步骤：</p>
+
+<p>1.登陆A，并切换到zhangsan: <code>su - zhangsan</code>;</p>
+
+<p>2.生成公钥和私钥：<code>ssh-keygen -t dsa</code>。其中-t参数后面可以为dsa或rsa，具体类型根据机器环境决定，现在大部分应该是dsa。接下来一路回车后会在~zhangsan/.ssh/目录下生成id_dsa和id_dsa.pub文件，其中id_dsa.pub文件就是公钥文件，需要拷贝到目标及其B上的。</p>
+
+<p>3.拷贝公钥到目标机器:
+<code>scp id_dsa.pub zhangsan@B:/home/zhangsan/.ssh/id_dsa.pub.A</code></p>
+
+<p>4.追加到目标机器~/.ssh/authorized_keys中: <code>~/.ssh/cat id_dsa.pub.A &gt;&gt; ~/.ssh/authorized_keys</code></p>
+
+<p>5.Done</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/25/can-not-connect-mysql/">Mysql远程客户端无法连接的问题</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-25T03:27:00+10:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>默认安装的mysql是不能在远程进行访问的，主要由以下两个原因造成：</p>
+
+<p>1.mysqld服务没有监听可供远程访问的IP地址，解决方法：
+修改mysqld的启动参数（或my.cnf），注释掉[mysqld]部分的bind-address=127.0.0.1，或修改为可访问到的IP。services mysql restart;</p>
+
+<p>2.客户端连接时所使用的账户没有权限。查看mysql.user表可看到所有的账户及可供访问的HOST配置，检查所使用的账户是否有权限在当前客户端（IP）具有访问权限，如过没有可以通过以下语句添加：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">GRANT</span> <span class="k">ALL</span> <span class="k">PRIVILEGES</span> <span class="k">ON</span> <span class="o">*</span><span class="p">.</span><span class="o">*</span> <span class="k">TO</span> <span class="s1">&#39;root&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span> <span class="n">IDENTIFIED</span> <span class="k">BY</span> <span class="s1">&#39;123456&#39;</span> <span class="k">WITH</span> <span class="k">GRANT</span> <span class="k">OPTION</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -155,42 +250,6 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2000/01/01/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2000-01-01T01:27:00+10:00" pubdate data-updated="true">Jan 1<span>st</span>, 2000</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is a template file</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
       <h1 class="entry-title"><a href="/blog/2000/01/01/template-blog/">Blog Template</a></h1>
     
     
@@ -237,7 +296,15 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a>
       </li>
     
       <li class="post">
@@ -246,14 +313,6 @@
     
       <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
       </li>
     
   </ul>

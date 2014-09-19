@@ -9,7 +9,8 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="之前小伙伴已经写过一篇关于spring mvc中validation的文章，其中还提到了与JSR-303集成和MessageCodeResolver的使用，非常详细。我想已经适用于大部分的情况了，最近也遇到了一些关于数据绑定和验证(实际上他们本来就是不可分割的)的问题，解决方案虽然有很多， &hellip;">
+  <meta name="description" content="This is a template file
+">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +64,42 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-19T01:27:00+10:00" pubdate data-updated="true">Sep 19<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is a template file</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -350,6 +387,189 @@
 <p>OK，拿到了Exception并且翻译成了error code，然后又怎么办呢？这个就是由DataBinder中得<code>BindingErrorProcessor</code>来决定的了，实际上该接口也是非常简单的，默认实现就是将刚才得到的error code封装成Error对象加入到BindingResult中。</p>
 
 <p>有了MessageCodesResolver和BindingErrorProcessor，我想就应该可以非常容易的驾驭Spring MVC的验证逻辑了，难能可贵的是这些对象都可以很容易的配置到不同Controller对应的DataBinder中去。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-28T01:27:00+10:00" pubdate data-updated="true">Aug 28<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上<code>&lt;mvc:annotation-driven/&gt;</code>这句话，但是如果不加这句话一切有是可以正常word的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？</p>
+
+<p>其实如果用一句话来描述<code>&lt;mvc:annotation-driven/&gt;</code>到底干了什么，实际上它就是一个spring的自定义标签，帮助我们自动配置一些bean到spring容器中，这些bean又会被进一步的被其他bean发现，最终实现一些预定义的功能。当然它也提供了一些属性(attribute)可以供我们做细微的调整。说到这里就不得不提<em>DispatcherServlet.properties</em>文件，如果你还不知道它在哪里，你可以在spring-webmvc-x.x.x.jar中的org.springframework.web.servlet包种找到它。就像它的名字所说，该文件会被Spring MVC的入口DispatcherServlet在初始化的使用作为默认配置使用。看看它里面的内容主要包括以下类：</p>
+
+<ol>
+<li>LocaleResolver</li>
+<li>ThemeResolver</li>
+<li>HandlerMapping</li>
+<li>HandlerAdapter</li>
+<li>HandlerExceptionResolver</li>
+<li>RequestToViewNameTranslator</li>
+<li>ViewResolver</li>
+<li>FlashMapManager</li>
+</ol>
+
+
+<p>这些组件都是spring mvc中的核心组件，<em>DispatcherServlet.properties</em>中就定义这些组件的默认实现类(默认策略)。那么DispatcherServlet是怎么使用这些默认策略的呢？其中有如下函数来初始化各组件：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">initStrategies</span><span class="o">(</span><span class="n">ApplicationContext</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">initMultipartResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initLocaleResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initThemeResolver</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerMappings</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerAdapters</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initHandlerExceptionResolvers</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initRequestToViewNameTranslator</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initViewResolvers</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">initFlashMapManager</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>各种init函数，就拿initViewResolvers举例：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">private</span> <span class="kt">void</span> <span class="nf">initViewResolvers</span><span class="o">(</span><span class="n">ApplicationContext</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">detectAllViewResolvers</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="c1">// Find all ViewResolvers in the ApplicationContext, including ancestor contexts.</span>
+</span><span class='line'>          <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">&gt;</span> <span class="n">matchingBeans</span> <span class="o">=</span>
+</span><span class='line'>                  <span class="n">BeanFactoryUtils</span><span class="o">.</span><span class="na">beansOfTypeIncludingAncestors</span><span class="o">(</span><span class="n">context</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(!</span><span class="n">matchingBeans</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>              <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">ViewResolver</span><span class="o">&gt;(</span><span class="n">matchingBeans</span><span class="o">.</span><span class="na">values</span><span class="o">());</span>
+</span><span class='line'>              <span class="c1">// We keep ViewResolvers in sorted order.</span>
+</span><span class='line'>              <span class="n">OrderComparator</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>              <span class="n">ViewResolver</span> <span class="n">vr</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">VIEW_RESOLVER_BEAN_NAME</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>              <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="n">vr</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>          <span class="k">catch</span> <span class="o">(</span><span class="n">NoSuchBeanDefinitionException</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>              <span class="c1">// Ignore, we&#39;ll add a default ViewResolver later.</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="c1">// Ensure we have at least one ViewResolver, by registering</span>
+</span><span class='line'>      <span class="c1">// a default ViewResolver if no other resolvers are found.</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">this</span><span class="o">.</span><span class="na">viewResolvers</span> <span class="o">=</span> <span class="n">getDefaultStrategies</span><span class="o">(</span><span class="n">context</span><span class="o">,</span> <span class="n">ViewResolver</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>          <span class="k">if</span> <span class="o">(</span><span class="n">logger</span><span class="o">.</span><span class="na">isDebugEnabled</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>              <span class="n">logger</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;No ViewResolvers found in servlet &#39;&quot;</span> <span class="o">+</span> <span class="n">getServletName</span><span class="o">()</span> <span class="o">+</span> <span class="s">&quot;&#39;: using default&quot;</span><span class="o">);</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就是首先看看容器里有没有已经定义ViewResolver类，如果有就使用容器中定义的ViewResolver作为最终的ViewResolver，如果没有就使用<em>DispatcherServlet.properties</em>中定义的。其他的init函数也是类似的模式，首先看看是否有显示的定义，如果有就用定义好的，否则就用properties中的默认配置。好了，这下知道在零配置环境下spring mvc实际上默认的已经给我们提供了一套组件配置供我们正常使用了，如果代码出了什么问题这下知道从哪里下手查看配置了吧。</p>
+
+<p>总算可以回到主题<code>&lt;mvc:annotation-driven/&gt;</code>了。如果要查看它到底干了什么事情，只需要看该元素对应的handler即可，也就是<code>AnnotationDrivenBeanDefinitionParser</code>。从它的javadoc中可以看出主要做了下面这些配置：</p>
+
+<ol>
+<li>HandlerMapping: 将<code>RequestMappingHandlerMapping</code>和<code>BeanNameUrlHandlerMapping</code>配置到spring容器中。</li>
+<li>HandlerAdapter: 将<code>RequestMappingHandlerAdapter</code>，<code>HttpRequestHandlerAdapter</code>和<code>SimpleControllerHandlerAdapter</code>配置到spring容器中</li>
+<li>HandlerExceptionResolver: 这个组件是用来控制当出现异常的时候spring如何来处理。它将<code>ExceptionHandlerExceptionResolver</code>，<code>ResponseStatusExceptionResolver</code>和<code>DefaultHandlerExceptionResolver</code>配置到spring容器中作为异常处理器。</li>
+<li>ContentNegotiationManager:</li>
+<li>DefaultFormattingConversionService: 给Spring MVC配置的ConversionService，也是spring提供的默认FormattingConversionService。</li>
+<li>LocalValidatorFactoryBean: 提供自动检测jsr303实现的spring validator，主要会被用来spring mvc在收到请求，并在交给Controller的时候做数据绑定使用（数据绑定之后做数据验证）。</li>
+<li>HttpMessageConverters: 创建（发现）一组HttpMessageConverter，并把他们配置到RequestMappingHandlerAdapter中，供spring mvc使用。</li>
+</ol>
+
+
+<p>对于HttpMessageConverter，它到底是干什么的呢？用spring mvc写过REST的人可能略知一二，它是用来将特定的对象转换成字符串并最终作为http response返回的工具。实际上spring mvc中面向开发人员的业务逻辑处理主要集中在各种Controller的方法中，基本模式是接受代表着HttpRequest的各种输入参数，在方法体中进行业务逻辑处理，最后得到输出结果，并以返回值的形式交给spring mvc，spring mvc根据返回值的不同调用不同的处理逻辑并最终以http response的形式返回给客户端。大家都知道Controller中得返回值可以有很多种，比如字符串，ModelAndView，普通对象，等等，甚至void类型都是可以的。那么很容易想到spring mvc会根据返回值的类型做很多的if else，不同的类型调用不同的处理逻辑。那么当函数受<code>@ResponseBody</code>声明时，spring就会尝试用配置好的各种HttpMessageConverter来将返回值进行序列化。不同HttpMessageConverter能够处理的对象以及处理方式都是不一样的，spring会遍历各converter，如果该converter能够处理该对象则交由其处理。因此，很多基于spring的REST风格的应用常常会返回一个model对象，那么你就应该配置好正确的HttpMessageConverter，以便spring能够正确的将这些对象序列化回客户端。</p>
+
+<p>那么<code>&lt;mvc:annotation-driven/&gt;</code>是如何配置HttpMessageConverter的呢？</p>
+
+<ol>
+<li>首先它会看<code>&lt;mvc:annotation-driven/&gt;</code>中有没有显示指定message-converters，如果指定了那么就用指定的配置。</li>
+<li>如果没有显示指定，或者虽然显示指定了但是还是指定了<em>register-defaults</em>属性的话就会默认添加一些常用的converter，比如ByteArrayHttpMessageConverter，StringHttpMessageConverter，ResourceHttpMessageConverter，SourceHttpMessageConverter，AllEncompassingFormHttpMessageConverter。除此之外还会有一些自动发现的逻辑，比如自动发现jackson和jaxb的相关组件是否在classpath中，如果存在就会加入对应的converter。因此如果你想用jackson来序列化json或者使用jaxb序列化xml，你只需要将其实现类放入到classpath中，并且再声明<code>&lt;mvc:annotation-driven/&gt;</code>就自动配置好了。</li>
+</ol>
+
+
+<h3>意味着什么</h3>
+
+<p>前面介绍了<em>DispatcherServlet.properties</em>和<code>&lt;mvc:annotation-driven/&gt;</code>，实际上<em>DispatcherServlet.properties</em>的逻辑是固然存在的，我们没有办法控制；但是<code>&lt;mvc:annotation-driven/&gt;</code>我们可以选择声明或者不声明，如果声明了还可以在一定程度上控制它的行为。但是很显然如果我们使用spring mvc，是推荐声明<code>&lt;mvc:annotation-driven/&gt;</code>的，并且如果声明了<code>&lt;mvc:annotation-driven/&gt;</code>那么就会自动堆一些spring mvc的核心组件进行配置，也进而disable(覆盖)了很多<em>DispatcherServlet.properties</em>中的默认配置。</p>
+
+<p>比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中得默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是&lt;mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论&lt;mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上<code>&lt;mvc:annotation-driven/&gt;</code>，因为背后提供该服务的组件是不一样的。</p>
+
+<p>总之，当你在使用spring mvc的时候，虽然它帮我们做了很多事情，一切看起来都是work的，但是还是要清楚你的系统中有哪些组件在起作用，这样出了问题才知道如何定位问题。</p>
 </div>
   
   
@@ -681,499 +901,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/">哪个更快：Java堆还是本地内存[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-13T01:27:00+10:00" pubdate data-updated="true">Apr 13<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
-
-<p>使用Java的一个好处就是你可以不用亲自来管理内存的分配和释放。当你用<code>new</code>关键字来实例化一个对象时，它所需的内存会自动的在Java堆中分配。堆会被垃圾回收器进行管理，并且它会在对象超出作用域时进行内存回收。但是在JVM中有一个‘后门’可以让你访问不在堆中的本地内存(native memory)。在这篇文章中，我会给你演示一个对象是怎样以连续的字节码的方式在内存中进行存储，并且告诉你是应该怎样存储这些字节，是在Java堆中还是在本地内存中。最后我会就怎样从JVM中访问内存更快给一些结论：是用Java堆还是本地内存。</p>
-
-<h1>使用<code>Unsafe</code>来分配和回收内存</h1>
-
-<p><code>sun.misc.Unsafe</code>可以让你在Java中分配和回收本地内存，就像C语言中的<code>malloc</code>和<code>free</code>。通过它分配的内存不在Java堆中，并且不受垃圾回收器的管理，因此在它被使用完的时候你需要自己来负责释放和回收。下面是我写的一个使用<code>Unsafe</code>来管理本地内存的一个工具类：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Direct</span> <span class="kd">implements</span> <span class="n">Memory</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Unsafe</span> <span class="n">unsafe</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="n">AVAILABLE</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">static</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">Field</span> <span class="n">field</span> <span class="o">=</span> <span class="n">Unsafe</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&quot;theUnsafe&quot;</span><span class="o">);</span>
-</span><span class='line'>            <span class="n">field</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>            <span class="n">unsafe</span> <span class="o">=</span> <span class="o">(</span><span class="n">Unsafe</span><span class="o">)</span><span class="n">field</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>            <span class="n">AVAILABLE</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span><span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="c1">// NOOP: throw exception later when allocating memory</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isAvailable</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">AVAILABLE</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Direct</span> <span class="n">INSTANCE</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Memory</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">INSTANCE</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Direct</span><span class="o">();</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">INSTANCE</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="nf">Direct</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">alloc</span><span class="o">(</span><span class="kt">long</span> <span class="n">size</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(!</span><span class="n">AVAILABLE</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">(</span><span class="s">&quot;sun.misc.Unsafe is not accessible!&quot;</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">allocateMemory</span><span class="o">(</span><span class="n">size</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">free</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">freeMemory</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">long</span> <span class="nf">getLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">putLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">,</span> <span class="kt">long</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">putLong</span><span class="o">(</span><span class="n">address</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">int</span> <span class="nf">getInt</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getInt</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">putInt</span><span class="o">(</span><span class="kt">long</span> <span class="n">address</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">unsafe</span><span class="o">.</span><span class="na">putInt</span><span class="o">(</span><span class="n">address</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>在本地内存中分配一个对象</h2>
-
-<p>让我们来将下面的Java对象放到本地内存中：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SomeObject</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">someLong</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kt">int</span> <span class="n">someInt</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getSomeLong</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">someLong</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setSomeLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">someLong</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">someLong</span> <span class="o">=</span> <span class="n">someLong</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSomeInt</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">someInt</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setSomeInt</span><span class="o">(</span><span class="kt">int</span> <span class="n">someInt</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">someInt</span> <span class="o">=</span> <span class="n">someInt</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>我们所做的仅仅是把对象的属性放入到<code>Memory</code>中：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SomeMemoryObject</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">someLong_OFFSET</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">someInt_OFFSET</span> <span class="o">=</span> <span class="mi">8</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">SIZE</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">4</span><span class="o">;</span> <span class="c1">// one long + one int</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kt">long</span> <span class="n">address</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Memory</span> <span class="n">memory</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="nf">SomeMemoryObject</span><span class="o">(</span><span class="n">Memory</span> <span class="n">memory</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">memory</span> <span class="o">=</span> <span class="n">memory</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">address</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="na">alloc</span><span class="o">(</span><span class="n">SIZE</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">finalize</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">free</span><span class="o">(</span><span class="n">address</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">setSomeLong</span><span class="o">(</span><span class="kt">long</span> <span class="n">someLong</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">putLong</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someLong_OFFSET</span><span class="o">,</span> <span class="n">someLong</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">long</span> <span class="nf">getSomeLong</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someLong_OFFSET</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">setSomeInt</span><span class="o">(</span><span class="kt">int</span> <span class="n">someInt</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">memory</span><span class="o">.</span><span class="na">putInt</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someInt_OFFSET</span><span class="o">,</span> <span class="n">someInt</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">int</span> <span class="nf">getSomeInt</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="na">getInt</span><span class="o">(</span><span class="n">address</span> <span class="o">+</span> <span class="n">someInt_OFFSET</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>现在我们来看看对两个数组的读写性能：其中一个含有数百万的<code>SomeObject</code>对象，另外一个含有数百万的<code>SomeMemoryObject</code>对象。</p>
-
-<pre><code>// with JIT:
-Number of Objects:  1,000     1,000,000     10,000,000    60,000,000
-Heap Avg Write:      107         2.30          2.51         2.58       
-Native Avg Write:    305         6.65          5.94         5.26
-Heap Avg Read:       61          0.31          0.28         0.28
-Native Avg Read:     309         3.50          2.96         2.16
-
-
-// without JIT: (-Xint)
-Number of Objects:  1,000     1,000,000     10,000,000    60,000,000
-Heap Avg Write:      104         107           105         102       
-Native Avg Write:    292         293           300         297
-Heap Avg Read:       59          63            60          58
-Native Avg Read:     297         298           302         299
-</code></pre>
-
-<p><strong>结论：</strong>跨越JVM的屏障来读本地内存大约会比直接读Java堆中的内存慢10倍，而对于写操作会慢大约2倍。<em>但是需要注意的是，由于每一个SomeMemoryObject对象所管理的本地内存空间都是独立的，因此读写操作都不是连续的。</em>那么我们接下来就来对比下读写连续的内存空间的性能。</p>
-
-<h2>访问一大块的连续内存空间</h2>
-
-<p>这个测试分别在堆中和一大块连续本地内存中包含了相同的测试数据。然后我们来做多次的读写操作看看哪个更快。并且我们会做一些随机地址的访问来对比结果。</p>
-
-<pre><code>// with JIT and sequential access:
-Number of Objects:  1,000     1,000,000     1,000,000,000
-Heap Avg Write:      12          0.34           0.35 
-Native Avg Write:    102         0.71           0.69 
-Heap Avg Read:       12          0.29           0.28 
-Native Avg Read:     110         0.32           0.32
-
-// without JIT and sequential access: (-Xint)
-Number of Objects:  1,000     1,000,000      10,000,000
-Heap Avg Write:      8           8              8
-Native Avg Write:    91          92             94
-Heap Avg Read:       10          10             10
-Native Avg Read:     91          90             94
-
-// with JIT and random access:
-Number of Objects:  1,000     1,000,000     1,000,000,000
-Heap Avg Write:      61          1.01           1.12
-Native Avg Write:    151         0.89           0.90 
-Heap Avg Read:       59          0.89           0.92 
-Native Avg Read:     156         0.78           0.84
-
-// without JIT and random access: (-Xint)
-Number of Objects:  1,000     1,000,000      10,000,000
-Heap Avg Write:      55          55              55
-Native Avg Write:    141         142             140
-Heap Avg Read:       55          55              55 
-Native Avg Read:     138         140             138
-</code></pre>
-
-<p><strong>结论:</strong>在做连续访问的时候，Java堆内存通常都比本地内存要快。对于随机地址访问，堆内存仅仅比本地内存慢一点点，并且是针对大块连续数据的时候，而且没有慢很多。</p>
-
-<h2>最后的结论</h2>
-
-<p>在Java中使用本地内存有它的意义，比如当你要操作大块的数据时(>2G)并且不想使用垃圾回收器(GC)的时候。从延迟的角度来说，直接访问本地内存不会比访问Java堆快。这个结论其实是有道理的，因为跨越JVM屏障肯定是有开销的。这样的结论对使用本地还是堆的<code>ByteBuffer</code>同样适用。使用本地ByteBuffer的速度提升不在于访问这些内存，而是它可以直接与操作系统提供的本地IO进行操作。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/15/something-about-maven/">Maven杂谈(生命周期,插件绑定,effective-xx)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-15T01:27:00+10:00" pubdate data-updated="true">Sep 15<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h2>1.生命周期</h2>
-
-<h3>Clean</h3>
-
-<pre><code>pre-clean
-clean
-post-clean
-</code></pre>
-
-<h3>Default</h3>
-
-<pre><code>validate
-initialize
-generate-sources
-process-sources
-generate-resources
-process-resources
-compile
-process-classes
-generate-test-sources
-process-test-sources
-generate-test-resources
-process-test-resources
-test-compile
-process-test-classes
-test
-prepare-package
-package
-pre-integration-test
-integration-test
-post-integration-test
-verify
-install
-deploy
-</code></pre>
-
-<h3>Site</h3>
-
-<pre><code>pre-site
-site
-post-site
-site-deploy
-</code></pre>
-
-<h2>2.插件绑定</h2>
-
-<p>maven在不同的生命周期中会按顺序进入不同的阶段，每个阶段又会执行与该阶段绑定的plugins。如何将plugins绑定到生命周期中呢，maven-compile-plugin又是怎么知道在每次的compile阶段执行的呢？</p>
-
-<p>plugin绑定到生命周期中需要在pom.xml中的<build>=><plugins>中进行声明，有些是在pom.xml中，有些可能是在super pom中，有些甚至是maven默认的绑定，但是最终都会出现在effective pom中（mvn help:effective-pom查看)。</p>
-
-<p>那么具体是在哪个阶段执行呢？看effective pom中对maven-compile-plugin的描述：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'>  <span class="nt">&lt;plugin&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>maven-compiler-plugin<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;version&gt;</span>2.3.2<span class="nt">&lt;/version&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;executions&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-testCompile<span class="nt">&lt;/id&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>test-compile<span class="nt">&lt;/phase&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
-</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>testCompile<span class="nt">&lt;/goal&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;execution&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;id&gt;</span>default-compile<span class="nt">&lt;/id&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;phase&gt;</span>compile<span class="nt">&lt;/phase&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;goals&gt;</span>
-</span><span class='line'>          <span class="nt">&lt;goal&gt;</span>compile<span class="nt">&lt;/goal&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;/goals&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;/execution&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;/executions&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;/plugin&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>主要是在phase节点和goals节点，上面的配置说明了maven-compile-plugin被分别绑定到了compile阶段和test-compile阶段，并且分别执行该插件的compile goal和testCompile goal。</p>
-
-<p>另外有些plugin可能并没有在pom.xml中说明具体的执行阶段，那么就要看该插件中的/META-INF/maven/plugin.xml插件描述文件了，该描述文件说明了该plugin的前缀(goalPrefix)，所有的mojos或者说是goal，并且这些goal的名字以及默认的执行阶段，比如compile:testCompile节点就说明了&lt;phase&gt;test-compile&lt;/phase&gt;。因此如果没有在pom.xml中说明执行阶段的话，就按照该plugin的goal的自描述中的phase进行绑定。</p>
-
-<h2>3.effective-xx</h2>
-
-<p>maven有关于自己运行的配置文件settings.xml，该文件可以是$MAVEN_HOME/conf/settings.xml或者$USER/.m2/setttings.xml，并且后者会覆盖前者，可以通过mvn help:effective-settings查看相对于默认的settings.xml所改变的部分。</p>
-
-<p>同样，前面提到的effective-pom也是由多个部分合并而来，首先是项目下的pom.xml，然后是maven的super pom($MAVEN_HOME/lib/maven-model-builder-x.x.x.jar#org/apache/maven/model/pom-x.x.x.xml)，还有一些是maven针对不同的生命周期默认绑定的插件信息($MAVEN_HOME/lib/maven-core-x.x.x.jar#/META-INF/plexus/components.xml)。最终的pom可以通过help:effective-pom查看)</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1189,7 +916,15 @@ site-deploy
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a>
       </li>
     
       <li class="post">
@@ -1198,14 +933,6 @@ site-deploy
     
       <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
       </li>
     
   </ul>

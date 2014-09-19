@@ -9,7 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="java中的死锁是各式各样的，但是类的静态初始化块死锁却很少被人提到。 实际上jvm对同一个类的静态初始化块的初始化肯定是原子的，而且是限于当前线程内部，死锁主要是发生在不同类静态初始化交叉引用的并发初始化场景。 举个例子，类B的static块应用了C，C的static块引用了B， &hellip;">
+  <meta name="description" content="jetty中的org.eclipse.jetty.server.handler.ScopedHandler主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -63,6 +63,182 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/26/scopehandler-in-jetty/">Jetty中的ScopedHandler</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-26T03:27:00+10:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>jetty中的<code>org.eclipse.jetty.server.handler.ScopedHandler</code>主要用于ServletContextHandler以及WebAppContext，粗略看了下有点糊里糊涂的，后面仔细看了之后觉得实际上他就是想实现一个具有以下执行流程的HandlerWrapper:</p>
+
+<pre><code> A.handle(...)
+   A.doScope(...)
+     B.doScope(...)
+       C.doScope(...)
+         A.doHandle(...)
+           B.doHandle(...)
+              C.doHandle(...)  
+</code></pre>
+
+<p>其中A包含B，B包含C。该执行流程主要应用在WebAppContext中。WebAppContext包含了SessionHandler,SecurityHandler, ServletHandler，但是从request的流程来看实际上是WebAppContext->SessionHandler->SecurityHandler->ServletHandler，所有后续执行逻辑都是被包含在前面的handler逻辑中的，或者所起堆栈是嵌套的。这样最大的好处是环境（context）共享和异常处理。内部的逻辑必须是在外部逻辑创造的环境内执行，比如所ServletHandler必须是在SessionHandler初始化好的session环境中处理。</p>
+
+<p>因此ScopedHandler需要两个过程：</p>
+
+<p><em>doScope:</em> 进入环境，并做响应的环境初始化,并在其中调用子handler的doScope，最后再做退出环境的逻辑。</p>
+
+<p><em>doHandler:</em> 执行该handler真正要处理的事情，并在其中调用子handler的doScope</p>
+
+<p>拿SessionHandler举例，它的doScope就是将session恢复好，并且再调用子handler的doScope进一步对SecurityHandler做环境初始化；它的doHandler实际上就没有做任何事情，仅仅是调用子handler的doHandler：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">never</span><span class="o">())</span>
+</span><span class='line'>        <span class="n">nextHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_nextScope</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">_nextScope</span> <span class="o">==</span> <span class="n">_handler</span><span class="o">)</span>
+</span><span class='line'>        <span class="n">_nextScope</span><span class="o">.</span><span class="na">doHandle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">_handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>        <span class="n">_handler</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">target</span><span class="o">,</span><span class="n">baseRequest</span><span class="o">,</span><span class="n">request</span><span class="o">,</span><span class="n">response</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>doScope的递归调用还算比较简单，但是如何从最底层的handler.doScope回到最上层的handler.doHandler呢，而且是嵌套的调用？</p>
+
+<p>ScopedHandler实际上维护了两个变量：</p>
+
+<p><em>_nextScope:</em> 指向下一个子handler</p>
+
+<p><em>_outterScope</em> 指向最外层的handler</p>
+
+<p>初始化：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="kt">void</span> <span class="nf">doStart</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="k">try</span>
+</span><span class='line'>        <span class="o">{</span>
+</span><span class='line'>            <span class="n">_outerScope</span><span class="o">=</span><span class="n">__outerScope</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="kd">super</span><span class="o">.</span><span class="na">doStart</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">_nextScope</span><span class="o">=</span> <span class="o">(</span><span class="n">ScopedHandler</span><span class="o">)</span><span class="n">getChildHandlerByClass</span><span class="o">(</span><span class="n">ScopedHandler</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">finally</span>
+</span><span class='line'>        <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">_outerScope</span><span class="o">==</span><span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">__outerScope</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里的_outerScope的初始化我觉得实在是不优雅，显然整个jetty中那个最先初始化的ScopedHandler将会作为所有ScopedHandler的outerScope，显然不能再jetty中提供多个顶层ScopedHandler，这个需求可能是针对WebAppContext专门设计的，但是有点不符合Jetty这种灵活的可插拔式的定义。哪怕通过set方法主动设值都要好的多。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/07/26/bug-about-background-image-in-ie6/">ie6中背景图片缓存的BUG</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-26T01:27:00+10:00" pubdate data-updated="true">Jul 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>IE6的bug本来是再寻常不过的事了，感觉表现正常了反而感觉不正常，但是背景图片缓存的bug对整个应用的影响太大了，最后找了半天在stackoverflow上找到了解决方案，在页面加载之初执行下面的语句：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="nb">document</span><span class="p">.</span><span class="nx">execCommand</span><span class="p">(</span><span class="s2">&quot;BackgroundImageCache&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>自己试了下确实完美解决了问题，但是还是不明白该BackgroundImageCache参数是什么意思，会对IE6造成怎样的影响，找了半天MSDN的文档都没有发现该参数，最后在<a href="http://support.microsoft.com/kb/823727/en-us">这里</a>找到了答案.</p>
+
+<p>原来这个可以说是IE6的一个BUG，进而让微软出了一个针对sp1的hotfix来修复该BUG，但是要想激活该pach就需要执行该语句，因此该参数是没有记录在MSDN手册中的也仅仅是对IE6 SP1有效。</p>
+
+<p>但是微软对该bug的描述实在是轻描淡写啊：</p>
+
+<blockquote><p>&ldquo;This problem may occur over a long time (for example, several hours) when you run a script that constantly changes the background color of a button that also contains a background image.&rdquo;</p></blockquote>
+
+<p>实际情况是只要改变任意的style，其元素并且所有子元素的background-image都要重新向服务器请求，这个不但导致浏览器内存升高，还导致服务器的压力增大，页面背景闪烁等多重问题。</p>
+
+<p>没办法，能有解决方法已经谢天谢地了。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -691,97 +867,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/10/pagetable/">页表(Page Table)[译]</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-10T01:27:00+10:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>页表是操作系统中存储系统中的重要概念，wiki中对页表的解释非常详尽，<a href="http://en.wikipedia.org/wiki/Page_table">原文链接</a>。</p>
-
-<p>页表是一种数据结构，操作系统的虚拟内存系统使用页表来存储虚拟内存地址和物理地址的映射关系。虚拟地址对每一个独立的进程来说都是唯一的。物理地址对硬件是唯一的，比如说内存。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/10/pagetable/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/07/06/classloader-in-jetty/">Jetty中的classloader</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-07-06T01:27:00+10:00" pubdate data-updated="true">Jul 6<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>web容器的类加载机制要比普通java应用复杂一些。通常来说每一个webcontext(web应用或者war文件）都有一个对应classloader，并且以system classloader作为其父loader。但是servlet规范描述了更加复杂的情况(相比传统的双亲委派模式)：</p>
-
-<ol>
-<li>位于WEB-INF/lib或WEB-INF/classes里的类始终应该优先被加载，这个是和传统的双亲委派模式相反的。</li>
-<li>系统类(System class)比如java.lang.String需要排除在第1种情况之外，你不能试图在WEB-INF/lib或WEB-INF/classes中替换系统类。但是规范中并没有清楚的说明具体哪些类属于系统类，并且没有说明javax开头的类是不是都需要当作系统类处理。</li>
-<li>server的实现类，比如说org.eclipse.jetty.server.Server需要被排除在web应用的类加载体系之外，也就是说这个类是不能被web应用加载。但是规范里也没有说明哪些类是server类，并且也没有说明一些常规类库比如说Xerces解析器是否应该被当成server实现类的一部分。</li>
-</ol>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/07/06/classloader-in-jetty/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -799,7 +884,15 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/19/spring-mvc-qa/">Spring MVC中的二三事</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/09/17/spring-binding-validation/">再谈Spring的Binding和Validation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/28/what-does-mvc-annotation-driven-do/">Mvc:annotation-driven到底帮我们做了什么</a>
       </li>
     
       <li class="post">
@@ -808,14 +901,6 @@ WorkingDirectory:job的工作目录，也就是在运行该job前执行chdired�
     
       <li class="post">
         <a href="/blog/2014/05/25/java8-invokedynamic/">深入分析invokeDynamic</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/java8-stampedlock/">StampedLock源码分析</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/04/introspector-in-java/">Java中的Introspector</a>
       </li>
     
   </ul>
