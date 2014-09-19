@@ -6,7 +6,7 @@ comments: true
 categories: 
 ---
 
-大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上`<mvc:annotation-driven/>`这句话，但是如果不加这句话一切有是可以正常word的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？
+大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上`<mvc:annotation-driven/>`这句话，但是如果不加这句话一切有是可以正常work的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？
 
 其实如果用一句话来描述`<mvc:annotation-driven/>`到底干了什么，实际上它就是一个spring的自定义标签，帮助我们自动配置一些bean到spring容器中，这些bean又会被进一步的被其他bean发现，最终实现一些预定义的功能。当然它也提供了一些属性(attribute)可以供我们做细微的调整。说到这里就不得不提*DispatcherServlet.properties*文件，如果你还不知道它在哪里，你可以在spring-webmvc-x.x.x.jar中的org.springframework.web.servlet包种找到它。就像它的名字所说，该文件会被Spring MVC的入口DispatcherServlet在初始化的使用作为默认配置使用。看看它里面的内容主要包括以下类：
 
@@ -87,7 +87,7 @@ categories:
 6. LocalValidatorFactoryBean: 提供自动检测jsr303实现的spring validator，主要会被用来spring mvc在收到请求，并在交给Controller的时候做数据绑定使用（数据绑定之后做数据验证）。
 7. HttpMessageConverters: 创建（发现）一组HttpMessageConverter，并把他们配置到RequestMappingHandlerAdapter中，供spring mvc使用。
 
-对于HttpMessageConverter，它到底是干什么的呢？用spring mvc写过REST的人可能略知一二，它是用来将特定的对象转换成字符串并最终作为http response返回的工具。实际上spring mvc中面向开发人员的业务逻辑处理主要集中在各种Controller的方法中，基本模式是接受代表着HttpRequest的各种输入参数，在方法体中进行业务逻辑处理，最后得到输出结果，并以返回值的形式交给spring mvc，spring mvc根据返回值的不同调用不同的处理逻辑并最终以http response的形式返回给客户端。大家都知道Controller中得返回值可以有很多种，比如字符串，ModelAndView，普通对象，等等，甚至void类型都是可以的。那么很容易想到spring mvc会根据返回值的类型做很多的if else，不同的类型调用不同的处理逻辑。那么当函数受`@ResponseBody`声明时，spring就会尝试用配置好的各种HttpMessageConverter来将返回值进行序列化。不同HttpMessageConverter能够处理的对象以及处理方式都是不一样的，spring会遍历各converter，如果该converter能够处理该对象则交由其处理。因此，很多基于spring的REST风格的应用常常会返回一个model对象，那么你就应该配置好正确的HttpMessageConverter，以便spring能够正确的将这些对象序列化回客户端。
+对于HttpMessageConverter，它到底是干什么的呢？用spring mvc写过REST的人可能略知一二，它是用来将特定的对象转换成字符串并最终作为http response返回的工具。实际上spring mvc中面向开发人员的业务逻辑处理主要集中在各种Controller的方法中，基本模式是接受代表着HttpRequest的各种输入参数，在方法体中进行业务逻辑处理，最后得到输出结果，并以返回值的形式交给spring mvc，spring mvc根据返回值的不同调用不同的处理逻辑并最终以http response的形式返回给客户端。大家都知道Controller中的返回值可以有很多种，比如字符串，ModelAndView，普通对象，等等，甚至void类型都是可以的。那么很容易想到spring mvc会根据返回值的类型做很多的if else，不同的类型调用不同的处理逻辑。那么当函数受`@ResponseBody`声明时，spring就会尝试用配置好的各种HttpMessageConverter来将返回值进行序列化。不同HttpMessageConverter能够处理的对象以及处理方式都是不一样的，spring会遍历各converter，如果该converter能够处理该对象则交由其处理。因此，很多基于spring的REST风格的应用常常会返回一个model对象，那么你就应该配置好正确的HttpMessageConverter，以便spring能够正确的将这些对象序列化回客户端。
 
 那么`<mvc:annotation-driven/>`是如何配置HttpMessageConverter的呢？
 
@@ -96,8 +96,8 @@ categories:
 
 ###意味着什么
 
-前面介绍了*DispatcherServlet.properties*和`<mvc:annotation-driven/>`，实际上*DispatcherServlet.properties*的逻辑是固然存在的，我们没有办法控制；但是`<mvc:annotation-driven/>`我们可以选择声明或者不声明，如果声明了还可以在一定程度上控制它的行为。但是很显然如果我们使用spring mvc，是推荐声明`<mvc:annotation-driven/>`的，并且如果声明了`<mvc:annotation-driven/>`那么就会自动堆一些spring mvc的核心组件进行配置，也进而disable(覆盖)了很多*DispatcherServlet.properties*中的默认配置。
+前面介绍了*DispatcherServlet.properties*和`<mvc:annotation-driven/>`，实际上*DispatcherServlet.properties*的逻辑是固然存在的，我们没有办法控制；但是`<mvc:annotation-driven/>`我们可以选择声明或者不声明，如果声明了还可以在一定程度上控制它的行为。但是很显然如果我们使用spring mvc，是推荐声明`<mvc:annotation-driven/>`的，并且如果声明了`<mvc:annotation-driven/>`那么就会自动对一些spring mvc的核心组件进行配置，也进而disable(覆盖)了很多*DispatcherServlet.properties*中的默认配置。
 
-比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中得默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是<mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论<mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上`<mvc:annotation-driven/>`，因为背后提供该服务的组件是不一样的。
+比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中的默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是<mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论<mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上`<mvc:annotation-driven/>`，因为背后提供该服务的组件是不一样的。
 
 总之，当你在使用spring mvc的时候，虽然它帮我们做了很多事情，一切看起来都是work的，但是还是要清楚你的系统中有哪些组件在起作用，这样出了问题才知道如何定位问题。
