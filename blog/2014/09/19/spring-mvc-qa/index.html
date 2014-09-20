@@ -198,6 +198,259 @@
 </span><span class='line'><span class="nt">&lt;beans&gt;</span>
 </span></code></pre></td></tr></table></div></figure>
 
+
+<p>实际上在spring中HandlerInterceptor有两类，一类是名符其实的实现了HandlerInterceptor接口的类；另外一类是<code>MappedInterceptor</code>，顾名思义它除了HandlerInterceptor的功能外还有了path match的能力，实际上它就是包含了一个真正的HandlerInterceptor外加一些路径匹配表达式。它的作用除了能够让spring调用其中包含的HandlerInterceptor之外，还具有路径匹配的功能，也就是说会告诉spring只有当指定request的请求路径复合要求的时候才会调用该interceptor。</p>
+
+<p>OK，在回到配置HandlerInterceptor的第二种方法，就是使用&lt;mvc:interceptors/>标签，如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;mvc:interceptors&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;bean</span> <span class="na">class=</span><span class="s">&quot;my.MyInterceptor&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;ref</span> <span class="na">bean=</span><span class="s">&quot;interceptorRef&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;mvc:interceptor&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;mvc:mapping</span> <span class="na">path=</span><span class="s">&quot;/interceptor/*&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;bean</span> <span class="na">class=</span><span class="s">&quot;my.MyInterceptor1&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/mvc:interceptor&gt;</span>
+</span><span class='line'><span class="nt">&lt;/mvc:interceptors&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个例子就定义了三个interceptor，分别通过bean, ref, interceptor子元素。其中bean和ref定义的interceptor会匹配任何request（因为没有指定mapping path）；使用interceptor子元素就可以指定mapping path了，那么它所表示的HandlerInterceptor就会根据request path来决定是否要执行。这些标签都会被转变为前面提到的<code>MappedInterceptor</code>。</p>
+
+<p>前面说了HandlerInterceptor会最终被应用到HandlerMapping中，那通过xml配置的interceptor呢？实际上他们会被同时自动配置到spring容器中定义的所有HandlerMapping中，这也是最合乎情理的，因为你并不需要同时考虑你根据path所配置的interceptor到底应该作用到那个HandlerMapping中。相反，所有的HandlerMapping在拥有了这些MappedInterceptor后，在准备HandlerExecutionChain时就会根据当前的request path来决定要把哪些MappedInterceptor放进去，当然所有直接定义的HandlerInterceptor都会被放入chain中。</p>
+
+<p>那么spring是怎么把这些MappedInterceptor放入到HandlerMapping中的呢？实际上spring仅仅是把他们定义到容器中，在HandlerMapping初始化的时候通过调用<em>AbstractHandlerMapping.detectMappedInterceptors</em>方法来自动发现所有的MappedInterceptor，并做一些必要的初始化配置。</p>
+
+<h2>HandlerAdapter</h2>
+
+<h3>如何配置</h3>
+
+<p>HandlerAdapter是spring mvc中的独立组件，因此和其他核心组件一样可以通过一些三种方法获得：</p>
+
+<ol>
+<li>DispatcherServlet.peroperties默认提供</li>
+<li>&lt;mvc:annotation-driven/>提供</li>
+<li>自己配置在spring配置文件中</li>
+</ol>
+
+
+<p>注意，2和3会disable掉1，但是2和3又会同时起作用。</p>
+
+<h3>应用流程</h3>
+
+<p>还是先看接口声明吧：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">HandlerAdapter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * Given a handler instance, return whether or not this {@code HandlerAdapter}</span>
+</span><span class='line'><span class="cm">  * can support it. Typical HandlerAdapters will base the decision on the handler</span>
+</span><span class='line'><span class="cm">  * type. HandlerAdapters will usually only support one handler type each.</span>
+</span><span class='line'><span class="cm">  * &lt;p&gt;A typical implementation:</span>
+</span><span class='line'><span class="cm">  * &lt;p&gt;{@code</span>
+</span><span class='line'><span class="cm">  * return (handler instanceof MyHandler);</span>
+</span><span class='line'><span class="cm">  * }</span>
+</span><span class='line'><span class="cm">  * @param handler handler object to check</span>
+</span><span class='line'><span class="cm">  * @return whether or not this object can use the given handler</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="kt">boolean</span> <span class="nf">supports</span><span class="o">(</span><span class="n">Object</span> <span class="n">handler</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * Use the given handler to handle this request.</span>
+</span><span class='line'><span class="cm">  * The workflow that is required may vary widely.</span>
+</span><span class='line'><span class="cm">  * @param request current HTTP request</span>
+</span><span class='line'><span class="cm">  * @param response current HTTP response</span>
+</span><span class='line'><span class="cm">  * @param handler handler to use. This object must have previously been passed</span>
+</span><span class='line'><span class="cm">  * to the {@code supports} method of this interface, which must have</span>
+</span><span class='line'><span class="cm">  * returned {@code true}.</span>
+</span><span class='line'><span class="cm">  * @throws Exception in case of errors</span>
+</span><span class='line'><span class="cm">  * @return ModelAndView object with the name of the view and the required</span>
+</span><span class='line'><span class="cm">  * model data, or {@code null} if the request has been handled directly</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="n">ModelAndView</span> <span class="nf">handle</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">HttpServletResponse</span> <span class="n">response</span><span class="o">,</span> <span class="n">Object</span> <span class="n">handler</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * Same contract as for HttpServlet&#39;s {@code getLastModified} method.</span>
+</span><span class='line'><span class="cm">  * Can simply return -1 if there&#39;s no support in the handler class.</span>
+</span><span class='line'><span class="cm">  * @param request current HTTP request</span>
+</span><span class='line'><span class="cm">  * @param handler handler to use</span>
+</span><span class='line'><span class="cm">  * @return the lastModified value for the given handler</span>
+</span><span class='line'><span class="cm">  * @see javax.servlet.http.HttpServlet#getLastModified</span>
+</span><span class='line'><span class="cm">  * @see org.springframework.web.servlet.mvc.LastModified#getLastModified</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="kt">long</span> <span class="nf">getLastModified</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Object</span> <span class="n">handler</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>DispatherServlet在通过前面的HandlerMapping获得了当前请求的HandlerExecutionChain之后，就会哪些chain里面定义的目标handler遍历所有配置好的HandlerAdapter，并调用<em>supports</em>方法询问不同的adapter是否可以处理，如果可以就进入处理流程，如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">protected</span> <span class="n">HandlerAdapter</span> <span class="nf">getHandlerAdapter</span><span class="o">(</span><span class="n">Object</span> <span class="n">handler</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">ServletException</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">for</span> <span class="o">(</span><span class="n">HandlerAdapter</span> <span class="n">ha</span> <span class="o">:</span> <span class="k">this</span><span class="o">.</span><span class="na">handlerAdapters</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">logger</span><span class="o">.</span><span class="na">isTraceEnabled</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>          <span class="n">logger</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="s">&quot;Testing handler adapter [&quot;</span> <span class="o">+</span> <span class="n">ha</span> <span class="o">+</span> <span class="s">&quot;]&quot;</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">ha</span><span class="o">.</span><span class="na">supports</span><span class="o">(</span><span class="n">handler</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">return</span> <span class="n">ha</span><span class="o">;</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="k">throw</span> <span class="k">new</span> <span class="nf">ServletException</span><span class="o">(</span><span class="s">&quot;No adapter for handler [&quot;</span> <span class="o">+</span> <span class="n">handler</span> <span class="o">+</span>
+</span><span class='line'>          <span class="s">&quot;]: The DispatcherServlet configuration needs to include a HandlerAdapter that supports this handler&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>处理流程如下：</p>
+
+<ol>
+<li>如果是GET或者HEAD请求，调用<em>HandlerAdapter.getLastModified</em>方法看看目标Controller方法在对于该请求有没有可用的lastModified逻辑，如果有的话就使用<em>ServletWebRequest.checkNotModified</em>逻辑判断当前lastModfied值和http header的上次缓存值，如果还没有过期就设置304头并且返回并结束整个请求流程。否则继续。</li>
+<li>应用preHandle方法，调用所有的HandlerInterceptor.preHandle方法</li>
+<li>调用<em>HandlerAdapter.handle</em>方法进行目标handler的调用（调用controller)，得到ModelAndView返回值</li>
+<li>应用interceptor.postHandle方法。</li>
+<li>最后根据handle返回值的请求调用<em>DispatcherServlet.processDispatchResult</em>方法来根据返回值类型处理成最终的http response。</li>
+</ol>
+
+
+<h3>一个栗子</h3>
+
+<p>逻辑就是这么简单，没有什么好多说的，因为就像前面说的不同的HandlerAdapter是需要配合不同的HandlerMapping产生的目标handler，没有固定的规律和模式。就拿<code>SimpleControllerHandlerAdapter</code>这个例子来说明下把。可以和它配对的HandlerMapping有<code>ControllerBeanNameHandlerMapping</code>和<code>ControllerClassNameHandlerMapping</code>，或者说从<code>AbstractControllerUrlHandlerMapping</code>继承下来的类。</p>
+
+<p>先看看SimpleControllerHandlerAdapter:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SimpleControllerHandlerAdapter</span> <span class="kd">implements</span> <span class="n">HandlerAdapter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">supports</span><span class="o">(</span><span class="n">Object</span> <span class="n">handler</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">return</span> <span class="o">(</span><span class="n">handler</span> <span class="k">instanceof</span> <span class="n">Controller</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="n">ModelAndView</span> <span class="nf">handle</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">HttpServletResponse</span> <span class="n">response</span><span class="o">,</span> <span class="n">Object</span> <span class="n">handler</span><span class="o">)</span>
+</span><span class='line'>          <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">return</span> <span class="o">((</span><span class="n">Controller</span><span class="o">)</span> <span class="n">handler</span><span class="o">).</span><span class="na">handleRequest</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">response</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getLastModified</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">,</span> <span class="n">Object</span> <span class="n">handler</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">handler</span> <span class="k">instanceof</span> <span class="n">LastModified</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">return</span> <span class="o">((</span><span class="n">LastModified</span><span class="o">)</span> <span class="n">handler</span><span class="o">).</span><span class="na">getLastModified</span><span class="o">(</span><span class="n">request</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>      <span class="k">return</span> <span class="o">-</span><span class="mi">1L</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以得出以下简单的结论：</p>
+
+<ol>
+<li>它只能处理目标handler是Controller类型（实现了Controller接口）的调用</li>
+<li>对于lastModified特性，如果目标handler（从1可知肯定是一个Controller类型）也实现了LastModifed接口，那么就调用该接口的getLastMofied函数来得到lastMofiy值，否则返回-1表示不支持。</li>
+<li>调用过程非常简单，就是调用目标Controller的handleRequest方法。</li>
+</ol>
+
+
+<p>从中我们可以断定和它配合的HandlerMapping返回的目标handler必须是Controller类型。好吧，我们来看看<code>ControllerBeanNameHandlerMapping</code>和<code>ControllerClassNameHandlerMapping</code>是干什么的。他们两个实际上是非常相似的，共同的父类都会扫描容器中所有定义的bean，如果该bean是Controller类型，那么就交给这两个不同的子类做处理来决定如何将这个Controller加入到mapping中。</p>
+
+<ol>
+<li>对于ControllerBeanNameHandlerMapping，它会把这个bean的名字及其alias作为request path</li>
+<li>对于ControllerClassNameHandlerMapping，它会把这个bean的类名作为request path，比如HelloController对应为&#8221;/hello&#8221;。</li>
+</ol>
+
+
+<p>那么在收到请求后，这两个HandlerMapping会根据request path匹配已经保存的mapping数据，如果找到匹配的就会将之前存好的这个bean，也就是这个Controller对象当做目标handler返回出去。在后面的调用流程中自然就可以被SimpleControllerHandlerAdapter处理了。</p>
+
+<p>当然，一个请求来了具体被那个HandlerMapping处理要看不同HandlerMapping的处理能力，还处理顺序，自己不能处理的旧交由下一个处理，其顺序是HandlerMapping的order值确定的。</p>
+
+<p>这仅仅是一个例子，目前Controller类已经不推荐使用了，更多的请使用annotation的方法，当然其对应的处理组件是RequestMappingHandlerMapping和RequestMappingHandlerAdapter。</p>
+
+<h2>Spring MVC如何处理handler的返回值</h2>
 </div>
 
 
