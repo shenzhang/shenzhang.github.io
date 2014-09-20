@@ -79,6 +79,8 @@ OK，在回到配置HandlerInterceptor的第二种方法，就是使用<mvc:inte
 
 那么spring是怎么把这些MappedInterceptor放入到HandlerMapping中的呢？实际上spring仅仅是把他们定义到容器中，在HandlerMapping初始化的时候通过调用*AbstractHandlerMapping.detectMappedInterceptors*方法来自动发现所有的MappedInterceptor，并做一些必要的初始化配置。
 
+另外一点，如果你使用了*<mvc:annotation-driven/>*的话，默认是会添加一个MappedInterceptor到容器中，这个interceptor是`ConversionServiceExposingInterceptor`，它会把*<mvc:annotation-driven/>*检测或者创建的conversionService添加到HttpServletRequest的一个属性中，以便整个http request处理流程可以随时享用这个conversionService。因为并不是所有的组件都有享受spring ioc的能力，比如jsp tag，因此放在HttpServletRequest会比较方便。
+
 ##HandlerAdapter
 
 ###如何配置
@@ -211,10 +213,6 @@ public class SimpleControllerHandlerAdapter implements HandlerAdapter {
 当然，一个请求来了具体被那个HandlerMapping处理要看不同HandlerMapping的处理能力，还处理顺序，自己不能处理的旧交由下一个处理，其顺序是HandlerMapping的order值确定的。
 
 这仅仅是一个例子，目前Controller类已经不推荐使用了，更多的请使用annotation的方法，当然其对应的处理组件是RequestMappingHandlerMapping和RequestMappingHandlerAdapter。
-
-
-
-##Spring MVC如何处理handler的返回值
 
 
 
