@@ -213,7 +213,7 @@
 <li>HandlerMapping: 将<code>RequestMappingHandlerMapping</code>和<code>BeanNameUrlHandlerMapping</code>配置到spring容器中。</li>
 <li>HandlerAdapter: 将<code>RequestMappingHandlerAdapter</code>，<code>HttpRequestHandlerAdapter</code>和<code>SimpleControllerHandlerAdapter</code>配置到spring容器中</li>
 <li>HandlerExceptionResolver: 这个组件是用来控制当出现异常的时候spring如何来处理。它将<code>ExceptionHandlerExceptionResolver</code>，<code>ResponseStatusExceptionResolver</code>和<code>DefaultHandlerExceptionResolver</code>配置到spring容器中作为异常处理器。</li>
-<li>ContentNegotiationManager:</li>
+<li>ContentNegotiationManager: 这个东西是用来做内容协商的，主要是用在<code>RequestMappingHandlerMapping</code>里面。&lt;mvc:annotation-driven/>会首先检查自己有没有<em>content-negotiation-manager</em>属性，如果有的话就用属性指定的ContentNegotiationManager，否则就创建一个默认的并注册到容器中。但是最关键的还是该ContentNegotiationManager最终会被自动设置到前面定义的<code>RequestMappingHandlerMapping</code>中去。</li>
 <li>DefaultFormattingConversionService: 给Spring MVC配置的ConversionService，也是spring提供的默认FormattingConversionService。</li>
 <li>LocalValidatorFactoryBean: 提供自动检测jsr303实现的spring validator，主要会被用来spring mvc在收到请求，并在交给Controller的时候做数据绑定使用（数据绑定之后做数据验证）。</li>
 <li>HttpMessageConverters: 创建（发现）一组HttpMessageConverter，并把他们配置到RequestMappingHandlerAdapter中，供spring mvc使用。</li>

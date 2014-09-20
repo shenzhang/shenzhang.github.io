@@ -9,8 +9,7 @@
   <meta name="author" content="zshen">
 
   
-  <meta name="description" content="This is a template file
-">
+  <meta name="description" content="HandlerMapping和HandlerAdapter 这个两个组件应该算是spring mvc中最重要的几个组件之一了，当一个请求到达DispatcherSerlvet后，spring mvc就全靠这各两个组件定位并调用我们定义的Controller函数。是的，他们的功能就分别对应了“定位” &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -93,7 +92,115 @@
   </header>
 
 
-  <div class="entry-content"><p>This is a template file</p>
+  <div class="entry-content"><h2>HandlerMapping和HandlerAdapter</h2>
+
+<p>这个两个组件应该算是spring mvc中最重要的几个组件之一了，当一个请求到达DispatcherSerlvet后，spring mvc就全靠这各两个组件定位并调用我们定义的Controller函数。是的，他们的功能就分别对应了“定位”和“调用”。</p>
+
+<h3>HandlerMapping</h3>
+
+<p>先看看该接口的申明：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">HandlerMapping</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// ...</span>
+</span><span class='line'>  <span class="c1">// 其他常量定义</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * Return a handler and any interceptors for this request. The choice may be made</span>
+</span><span class='line'><span class="cm">  * on request URL, session state, or any factor the implementing class chooses.</span>
+</span><span class='line'><span class="cm">  * &lt;p&gt;The returned HandlerExecutionChain contains a handler Object, rather than</span>
+</span><span class='line'><span class="cm">  * even a tag interface, so that handlers are not constrained in any way.</span>
+</span><span class='line'><span class="cm">  * For example, a HandlerAdapter could be written to allow another framework&#39;s</span>
+</span><span class='line'><span class="cm">  * handler objects to be used.</span>
+</span><span class='line'><span class="cm">  * &lt;p&gt;Returns {@code null} if no match was found. This is not an error.</span>
+</span><span class='line'><span class="cm">  * The DispatcherServlet will query all registered HandlerMapping beans to find</span>
+</span><span class='line'><span class="cm">  * a match, and only decide there is an error if none can find a handler.</span>
+</span><span class='line'><span class="cm">  * @param request current HTTP request</span>
+</span><span class='line'><span class="cm">  * @return a HandlerExecutionChain instance containing handler object and</span>
+</span><span class='line'><span class="cm">  * any interceptors, or {@code null} if no mapping found</span>
+</span><span class='line'><span class="cm">  * @throws Exception if there is an internal error</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="n">HandlerExecutionChain</span> <span class="nf">getHandler</span><span class="o">(</span><span class="n">HttpServletRequest</span> <span class="n">request</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际干事的就只有getHandler一个方法，根据http请求确定将要被执行的执行链HandlerExecutionChain。一个HandlerExecutionChain就是由目标handler和一组HandlerInterceptor组成。但是需要注意的是，HandlerExecutionChain并不负责真正的执行动作，它也不知道如何去执行目标handler，而仅仅是一个保存这些对象的容器罢了。</p>
+
+<p>目标的handler是Object类型，换句话说spring没有提供任何接口来限定，可以是任何类型。因此真正的执行动作会发生在HandlerAdpater中，也就是说如果每个HandlerMapping（不管是spring提供的还是你自己写的）都需要有对应的HandlerAdpater，当然不一定是一一对应有些是可以复用的。</p>
+
+<h3>如何定义HandlerInterceptor</h3>
+
+<p>不像目标handler，handler执行链上的拦截器是有限定类型的，也就是上面提到的HandlerInterceptor。那么如何配置这些HandlerInterceptor呢？</p>
+
+<p>首先需要明确的是interceptor最终都会被配置到容器中使用的HandlerMapping组件中去，因为HandlerMapping会产生HandlerExecutionChain，需要将所有的interceptor一并设置到返回的HandlerExecutionChain中。那么最直接的方式就是在定义HandlerMapping的地方将需要的interceptor直接注入到对应的HandlerMapping类中，实际上该字段是声明在<code>AbstractHandlerMapping</code>中，因此所有的HandlerMapping最好直接从<code>AbstractHandlerMapping</code>抽象类上继承，而不要直接实现HandlerMapping接口。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;beans&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;bean</span> <span class="na">id=</span><span class="s">&quot;handlerMapping&quot;</span>
+</span><span class='line'>          <span class="na">class=</span><span class="s">&quot;org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMap</span>
+</span><span class='line'><span class="s">        &lt;property name=&quot;</span><span class="err">interceptors&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>            <span class="nt">&lt;list&gt;</span>
+</span><span class='line'>                <span class="nt">&lt;ref</span> <span class="na">bean=</span><span class="s">&quot;officeHoursInterceptor&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>            <span class="nt">&lt;/list&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/property&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;property</span> <span class="na">name=</span><span class="s">&quot;interceptors&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>                    <span class="nt">&lt;list&gt;</span>
+</span><span class='line'>                <span class="nt">&lt;ref</span> <span class="na">bean=</span><span class="s">&quot;officeHoursInterceptor&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>            <span class="nt">&lt;/list&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/property&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/bean&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;bean</span> <span class="na">id=</span><span class="s">&quot;officeHoursInterceptor&quot;</span>
+</span><span class='line'>          <span class="na">class=</span><span class="s">&quot;samples.TimeBasedAccessInterceptor&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;property</span> <span class="na">name=</span><span class="s">&quot;openingTime&quot;</span> <span class="na">value=</span><span class="s">&quot;9&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;property</span> <span class="na">name=</span><span class="s">&quot;closingTime&quot;</span> <span class="na">value=</span><span class="s">&quot;18&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/bean&gt;</span>
+</span><span class='line'><span class="nt">&lt;beans&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
 </div>
   
   
@@ -546,7 +653,7 @@
 <li>HandlerMapping: 将<code>RequestMappingHandlerMapping</code>和<code>BeanNameUrlHandlerMapping</code>配置到spring容器中。</li>
 <li>HandlerAdapter: 将<code>RequestMappingHandlerAdapter</code>，<code>HttpRequestHandlerAdapter</code>和<code>SimpleControllerHandlerAdapter</code>配置到spring容器中</li>
 <li>HandlerExceptionResolver: 这个组件是用来控制当出现异常的时候spring如何来处理。它将<code>ExceptionHandlerExceptionResolver</code>，<code>ResponseStatusExceptionResolver</code>和<code>DefaultHandlerExceptionResolver</code>配置到spring容器中作为异常处理器。</li>
-<li>ContentNegotiationManager:</li>
+<li>ContentNegotiationManager: 这个东西是用来做内容协商的，主要是用在<code>RequestMappingHandlerMapping</code>里面。&lt;mvc:annotation-driven/>会首先检查自己有没有<em>content-negotiation-manager</em>属性，如果有的话就用属性指定的ContentNegotiationManager，否则就创建一个默认的并注册到容器中。但是最关键的还是该ContentNegotiationManager最终会被自动设置到前面定义的<code>RequestMappingHandlerMapping</code>中去。</li>
 <li>DefaultFormattingConversionService: 给Spring MVC配置的ConversionService，也是spring提供的默认FormattingConversionService。</li>
 <li>LocalValidatorFactoryBean: 提供自动检测jsr303实现的spring validator，主要会被用来spring mvc在收到请求，并在交给Controller的时候做数据绑定使用（数据绑定之后做数据验证）。</li>
 <li>HttpMessageConverters: 创建（发现）一组HttpMessageConverter，并把他们配置到RequestMappingHandlerAdapter中，供spring mvc使用。</li>
