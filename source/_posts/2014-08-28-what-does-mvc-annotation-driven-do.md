@@ -100,4 +100,6 @@ categories:
 
 比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中的默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是<mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论<mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上`<mvc:annotation-driven/>`，因为背后提供该服务的组件是不一样的。
 
+*还有一点是需要强调的*, 要想让DispatchServlet.properties中的配置生效，比如其中定义的HandlerMapping，需要保证整个Spring Context中没有显示或隐式定义其他HandlerMapping，这种约束是很不灵活的。举个例子，你的spring配置中没有定义任何HandlerMapping，觉得DispatcherServlet.properties中提供的默认配置足够了，并且也想使用RequestMapping定义的Controller，在通常情况下这个是可以满足要求的。但是如果你又想将没有匹配成功的request交给应用服务器的默认Servlet来处理，就需要在spring-servlet.xml中配置<mvc:default-servlet-handler/>，这个时候你会发现RequestMapping不能工作了，为什么？原因是<mvc:default-servlet-handler/>会在context中隐式加入SimpleUrlHandlerMapping，导致spring在解析的时候发现有可用的HandlerMapping，就不会再去加载DispatcherServlet.properties中定义的配置。
+
 总之，当你在使用spring mvc的时候，虽然它帮我们做了很多事情，一切看起来都是work的，但是还是要清楚你的系统中有哪些组件在起作用，这样出了问题才知道如何定位问题。
