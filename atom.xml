@@ -4,7 +4,7 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-09-20T20:42:02+10:00</updated>
+  <updated>2014-12-03T23:23:52+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
     <name><![CDATA[zshen]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Spring MVC中的二三事]]></title>
     <link href="http://shenzhang.github.io/blog/2014/09/19/spring-mvc-qa/"/>
-    <updated>2014-09-19T01:27:00+10:00</updated>
+    <updated>2014-09-19T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/09/19/spring-mvc-qa</id>
     <content type="html"><![CDATA[<h2>HandlerMapping和HandlerAdapter</h2>
 
@@ -386,7 +386,7 @@
   <entry>
     <title type="html"><![CDATA[再谈Spring的Binding和Validation]]></title>
     <link href="http://shenzhang.github.io/blog/2014/09/17/spring-binding-validation/"/>
-    <updated>2014-09-17T01:27:00+10:00</updated>
+    <updated>2014-09-17T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/09/17/spring-binding-validation</id>
     <content type="html"><![CDATA[<p>之前小伙伴已经写过一篇关于spring mvc中validation的<a href="http://benweizhu.github.io/blog/2014/07/19/spring-validation-by-example">文章</a>，其中还提到了与JSR-303集成和MessageCodeResolver的使用，非常详细。我想已经适用于大部分的情况了，最近也遇到了一些关于数据绑定和验证(实际上他们本来就是不可分割的)的问题，解决方案虽然有很多，但是还是希望对以下问题做一个总结以便形成一种处理该类问题的模式。</p>
 
@@ -652,7 +652,7 @@
   <entry>
     <title type="html"><![CDATA[mvc:annotation-driven到底帮我们做了什么]]></title>
     <link href="http://shenzhang.github.io/blog/2014/08/28/what-does-mvc-annotation-driven-do/"/>
-    <updated>2014-08-28T01:27:00+10:00</updated>
+    <updated>2014-08-28T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/08/28/what-does-mvc-annotation-driven-do</id>
     <content type="html"><![CDATA[<p>大家都知道在使用Spring MVC的时候需要在spring mvc的配置文件中加上<code>&lt;mvc:annotation-driven/&gt;</code>这句话，但是如果不加这句话一切有是可以正常work的，那到底是加还是不加呢，针对哪些功能是必须要加的呢？</p>
 
@@ -801,6 +801,8 @@
 
 <p>比如对于annotation风格的spring mvc，以前是可以使用DefaultAnnotationHandlerMapping作为handler mapping的，这个也是properties中的默认配置。但是现在spring已经在用RequestMappingHandlerMapping来替代它了，这也是&lt;mvc:annotation-driven/>的默认配置。所以曾经一个同事和我讨论&lt;mvc:annotation-driver/>是不是开启注解式spring mvc功能的必要条件，现在答案很清楚了，虽然不是必要条件，但是最好还是加上<code>&lt;mvc:annotation-driven/&gt;</code>，因为背后提供该服务的组件是不一样的。</p>
 
+<p><em>还有一点是需要强调的</em>, 要想让DispatchServlet.properties中的配置生效，比如其中定义的HandlerMapping，需要保证整个Spring Context中没有显示或隐式定义其他HandlerMapping，这种约束是很不灵活的。举个例子，你的spring配置中没有定义任何HandlerMapping，觉得DispatcherServlet.properties中提供的默认配置足够了，并且也想使用RequestMapping定义的Controller，在通常情况下这个是可以满足要求的。但是如果你又想将没有匹配成功的request交给应用服务器的默认Servlet来处理，就需要在spring-servlet.xml中配置&lt;mvc:default-servlet-handler/>，这个时候你会发现RequestMapping不能工作了，为什么？原因是&lt;mvc:default-servlet-handler/>会在context中隐式加入SimpleUrlHandlerMapping，导致spring在解析的时候发现有可用的HandlerMapping，就不会再去加载DispatcherServlet.properties中定义的配置。</p>
+
 <p>总之，当你在使用spring mvc的时候，虽然它帮我们做了很多事情，一切看起来都是work的，但是还是要清楚你的系统中有哪些组件在起作用，这样出了问题才知道如何定位问题。</p>
 ]]></content>
   </entry>
@@ -808,7 +810,7 @@
   <entry>
     <title type="html"><![CDATA[AngularJS源代码分析1]]></title>
     <link href="http://shenzhang.github.io/blog/2014/08/17/inside-angular-source-1/"/>
-    <updated>2014-08-17T01:27:00+10:00</updated>
+    <updated>2014-08-17T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/08/17/inside-angular-source-1</id>
     <content type="html"><![CDATA[
 ]]></content>
@@ -817,7 +819,7 @@
   <entry>
     <title type="html"><![CDATA[深入分析invokeDynamic]]></title>
     <link href="http://shenzhang.github.io/blog/2014/05/25/java8-invokedynamic/"/>
-    <updated>2014-05-25T01:27:00+10:00</updated>
+    <updated>2014-05-25T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/05/25/java8-invokedynamic</id>
     <content type="html"><![CDATA[<p>Placeholder</p>
 ]]></content>
@@ -826,7 +828,7 @@
   <entry>
     <title type="html"><![CDATA[StampedLock源码分析]]></title>
     <link href="http://shenzhang.github.io/blog/2014/05/25/java8-stampedlock/"/>
-    <updated>2014-05-25T00:27:00+10:00</updated>
+    <updated>2014-05-25T00:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/05/25/java8-stampedlock</id>
     <content type="html"><![CDATA[<p>Placeholder</p>
 ]]></content>
@@ -835,7 +837,7 @@
   <entry>
     <title type="html"><![CDATA[Java中的Introspector]]></title>
     <link href="http://shenzhang.github.io/blog/2014/05/04/introspector-in-java/"/>
-    <updated>2014-05-04T01:27:00+10:00</updated>
+    <updated>2014-05-04T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/05/04/introspector-in-java</id>
     <content type="html"><![CDATA[<p>This is the placeholder for Introspector in Java.</p>
 ]]></content>
@@ -844,7 +846,7 @@
   <entry>
     <title type="html"><![CDATA[Java中的Reference对象[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/27/java-reference-objects/"/>
-    <updated>2014-04-27T01:27:00+10:00</updated>
+    <updated>2014-04-27T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/27/java-reference-objects</id>
     <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.refobj#ObjectLifeCycle">原文链接</a></p>
 
@@ -1559,7 +1561,7 @@
   <entry>
     <title type="html"><![CDATA[深入解析OutOfMemoryError[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error/"/>
-    <updated>2014-04-24T01:27:00+10:00</updated>
+    <updated>2014-04-24T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/24/understanding-out-of-memory-error</id>
     <content type="html"><![CDATA[<p><a href="http://www.kdgregory.com/index.php?page=java.outOfMemory">原文链接</a></p>
 
@@ -1982,7 +1984,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
   <entry>
     <title type="html"><![CDATA[jcl-over-slf4j]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j/"/>
-    <updated>2014-04-13T02:27:00+10:00</updated>
+    <updated>2014-04-13T02:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j</id>
     <content type="html"><![CDATA[<p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
 
@@ -2036,7 +2038,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
   <entry>
     <title type="html"><![CDATA[哪个更快：Java堆还是本地内存[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory/"/>
-    <updated>2014-04-13T01:27:00+10:00</updated>
+    <updated>2014-04-13T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/13/which-one-is-faster-java-heap-or-native-memory</id>
     <content type="html"><![CDATA[<p><a href="http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/">原文链接</a></p>
 
@@ -2363,7 +2365,7 @@ Native Avg Read:     138         140             138
   <entry>
     <title type="html"><![CDATA[maven杂谈(生命周期,插件绑定,effective-xx)]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/15/something-about-maven/"/>
-    <updated>2013-09-15T01:27:00+10:00</updated>
+    <updated>2013-09-15T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/15/something-about-maven</id>
     <content type="html"><![CDATA[<h2>1.生命周期</h2>
 
@@ -2475,7 +2477,7 @@ site-deploy
   <entry>
     <title type="html"><![CDATA[maven依赖的scope]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/13/scope-in-maven/"/>
-    <updated>2013-09-13T01:27:00+10:00</updated>
+    <updated>2013-09-13T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/13/scope-in-maven</id>
     <content type="html"><![CDATA[<p>maven中一些常用的scope及其介绍。</p>
 
@@ -2504,7 +2506,7 @@ site-deploy
   <entry>
     <title type="html"><![CDATA[如何针对缺少source包的jar添加source包]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/12/add-source-to-repository/"/>
-    <updated>2013-09-12T01:27:00+10:00</updated>
+    <updated>2013-09-12T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/12/add-source-to-repository</id>
     <content type="html"><![CDATA[<p>repository中的有些jar是没有对应的source的，比如在使用hadoop-core-1.0.4.jar包，但是由于缺少sources包，因此无法在依赖中查看源文件。</p>
 
@@ -2529,7 +2531,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[javascript测试框架jasmine]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/11/jasmine/"/>
-    <updated>2013-09-11T01:27:00+10:00</updated>
+    <updated>2013-09-11T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/11/jasmine</id>
     <content type="html"><![CDATA[<p><a href="http://pivotal.github.io/jasmine/">jasmine</a>是一个javascript的测试框架，不同于qunit等其他测试框架，它可以用于很多js环境，比如web，nodejs等。它上手简单，并且官方有很详细的实例和描述，这里将大部分实用的api和用法记录下来。</p>
 
@@ -2778,7 +2780,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[SeaJS原理解析]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/10/inspect-seajs/"/>
-    <updated>2013-09-10T01:27:00+10:00</updated>
+    <updated>2013-09-10T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/10/inspect-seajs</id>
     <content type="html"><![CDATA[<p>对于前台javascript代码的模块化组织和依赖加载目前业界比较流行的有RequireJS和玉伯写的的SeaJS。看了下玉伯本人对这两款模块加载器的对比分析，个人还是比较喜欢SeaJS的，尤其是RequireJS在加载一个模块后就立刻执行的做法表示不能理解，可能也跟具体的应用场景有关系，不能用SeaJS的风格来使用RequireJS吧。</p>
 
@@ -3099,7 +3101,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[setTimeout和setInterval]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval/"/>
-    <updated>2013-09-05T01:27:00+10:00</updated>
+    <updated>2013-09-05T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/05/settimeout-and-setinterval</id>
     <content type="html"><![CDATA[<p>setTimeout和setInterval是浏览器环境中两个可用的定时器方案。在使用过程中曾经遇到了两个坑，在这里记录下：</p>
 
@@ -3118,7 +3120,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[Thread的状态]]></title>
     <link href="http://shenzhang.github.io/blog/2013/09/04/status-of-thread/"/>
-    <updated>2013-09-04T01:27:00+10:00</updated>
+    <updated>2013-09-04T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/09/04/status-of-thread</id>
     <content type="html"><![CDATA[<p>每个Thread在创建出来之后就有一个状态信息，可以通过Thread.getState()来获得该thread的状态，虽然javadoc中对thread的状态有详细的描述，但是很多人还是不能很好的说出所有的状态，以及不同状态的含义，理解这些状态还有助于使用java的线程分析工具，比如jstack</p>
 
@@ -3155,7 +3157,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[理解GC暂停 - Hotspot中的minor gc[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/16/gc-stop-minor-gc-in-hotspot/"/>
-    <updated>2013-08-16T02:27:00+10:00</updated>
+    <updated>2013-08-16T02:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/16/gc-stop-minor-gc-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots.html">原文链接</a></p>
 
@@ -3249,7 +3251,7 @@ packaging=java-doc =&gt; artifacteId-version-doc.jar
   <entry>
     <title type="html"><![CDATA[理解GC暂停 - Hotspot中的CMS[译]]]></title>
     <link href="http://shenzhang.github.io/blog/2013/08/16/gc-stop-cms-in-hotspot/"/>
-    <updated>2013-08-16T01:27:00+10:00</updated>
+    <updated>2013-08-16T01:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2013/08/16/gc-stop-cms-in-hotspot</id>
     <content type="html"><![CDATA[<p><a href="http://blog.ragozin.info/2011/06/understanding-gc-pauses-in-jvm-hotspots_02.html">原文链接</a></p>
 
