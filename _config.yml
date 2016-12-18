@@ -5,8 +5,9 @@
 url: http://shenzhang.github.io
 title: Keep going
 #subtitle: keep going
-author: zshen
+author: Shen Zhang
 simple_search: http://google.com/search
+google_analytics_tracking_id: UA-89160263-1
 description:
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
