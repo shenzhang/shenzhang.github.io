@@ -5,8 +5,8 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>章显魅颖</title>
-  <meta name="author" content="zshen">
+  <title>Keep going</title>
+  <meta name="author" content="Shen Zhang">
 
   
   <meta name="description" content="原文链接 介绍 我从2000年开始用Java编程，在这之前使用了C和C++长达15年。我觉得我有能力在C类的语言中管理好内存，比如使用指针偏移，或者使用工具比如Purify。不记不清我遇到的最后一次内存泄露问题了。因此我确实对Java的自动内存管理有点不削，但是我很快爱上它了。 &hellip;">
@@ -29,6 +29,14 @@
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KBLNPX2');</script>
+<!-- End Google Tag Manager -->
 
   
 
@@ -82,7 +90,7 @@
   
 
 
-<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -136,7 +144,7 @@
 
 <p>当程序尝试分配一个新的对象，但是又没有足够的堆空间时就会触发垃圾回收。当前请求的线程会被挂起，并且垃圾回收器会在堆空间中进行查找，尝试找到那些不会再被程序使用的对象，并且回收它们的堆空间。如果垃圾搜集器不能释放足够的空间，并且JVM不能再扩展(expand)堆空间，那么new操作符就会失败，并且抛出<code>OutOfMemoryError</code>。这通常会导致你的应用程序挂掉。</p>
 
-<p>这有很多非常优秀的参考文献来说明Java的垃圾回收器是如何工作的，有些我列在了文章的最后。它们不但适合阅读，而且还会教你如何对你的应用程序进行调优，而现在你仅仅需要知道的是Java使用了一种&#8217;标记-清除-整理&#8217;的垃圾回收器，并且对强引用进行垃圾搜集。</p>
+<p>这有很多非常优秀的参考文献来说明Java的垃圾回收器是如何工作的，有些我列在了文章的最后。它们不但适合阅读，而且还会教你如何对你的应用程序进行调优，而现在你仅仅需要知道的是Java使用了一种'标记-清除-整理'的垃圾回收器，并且对强引用进行垃圾搜集。</p>
 
 <h3>标记-清除-整理</h3>
 
@@ -425,7 +433,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>如果你的字符串数量不是很多，那么这种实现还将就。但是如果你的应用程序需要运行很长的时间，并且需要处理的字符串有很多很多，那么就还是有可能会重复。比如，一个会标准化请求头的HTTP服务器，大约有10多个不同的&#8221;User-Agent&#8221;头，并且其中的某些头的出现频率比其他头高很多，Google机器人可能一周仅仅会访问一次。</p>
+<p>如果你的字符串数量不是很多，那么这种实现还将就。但是如果你的应用程序需要运行很长的时间，并且需要处理的字符串有很多很多，那么就还是有可能会重复。比如，一个会标准化请求头的HTTP服务器，大约有10多个不同的"User-Agent"头，并且其中的某些头的出现频率比其他头高很多，Google机器人可能一周仅仅会访问一次。</p>
 
 <p>那么你就可以在你需要代码中使用的时候，才保持这些标准化之后的对象，这样可以大幅减少堆内存的长时间占用。这个时候弱引用就可以派上用场了：使用弱引用来引用这些map的entry，当不在存在强引用的时候，垃圾回收器就可以对他们进行搜集。一旦Google机器人访问了你的站点，那么它的User-Agent就可以被记录下来了。</p>
 
@@ -804,7 +812,7 @@
       
   
 
-<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+<span class="byline author vcard">Posted by <span class="fn">Shen Zhang</span></span>
 
       
 
@@ -818,7 +826,7 @@
   
 
 
-<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true"></time>
       
 
 
@@ -886,7 +894,7 @@
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - zshen -
+  Copyright &copy; 2016 - Shen Zhang -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

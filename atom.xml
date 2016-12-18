@@ -4,10 +4,10 @@
   <title><![CDATA[Keep going]]></title>
   <link href="http://shenzhang.github.io/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-12-03T23:23:52+08:00</updated>
+  <updated>2016-12-18T22:13:41+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
-    <name><![CDATA[zshen]]></name>
+    <name><![CDATA[Shen Zhang]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
@@ -371,7 +371,7 @@
 
 <ol>
 <li>对于ControllerBeanNameHandlerMapping，它会把这个bean的名字及其alias作为request path</li>
-<li>对于ControllerClassNameHandlerMapping，它会把这个bean的类名作为request path，比如HelloController对应为&#8221;/hello&#8221;。</li>
+<li>对于ControllerClassNameHandlerMapping，它会把这个bean的类名作为request path，比如HelloController对应为"/hello"。</li>
 </ol>
 
 
@@ -394,7 +394,7 @@
 
 <p>实际上数据绑定的过程就是一个找到目标字段，再把值设置进去的过程。目标字段的确定非常容易，最常用的类就是BeanWrapperImpl，我们可以在Spring中的很多地方见到它，再看看它所实现的接口就知道具有数据访问和类型转换的功能，实际上Spring的数据绑定很多时候也是通过BeanWrapperImpl来实现的。</p>
 
-<p>真正比较复杂的部分是数据的转换，看过Spring文档的人都知道Spring在很早以前就是用了Java中的PropertyEditor机制来实现数据转换。但是在Spring新的版本中虽然还是支持PropertyEditor，但是更加标准的做法是是用ConverionService。ConversionService是什么？如同它的名字所说，就是提供了转换服务的对象。真正提供转换功能的是Converter类，不同的Converter能够实现的转换不一样。OK，到这里就可以想象一个最简单的模式：一个ConversionService包含很多各式各样的Converter，使得这个ConversionService成为一个无所不能的转换器！如果你想要一个这样的ConversionService，你可以直接是用Spring给我们准备好的GenericConversionService，它是一个空的ConversionService，但是你可以自己定制它所包含的Convert。除此之外，Spring还给我们准备好了一套足够全的Converter，甚至还准备好了一个配置好的ConversionService &ndash; DefaultConversionService，它实际上就是继承自GenericConversionService，只不过在它的构造函数中就帮你把Spring中得默认Converter注册进去罢了，如果你对Spring提供的Converter感兴趣，可以从这里开始看。这些ConversionService不仅仅被Spring内部使用，你甚至可以自己直接拿来在产品代码中使用。</p>
+<p>真正比较复杂的部分是数据的转换，看过Spring文档的人都知道Spring在很早以前就是用了Java中的PropertyEditor机制来实现数据转换。但是在Spring新的版本中虽然还是支持PropertyEditor，但是更加标准的做法是是用ConverionService。ConversionService是什么？如同它的名字所说，就是提供了转换服务的对象。真正提供转换功能的是Converter类，不同的Converter能够实现的转换不一样。OK，到这里就可以想象一个最简单的模式：一个ConversionService包含很多各式各样的Converter，使得这个ConversionService成为一个无所不能的转换器！如果你想要一个这样的ConversionService，你可以直接是用Spring给我们准备好的GenericConversionService，它是一个空的ConversionService，但是你可以自己定制它所包含的Convert。除此之外，Spring还给我们准备好了一套足够全的Converter，甚至还准备好了一个配置好的ConversionService - DefaultConversionService，它实际上就是继承自GenericConversionService，只不过在它的构造函数中就帮你把Spring中得默认Converter注册进去罢了，如果你对Spring提供的Converter感兴趣，可以从这里开始看。这些ConversionService不仅仅被Spring内部使用，你甚至可以自己直接拿来在产品代码中使用。</p>
 
 <h2>2.如何给Spring配置类型转换器</h2>
 
@@ -468,7 +468,7 @@
 
 <p>当发生一个http请求时，我们可以配置我们的Controller让其自动将一些http请求参数直接转换为我们的command/model对象中。如果目标字段不是String型，必然就需要类型转换，因为HttpServletRequest中拿到的参数都是String型。</p>
 
-<p>实际上在你申明<code>&lt;mvc:annotation-driven/&gt;</code>的时候，Spring的<code>AnnotationDrivenBeanDefinitionParser</code>就会帮你自动注册一个ConversionService到容器中，并且会将这个ConversionService放到另外一个bean<code>ConfigurableWebBindingInitializer</code>中（这个WebBindingInitializer可就非常重要啦，最后再讲)。这个默认的ConversionService是<code>FormattingConversionService</code>，它提供了比普通ConversionService更多的Formatter的功能，实际上你可以将Formatter理解成另外一种形式上的Converter(object &lt;&ndash;> String)。</p>
+<p>实际上在你申明<code>&lt;mvc:annotation-driven/&gt;</code>的时候，Spring的<code>AnnotationDrivenBeanDefinitionParser</code>就会帮你自动注册一个ConversionService到容器中，并且会将这个ConversionService放到另外一个bean<code>ConfigurableWebBindingInitializer</code>中（这个WebBindingInitializer可就非常重要啦，最后再讲)。这个默认的ConversionService是<code>FormattingConversionService</code>，它提供了比普通ConversionService更多的Formatter的功能，实际上你可以将Formatter理解成另外一种形式上的Converter(object <-> String)。</p>
 
 <p>我们当然也可以通过直接在<code>&lt;mvc:annotation-driven/&gt;</code>显示指定来改变这个默认ConversionService，如下：</p>
 
@@ -895,7 +895,7 @@
 
 <p>当程序尝试分配一个新的对象，但是又没有足够的堆空间时就会触发垃圾回收。当前请求的线程会被挂起，并且垃圾回收器会在堆空间中进行查找，尝试找到那些不会再被程序使用的对象，并且回收它们的堆空间。如果垃圾搜集器不能释放足够的空间，并且JVM不能再扩展(expand)堆空间，那么new操作符就会失败，并且抛出<code>OutOfMemoryError</code>。这通常会导致你的应用程序挂掉。</p>
 
-<p>这有很多非常优秀的参考文献来说明Java的垃圾回收器是如何工作的，有些我列在了文章的最后。它们不但适合阅读，而且还会教你如何对你的应用程序进行调优，而现在你仅仅需要知道的是Java使用了一种&#8217;标记-清除-整理&#8217;的垃圾回收器，并且对强引用进行垃圾搜集。</p>
+<p>这有很多非常优秀的参考文献来说明Java的垃圾回收器是如何工作的，有些我列在了文章的最后。它们不但适合阅读，而且还会教你如何对你的应用程序进行调优，而现在你仅仅需要知道的是Java使用了一种'标记-清除-整理'的垃圾回收器，并且对强引用进行垃圾搜集。</p>
 
 <h3>标记-清除-整理</h3>
 
@@ -1184,7 +1184,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>如果你的字符串数量不是很多，那么这种实现还将就。但是如果你的应用程序需要运行很长的时间，并且需要处理的字符串有很多很多，那么就还是有可能会重复。比如，一个会标准化请求头的HTTP服务器，大约有10多个不同的&#8221;User-Agent&#8221;头，并且其中的某些头的出现频率比其他头高很多，Google机器人可能一周仅仅会访问一次。</p>
+<p>如果你的字符串数量不是很多，那么这种实现还将就。但是如果你的应用程序需要运行很长的时间，并且需要处理的字符串有很多很多，那么就还是有可能会重复。比如，一个会标准化请求头的HTTP服务器，大约有10多个不同的"User-Agent"头，并且其中的某些头的出现频率比其他头高很多，Google机器人可能一周仅仅会访问一次。</p>
 
 <p>那么你就可以在你需要代码中使用的时候，才保持这些标准化之后的对象，这样可以大幅减少堆内存的长时间占用。这个时候弱引用就可以派上用场了：使用弱引用来引用这些map的entry，当不在存在强引用的时候，垃圾回收器就可以对他们进行搜集。一旦Google机器人访问了你的站点，那么它的User-Agent就可以被记录下来了。</p>
 
@@ -1593,7 +1593,7 @@
 
 <p>学院派的人非常喜欢说<a href="http://java.sun.com/docs/books/jls/third_edition/html/j3TOC.html">Java语言规范</a>并没有对垃圾收集器进行任何约定，你甚至可以实现一个从来不释放内存的JVM(实际是毫无意义的)。<a href="http://java.sun.com/docs/books/jvms/second_edition/html/Overview.doc.html#15730">Java虚拟机规范</a>中提到堆是由垃圾回收器进行管理，但是却没有说明任何相关细节。仅仅说了我刚才提到的那句话：垃圾回收会发生在OOM之前。</p>
 
-<p>实际上，Sun Hotspot虚拟机使用了一个固定大小的堆空间，并且允许在最小空间和最大空间之间进行自动增长。<strong>如果你没有指定最小值和最大值，那么对于&#8217;client&#8217;模式将会默认使用2Mb最为最小值，64Mb最为最大值；对于&#8217;server&#8217;模式，JVM会根据当前可用内存来决定默认值</strong>。2000年后，默认的最大堆大小改为了64M，并且在当时已经认为足够大了(2000年前的时候默认值是16M)，但是对于现在的应用程序来说很容易就用完了。</p>
+<p>实际上，Sun Hotspot虚拟机使用了一个固定大小的堆空间，并且允许在最小空间和最大空间之间进行自动增长。<strong>如果你没有指定最小值和最大值，那么对于'client'模式将会默认使用2Mb最为最小值，64Mb最为最大值；对于'server'模式，JVM会根据当前可用内存来决定默认值</strong>。2000年后，默认的最大堆大小改为了64M，并且在当时已经认为足够大了(2000年前的时候默认值是16M)，但是对于现在的应用程序来说很容易就用完了。</p>
 
 <p>这意味着你需要显示的通过JVM参数来指定堆的最小值和最大值：</p>
 
@@ -1655,7 +1655,7 @@
 
 <p>使用<em>jmap</em>并且加上<code>-histo</code>参数可以为你产生一个直方图，它显示了从程序运行到现在所有对象的数量和内存消耗，并且包含了已经被回收的对象和内存。如果使用<code>-histo:live</code>参数会显示当前还在堆中得对象数量及其内存消耗，不论这些对象是否要被垃圾搜集器进行回收。</p>
 
-<p>也就是说，如果你要得到一个当前时间下得准确信息，你需要在使用<em>jmap</em>之前强制执行一次垃圾回收。如果你的应用程序是运行在本地，最简单的方式是直接使用<a href="http://download.oracle.com/javase/6/docs/technotes/tools/share/jconsole.html">jconsole</a>：在&#8217;Memory&#8217;标签下，有一个&#8217;Perform GC&#8217;的按钮。如果应用程序是运行在服务端环境，并且JMX beans被暴露了，<code>MemoryMXBean</code>有一个<code>gc()</code>操作。如果上述的两种方案都没办法满足你得要求，你就只有等待JVM自己触发一次垃圾搜集过程了。如果你有一个很严重的内存泄露问题，那么第一次major collection很可能预示着不久后就会OOM。</p>
+<p>也就是说，如果你要得到一个当前时间下得准确信息，你需要在使用<em>jmap</em>之前强制执行一次垃圾回收。如果你的应用程序是运行在本地，最简单的方式是直接使用<a href="http://download.oracle.com/javase/6/docs/technotes/tools/share/jconsole.html">jconsole</a>：在'Memory'标签下，有一个'Perform GC'的按钮。如果应用程序是运行在服务端环境，并且JMX beans被暴露了，<code>MemoryMXBean</code>有一个<code>gc()</code>操作。如果上述的两种方案都没办法满足你得要求，你就只有等待JVM自己触发一次垃圾搜集过程了。如果你有一个很严重的内存泄露问题，那么第一次major collection很可能预示着不久后就会OOM。</p>
 
 <p>有两种方法使用<code>jmap</code>产生的直方图。其中最有效的方法，适用于长时间运行的程序，可以使用带<code>live</code>的命令行参数，并且在一段时间内多次使用该命令，检查哪些对象的数量在不断增长。但是，根据当前程序的负载，该过程可能会花费1个小时或者更多的时间。</p>
 
@@ -1758,7 +1758,7 @@ Server is ready.
 
 <p>这个直方图里的每个class的名称都是一个链接，点击这个链接可以查看关于这个类型的详细信息。你可以在其中看到这个类的继承关系，它的成员变量，以及很多指向这个类的实体变量信息的链接。我不认为这个详细信息页面非常有用，而且实体变量的链接列表很占用很多的浏览器内存。</p>
 
-<p>为了能够跟踪你的内存问题，最有用的页面是&#8217;Reference by Type&#8217;。这个页面含有两个表格：入引用和出引用，他们都被引用的数量进行排序了。点击一个类的名字可以看到这个引用的信息。</p>
+<p>为了能够跟踪你的内存问题，最有用的页面是'Reference by Type'。这个页面含有两个表格：入引用和出引用，他们都被引用的数量进行排序了。点击一个类的名字可以看到这个引用的信息。</p>
 
 <p>你可以在类的详细信息(class details)页面中找到这个页面的链接。</p>
 
@@ -1788,7 +1788,7 @@ SITES END
 
 <p>大多数程序中都不会一直持有这么大得数据，这就表明这个程序没有很好的抽取和处理这些数据。你会发现这常常发生在读取一些大的字符串，并且保存了substring之后的字符串：很少有人知道<code>String.substring()</code>后会共享原始字符串对象的字节数组。如果你按照一行一行地读取了一个文件，但是却使用了每行的前五个字符，实际上你任然保存的是整个文件在内存中。</p>
 
-<p>转储文件也显示出这些数组被分配的数量和现在存活的数量完全相等。这是一种典型的泄露，并且我们可以通过搜索&#8217;trace&#8217;号来找到真正的代码：</p>
+<p>转储文件也显示出这些数组被分配的数量和现在存活的数量完全相等。这是一种典型的泄露，并且我们可以通过搜索'trace'号来找到真正的代码：</p>
 
 <pre><code>TRACE 300157:
     com.kdgregory.example.memory.Gobbler.main(Gobbler.java:22)
@@ -1831,7 +1831,7 @@ SITES END
 
 <p>解决永久代的问题通常都是比较痛苦的。一般可以先考虑加上<code>-XX:+TraceClassLoading</code>和<code>-XX:+TraceClassUnloading</code>命令行选项以便找出那些被加载了但是没有被卸载的类。如果你加上了<code>-XX:+TraceClassResolution</code>命令行选项，你还可以看到哪些类访问了其他类，但是没有被正常卸载。</p>
 
-<p>这里有针对这三个选项的一个实例。第一行显示了<code>MyClassLoader</code>类从classpath中被加载了。因为它又从<code>URLClassLoader</code>继承，因此我们看到了接下来的&#8217;RESOLVE&#8217;消息，紧跟着又是一条&#8217;RESOLVE&#8217;消息，说明<code>Class</code>类也被解析了。</p>
+<p>这里有针对这三个选项的一个实例。第一行显示了<code>MyClassLoader</code>类从classpath中被加载了。因为它又从<code>URLClassLoader</code>继承，因此我们看到了接下来的'RESOLVE'消息，紧跟着又是一条'RESOLVE'消息，说明<code>Class</code>类也被解析了。</p>
 
 <pre><code>[Loaded com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader from file:/home/kgregory/Workspace/Website/programming/examples/bin/]
 RESOLVE com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader java.net.URLClassLoader
@@ -1878,7 +1878,7 @@ RESOLVE java.net.URLClassLoader java.lang.Class URLClassLoader.java:188
 
 <p>就像我前面提到的，你在启动一个JVM时，你需要指定堆的最小值和最大值。这就意味着，JVM会在运行期动态改变它对虚拟内存的需求。在一个内存受限的机器上，你可以同时运行多个JVM，甚至它们所有指定的最大值之和大于了物理内存和交换区的大小。当然，这就有可能会导致OOM，就算你的程序中存活的对象大小小于你指定的堆空间也是一样的。</p>
 
-<p>这种情况和跑多个C++程序使用完所有的物理内存的原因是一样的。使用JVM可能会让你产生一种假象，以为不会出现这种问题。唯一的解决方案是购买更多的内存，或者不要同时跑那么多程序。没有办法让JVM可以&#8217;快速失败&#8217;；但是在Linux上你可以申请比总内存更多的内存。</p>
+<p>这种情况和跑多个C++程序使用完所有的物理内存的原因是一样的。使用JVM可能会让你产生一种假象，以为不会出现这种问题。唯一的解决方案是购买更多的内存，或者不要同时跑那么多程序。没有办法让JVM可以'快速失败'；但是在Linux上你可以申请比总内存更多的内存。</p>
 
 <h2>堆外内存的使用</h2>
 
@@ -1919,7 +1919,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
 
 <p>dump文件展示给你了关于虚拟内存映射的4个部分：虚拟内存地址，大小，权限，源（从文件加载的部分）。最有意思的部分是它的权限部分，它表示了该内存段是否是只读的(r-)还是读写的(rw)。</p>
 
-<p>我会从读写段开始分析。所有的段都具有名字&#8221;[ anon ]&ldquo;，它在Linux中说明了该段不是由文件加载而来。这里还有很多被命名的读写段，它们和共享库关联。我相信这些库都具有每个进程的地址表。</p>
+<p>我会从读写段开始分析。所有的段都具有名字"[ anon ]&ldquo;，它在Linux中说明了该段不是由文件加载而来。这里还有很多被命名的读写段，它们和共享库关联。我相信这些库都具有每个进程的地址表。</p>
 
 <p>因为所有的读写段都具有相同的名字，一次要找出出问题的部分需要花费一点时间。对于Java堆，有4个相关的大块内存被分配（新生代有2个，老年代1个，永久代1个），他们的大小由GC和堆配置来决定。</p>
 
@@ -1929,9 +1929,9 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
 
 <h3>不要被虚拟内存的统计信息所误导</h3>
 
-<p>有很多抱怨说Java是&#8217;memory hog&#8217;，经常被<em>top</em>命令的&#8217;VIRT&#8217;部分和Windows任务管理器的&#8217;Mem Usage&#8217;列所证实。需要澄清的是，有太多的东西都不会算进这个统计信息中，有些还是与其他程序共享的（比如说C的库）。实际上也有很多‘空’的区域在虚拟内存映射空间中：如果你适用<code>-Xms1000m</code>来启动JVM，就算你还没有开始分配对象，虚拟内存的大小也会超过1000m。</p>
+<p>有很多抱怨说Java是'memory hog'，经常被<em>top</em>命令的'VIRT'部分和Windows任务管理器的'Mem Usage'列所证实。需要澄清的是，有太多的东西都不会算进这个统计信息中，有些还是与其他程序共享的（比如说C的库）。实际上也有很多‘空’的区域在虚拟内存映射空间中：如果你适用<code>-Xms1000m</code>来启动JVM，就算你还没有开始分配对象，虚拟内存的大小也会超过1000m。</p>
 
-<p>一个更好的测量方法是使用驻留集的大小：你的应用程序真正使用的物理内存的页数，不包含共享页。这就是<em>top</em>命令中得&#8217;RES&#8217;列。但是，驻留集并不是对你的程序所需使用的总内存最好的测量方法。操作系统只有在你的程序真正需要使用它们的时候才会将它们放进进程的内存空间中，一般来说是在你的系统处于高负载的情况下才会出现，这会花费一段较长的时间。</p>
+<p>一个更好的测量方法是使用驻留集的大小：你的应用程序真正使用的物理内存的页数，不包含共享页。这就是<em>top</em>命令中得'RES'列。但是，驻留集并不是对你的程序所需使用的总内存最好的测量方法。操作系统只有在你的程序真正需要使用它们的时候才会将它们放进进程的内存空间中，一般来说是在你的系统处于高负载的情况下才会出现，这会花费一段较长的时间。</p>
 
 <p>最后：始终使用工具来提供所需的详细信息来分析Java中的内存问题。并且只有当出现OOM的时候才考虑下结论。</p>
 
@@ -1986,7 +1986,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
     <link href="http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j/"/>
     <updated>2014-04-13T02:27:00+08:00</updated>
     <id>http://shenzhang.github.io/blog/2014/04/13/commons-logging-over-slf4j</id>
-    <content type="html"><![CDATA[<p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
+    <content type="html"><![CDATA[<p>`jcl-over-slf4j'如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
 
 <h2>jcl的绑定流程</h2>
 

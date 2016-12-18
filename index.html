@@ -5,8 +5,8 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>章显魅颖</title>
-  <meta name="author" content="zshen">
+  <title>Keep going</title>
+  <meta name="author" content="Shen Zhang">
 
   
   <meta name="description" content="HandlerMapping和HandlerAdapter 这个两个组件应该算是spring mvc中最重要的几个组件之一了，当一个请求到达DispatcherSerlvet后，spring mvc就全靠这各两个组件定位并调用我们定义的Controller函数。是的，他们的功能就分别对应了“定位” &hellip;">
@@ -29,6 +29,14 @@
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KBLNPX2');</script>
+<!-- End Google Tag Manager -->
 
   
 
@@ -85,7 +93,7 @@
   
 
 
-<time datetime="2014-09-19T01:27:00+08:00" pubdate data-updated="true">Sep 19<span>th</span>, 2014</time>
+<time datetime="2014-09-19T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -445,7 +453,7 @@
 
 <ol>
 <li>对于ControllerBeanNameHandlerMapping，它会把这个bean的名字及其alias作为request path</li>
-<li>对于ControllerClassNameHandlerMapping，它会把这个bean的类名作为request path，比如HelloController对应为&#8221;/hello&#8221;。</li>
+<li>对于ControllerClassNameHandlerMapping，它会把这个bean的类名作为request path，比如HelloController对应为"/hello"。</li>
 </ol>
 
 
@@ -482,7 +490,7 @@
   
 
 
-<time datetime="2014-09-17T01:27:00+08:00" pubdate data-updated="true">Sep 17<span>th</span>, 2014</time>
+<time datetime="2014-09-17T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -495,7 +503,7 @@
 
 <p>实际上数据绑定的过程就是一个找到目标字段，再把值设置进去的过程。目标字段的确定非常容易，最常用的类就是BeanWrapperImpl，我们可以在Spring中的很多地方见到它，再看看它所实现的接口就知道具有数据访问和类型转换的功能，实际上Spring的数据绑定很多时候也是通过BeanWrapperImpl来实现的。</p>
 
-<p>真正比较复杂的部分是数据的转换，看过Spring文档的人都知道Spring在很早以前就是用了Java中的PropertyEditor机制来实现数据转换。但是在Spring新的版本中虽然还是支持PropertyEditor，但是更加标准的做法是是用ConverionService。ConversionService是什么？如同它的名字所说，就是提供了转换服务的对象。真正提供转换功能的是Converter类，不同的Converter能够实现的转换不一样。OK，到这里就可以想象一个最简单的模式：一个ConversionService包含很多各式各样的Converter，使得这个ConversionService成为一个无所不能的转换器！如果你想要一个这样的ConversionService，你可以直接是用Spring给我们准备好的GenericConversionService，它是一个空的ConversionService，但是你可以自己定制它所包含的Convert。除此之外，Spring还给我们准备好了一套足够全的Converter，甚至还准备好了一个配置好的ConversionService &ndash; DefaultConversionService，它实际上就是继承自GenericConversionService，只不过在它的构造函数中就帮你把Spring中得默认Converter注册进去罢了，如果你对Spring提供的Converter感兴趣，可以从这里开始看。这些ConversionService不仅仅被Spring内部使用，你甚至可以自己直接拿来在产品代码中使用。</p>
+<p>真正比较复杂的部分是数据的转换，看过Spring文档的人都知道Spring在很早以前就是用了Java中的PropertyEditor机制来实现数据转换。但是在Spring新的版本中虽然还是支持PropertyEditor，但是更加标准的做法是是用ConverionService。ConversionService是什么？如同它的名字所说，就是提供了转换服务的对象。真正提供转换功能的是Converter类，不同的Converter能够实现的转换不一样。OK，到这里就可以想象一个最简单的模式：一个ConversionService包含很多各式各样的Converter，使得这个ConversionService成为一个无所不能的转换器！如果你想要一个这样的ConversionService，你可以直接是用Spring给我们准备好的GenericConversionService，它是一个空的ConversionService，但是你可以自己定制它所包含的Convert。除此之外，Spring还给我们准备好了一套足够全的Converter，甚至还准备好了一个配置好的ConversionService - DefaultConversionService，它实际上就是继承自GenericConversionService，只不过在它的构造函数中就帮你把Spring中得默认Converter注册进去罢了，如果你对Spring提供的Converter感兴趣，可以从这里开始看。这些ConversionService不仅仅被Spring内部使用，你甚至可以自己直接拿来在产品代码中使用。</p>
 
 <h2>2.如何给Spring配置类型转换器</h2>
 
@@ -569,7 +577,7 @@
 
 <p>当发生一个http请求时，我们可以配置我们的Controller让其自动将一些http请求参数直接转换为我们的command/model对象中。如果目标字段不是String型，必然就需要类型转换，因为HttpServletRequest中拿到的参数都是String型。</p>
 
-<p>实际上在你申明<code>&lt;mvc:annotation-driven/&gt;</code>的时候，Spring的<code>AnnotationDrivenBeanDefinitionParser</code>就会帮你自动注册一个ConversionService到容器中，并且会将这个ConversionService放到另外一个bean<code>ConfigurableWebBindingInitializer</code>中（这个WebBindingInitializer可就非常重要啦，最后再讲)。这个默认的ConversionService是<code>FormattingConversionService</code>，它提供了比普通ConversionService更多的Formatter的功能，实际上你可以将Formatter理解成另外一种形式上的Converter(object &lt;&ndash;> String)。</p>
+<p>实际上在你申明<code>&lt;mvc:annotation-driven/&gt;</code>的时候，Spring的<code>AnnotationDrivenBeanDefinitionParser</code>就会帮你自动注册一个ConversionService到容器中，并且会将这个ConversionService放到另外一个bean<code>ConfigurableWebBindingInitializer</code>中（这个WebBindingInitializer可就非常重要啦，最后再讲)。这个默认的ConversionService是<code>FormattingConversionService</code>，它提供了比普通ConversionService更多的Formatter的功能，实际上你可以将Formatter理解成另外一种形式上的Converter(object <-> String)。</p>
 
 <p>我们当然也可以通过直接在<code>&lt;mvc:annotation-driven/&gt;</code>显示指定来改变这个默认ConversionService，如下：</p>
 
@@ -775,7 +783,7 @@
   
 
 
-<time datetime="2014-08-28T01:27:00+08:00" pubdate data-updated="true">Aug 28<span>th</span>, 2014</time>
+<time datetime="2014-08-28T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -960,7 +968,7 @@
   
 
 
-<time datetime="2014-08-17T01:27:00+08:00" pubdate data-updated="true">Aug 17<span>th</span>, 2014</time>
+<time datetime="2014-08-17T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -996,7 +1004,7 @@
   
 
 
-<time datetime="2014-05-25T01:27:00+08:00" pubdate data-updated="true">May 25<span>th</span>, 2014</time>
+<time datetime="2014-05-25T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1032,7 +1040,7 @@
   
 
 
-<time datetime="2014-05-25T00:27:00+08:00" pubdate data-updated="true">May 25<span>th</span>, 2014</time>
+<time datetime="2014-05-25T00:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1068,7 +1076,7 @@
   
 
 
-<time datetime="2014-05-04T01:27:00+08:00" pubdate data-updated="true">May 4<span>th</span>, 2014</time>
+<time datetime="2014-05-04T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1104,7 +1112,7 @@
   
 
 
-<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true">Apr 27<span>th</span>, 2014</time>
+<time datetime="2014-04-27T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1153,7 +1161,7 @@
   
 
 
-<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true">Apr 24<span>th</span>, 2014</time>
+<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1203,14 +1211,14 @@
   
 
 
-<time datetime="2014-04-13T02:27:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2014</time>
+<time datetime="2014-04-13T02:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>`jcl-over-slf4j&#8217;如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
+  <div class="entry-content"><p>`jcl-over-slf4j'如同名字一样就是用来将java commons logging桥接到slf4j上。现在J2EE的一个项目通常会引用五花八门的类库，不同的类库又会使用不同的日志门面系统，有的是slf4j，有的是jcl。现在随着slf4j的越来越流行，那么将系统里的所有日志系统都统一到slf4j上也成了一个很平常的需求，jcl-over-slf4j也成了项目依赖中的常客。这周和同事也讨论了该桥接类的应用，尤其是spring本身也是直接以来jcl的，其官方文档也给出了如何替换成slf4j的说明。今天看了下代码，这里做下记录。</p>
 
 <h2>jcl的绑定流程</h2>
 
@@ -1265,7 +1273,7 @@
   
   <div class="pagination">
     
-      <a class="prev" href="/blog/page/2/">&larr; Older</a>
+      <a class="prev" href="2">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -1310,7 +1318,7 @@
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - zshen -
+  Copyright &copy; 2016 - Shen Zhang -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

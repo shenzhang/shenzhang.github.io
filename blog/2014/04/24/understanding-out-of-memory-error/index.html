@@ -5,8 +5,8 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>章显魅颖</title>
-  <meta name="author" content="zshen">
+  <title>Keep going</title>
+  <meta name="author" content="Shen Zhang">
 
   
   <meta name="description" content="原文链接 在Java中，所有对象都存储在堆中。他们通过new关键字来进行分配，JVM会检查是否所有线程都无法在访问他们了，并且会将他们进行回收。在大多数时候程序员都不会有一丝一毫的察觉，这些工作都被静悄悄的执行。但是，有时候在发布前的最后一天，程序挂了。 Exception in thread " &hellip;">
@@ -29,6 +29,14 @@
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KBLNPX2');</script>
+<!-- End Google Tag Manager -->
 
   
 
@@ -82,7 +90,7 @@
   
 
 
-<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true">Apr 24<span>th</span>, 2014</time>
+<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -119,7 +127,7 @@
 
 <p>学院派的人非常喜欢说<a href="http://java.sun.com/docs/books/jls/third_edition/html/j3TOC.html">Java语言规范</a>并没有对垃圾收集器进行任何约定，你甚至可以实现一个从来不释放内存的JVM(实际是毫无意义的)。<a href="http://java.sun.com/docs/books/jvms/second_edition/html/Overview.doc.html#15730">Java虚拟机规范</a>中提到堆是由垃圾回收器进行管理，但是却没有说明任何相关细节。仅仅说了我刚才提到的那句话：垃圾回收会发生在OOM之前。</p>
 
-<p>实际上，Sun Hotspot虚拟机使用了一个固定大小的堆空间，并且允许在最小空间和最大空间之间进行自动增长。<strong>如果你没有指定最小值和最大值，那么对于&#8217;client&#8217;模式将会默认使用2Mb最为最小值，64Mb最为最大值；对于&#8217;server&#8217;模式，JVM会根据当前可用内存来决定默认值</strong>。2000年后，默认的最大堆大小改为了64M，并且在当时已经认为足够大了(2000年前的时候默认值是16M)，但是对于现在的应用程序来说很容易就用完了。</p>
+<p>实际上，Sun Hotspot虚拟机使用了一个固定大小的堆空间，并且允许在最小空间和最大空间之间进行自动增长。<strong>如果你没有指定最小值和最大值，那么对于'client'模式将会默认使用2Mb最为最小值，64Mb最为最大值；对于'server'模式，JVM会根据当前可用内存来决定默认值</strong>。2000年后，默认的最大堆大小改为了64M，并且在当时已经认为足够大了(2000年前的时候默认值是16M)，但是对于现在的应用程序来说很容易就用完了。</p>
 
 <p>这意味着你需要显示的通过JVM参数来指定堆的最小值和最大值：</p>
 
@@ -181,7 +189,7 @@
 
 <p>使用<em>jmap</em>并且加上<code>-histo</code>参数可以为你产生一个直方图，它显示了从程序运行到现在所有对象的数量和内存消耗，并且包含了已经被回收的对象和内存。如果使用<code>-histo:live</code>参数会显示当前还在堆中得对象数量及其内存消耗，不论这些对象是否要被垃圾搜集器进行回收。</p>
 
-<p>也就是说，如果你要得到一个当前时间下得准确信息，你需要在使用<em>jmap</em>之前强制执行一次垃圾回收。如果你的应用程序是运行在本地，最简单的方式是直接使用<a href="http://download.oracle.com/javase/6/docs/technotes/tools/share/jconsole.html">jconsole</a>：在&#8217;Memory&#8217;标签下，有一个&#8217;Perform GC&#8217;的按钮。如果应用程序是运行在服务端环境，并且JMX beans被暴露了，<code>MemoryMXBean</code>有一个<code>gc()</code>操作。如果上述的两种方案都没办法满足你得要求，你就只有等待JVM自己触发一次垃圾搜集过程了。如果你有一个很严重的内存泄露问题，那么第一次major collection很可能预示着不久后就会OOM。</p>
+<p>也就是说，如果你要得到一个当前时间下得准确信息，你需要在使用<em>jmap</em>之前强制执行一次垃圾回收。如果你的应用程序是运行在本地，最简单的方式是直接使用<a href="http://download.oracle.com/javase/6/docs/technotes/tools/share/jconsole.html">jconsole</a>：在'Memory'标签下，有一个'Perform GC'的按钮。如果应用程序是运行在服务端环境，并且JMX beans被暴露了，<code>MemoryMXBean</code>有一个<code>gc()</code>操作。如果上述的两种方案都没办法满足你得要求，你就只有等待JVM自己触发一次垃圾搜集过程了。如果你有一个很严重的内存泄露问题，那么第一次major collection很可能预示着不久后就会OOM。</p>
 
 <p>有两种方法使用<code>jmap</code>产生的直方图。其中最有效的方法，适用于长时间运行的程序，可以使用带<code>live</code>的命令行参数，并且在一段时间内多次使用该命令，检查哪些对象的数量在不断增长。但是，根据当前程序的负载，该过程可能会花费1个小时或者更多的时间。</p>
 
@@ -284,7 +292,7 @@ Server is ready.
 
 <p>这个直方图里的每个class的名称都是一个链接，点击这个链接可以查看关于这个类型的详细信息。你可以在其中看到这个类的继承关系，它的成员变量，以及很多指向这个类的实体变量信息的链接。我不认为这个详细信息页面非常有用，而且实体变量的链接列表很占用很多的浏览器内存。</p>
 
-<p>为了能够跟踪你的内存问题，最有用的页面是&#8217;Reference by Type&#8217;。这个页面含有两个表格：入引用和出引用，他们都被引用的数量进行排序了。点击一个类的名字可以看到这个引用的信息。</p>
+<p>为了能够跟踪你的内存问题，最有用的页面是'Reference by Type'。这个页面含有两个表格：入引用和出引用，他们都被引用的数量进行排序了。点击一个类的名字可以看到这个引用的信息。</p>
 
 <p>你可以在类的详细信息(class details)页面中找到这个页面的链接。</p>
 
@@ -314,7 +322,7 @@ SITES END
 
 <p>大多数程序中都不会一直持有这么大得数据，这就表明这个程序没有很好的抽取和处理这些数据。你会发现这常常发生在读取一些大的字符串，并且保存了substring之后的字符串：很少有人知道<code>String.substring()</code>后会共享原始字符串对象的字节数组。如果你按照一行一行地读取了一个文件，但是却使用了每行的前五个字符，实际上你任然保存的是整个文件在内存中。</p>
 
-<p>转储文件也显示出这些数组被分配的数量和现在存活的数量完全相等。这是一种典型的泄露，并且我们可以通过搜索&#8217;trace&#8217;号来找到真正的代码：</p>
+<p>转储文件也显示出这些数组被分配的数量和现在存活的数量完全相等。这是一种典型的泄露，并且我们可以通过搜索'trace'号来找到真正的代码：</p>
 
 <pre><code>TRACE 300157:
     com.kdgregory.example.memory.Gobbler.main(Gobbler.java:22)
@@ -357,7 +365,7 @@ SITES END
 
 <p>解决永久代的问题通常都是比较痛苦的。一般可以先考虑加上<code>-XX:+TraceClassLoading</code>和<code>-XX:+TraceClassUnloading</code>命令行选项以便找出那些被加载了但是没有被卸载的类。如果你加上了<code>-XX:+TraceClassResolution</code>命令行选项，你还可以看到哪些类访问了其他类，但是没有被正常卸载。</p>
 
-<p>这里有针对这三个选项的一个实例。第一行显示了<code>MyClassLoader</code>类从classpath中被加载了。因为它又从<code>URLClassLoader</code>继承，因此我们看到了接下来的&#8217;RESOLVE&#8217;消息，紧跟着又是一条&#8217;RESOLVE&#8217;消息，说明<code>Class</code>类也被解析了。</p>
+<p>这里有针对这三个选项的一个实例。第一行显示了<code>MyClassLoader</code>类从classpath中被加载了。因为它又从<code>URLClassLoader</code>继承，因此我们看到了接下来的'RESOLVE'消息，紧跟着又是一条'RESOLVE'消息，说明<code>Class</code>类也被解析了。</p>
 
 <pre><code>[Loaded com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader from file:/home/kgregory/Workspace/Website/programming/examples/bin/]
 RESOLVE com.kdgregory.example.memory.PermgenExhaustion$MyClassLoader java.net.URLClassLoader
@@ -404,7 +412,7 @@ RESOLVE java.net.URLClassLoader java.lang.Class URLClassLoader.java:188
 
 <p>就像我前面提到的，你在启动一个JVM时，你需要指定堆的最小值和最大值。这就意味着，JVM会在运行期动态改变它对虚拟内存的需求。在一个内存受限的机器上，你可以同时运行多个JVM，甚至它们所有指定的最大值之和大于了物理内存和交换区的大小。当然，这就有可能会导致OOM，就算你的程序中存活的对象大小小于你指定的堆空间也是一样的。</p>
 
-<p>这种情况和跑多个C++程序使用完所有的物理内存的原因是一样的。使用JVM可能会让你产生一种假象，以为不会出现这种问题。唯一的解决方案是购买更多的内存，或者不要同时跑那么多程序。没有办法让JVM可以&#8217;快速失败&#8217;；但是在Linux上你可以申请比总内存更多的内存。</p>
+<p>这种情况和跑多个C++程序使用完所有的物理内存的原因是一样的。使用JVM可能会让你产生一种假象，以为不会出现这种问题。唯一的解决方案是购买更多的内存，或者不要同时跑那么多程序。没有办法让JVM可以'快速失败'；但是在Linux上你可以申请比总内存更多的内存。</p>
 
 <h2>堆外内存的使用</h2>
 
@@ -445,7 +453,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
 
 <p>dump文件展示给你了关于虚拟内存映射的4个部分：虚拟内存地址，大小，权限，源（从文件加载的部分）。最有意思的部分是它的权限部分，它表示了该内存段是否是只读的(r-)还是读写的(rw)。</p>
 
-<p>我会从读写段开始分析。所有的段都具有名字&#8221;[ anon ]&ldquo;，它在Linux中说明了该段不是由文件加载而来。这里还有很多被命名的读写段，它们和共享库关联。我相信这些库都具有每个进程的地址表。</p>
+<p>我会从读写段开始分析。所有的段都具有名字"[ anon ]&ldquo;，它在Linux中说明了该段不是由文件加载而来。这里还有很多被命名的读写段，它们和共享库关联。我相信这些库都具有每个进程的地址表。</p>
 
 <p>因为所有的读写段都具有相同的名字，一次要找出出问题的部分需要花费一点时间。对于Java堆，有4个相关的大块内存被分配（新生代有2个，老年代1个，永久代1个），他们的大小由GC和堆配置来决定。</p>
 
@@ -455,9 +463,9 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
 
 <h3>不要被虚拟内存的统计信息所误导</h3>
 
-<p>有很多抱怨说Java是&#8217;memory hog&#8217;，经常被<em>top</em>命令的&#8217;VIRT&#8217;部分和Windows任务管理器的&#8217;Mem Usage&#8217;列所证实。需要澄清的是，有太多的东西都不会算进这个统计信息中，有些还是与其他程序共享的（比如说C的库）。实际上也有很多‘空’的区域在虚拟内存映射空间中：如果你适用<code>-Xms1000m</code>来启动JVM，就算你还没有开始分配对象，虚拟内存的大小也会超过1000m。</p>
+<p>有很多抱怨说Java是'memory hog'，经常被<em>top</em>命令的'VIRT'部分和Windows任务管理器的'Mem Usage'列所证实。需要澄清的是，有太多的东西都不会算进这个统计信息中，有些还是与其他程序共享的（比如说C的库）。实际上也有很多‘空’的区域在虚拟内存映射空间中：如果你适用<code>-Xms1000m</code>来启动JVM，就算你还没有开始分配对象，虚拟内存的大小也会超过1000m。</p>
 
-<p>一个更好的测量方法是使用驻留集的大小：你的应用程序真正使用的物理内存的页数，不包含共享页。这就是<em>top</em>命令中得&#8217;RES&#8217;列。但是，驻留集并不是对你的程序所需使用的总内存最好的测量方法。操作系统只有在你的程序真正需要使用它们的时候才会将它们放进进程的内存空间中，一般来说是在你的系统处于高负载的情况下才会出现，这会花费一段较长的时间。</p>
+<p>一个更好的测量方法是使用驻留集的大小：你的应用程序真正使用的物理内存的页数，不包含共享页。这就是<em>top</em>命令中得'RES'列。但是，驻留集并不是对你的程序所需使用的总内存最好的测量方法。操作系统只有在你的程序真正需要使用它们的时候才会将它们放进进程的内存空间中，一般来说是在你的系统处于高负载的情况下才会出现，这会花费一段较长的时间。</p>
 
 <p>最后：始终使用工具来提供所需的详细信息来分析Java中的内存问题。并且只有当出现OOM的时候才考虑下结论。</p>
 
@@ -512,7 +520,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
       
   
 
-<span class="byline author vcard">Posted by <span class="fn">zshen</span></span>
+<span class="byline author vcard">Posted by <span class="fn">Shen Zhang</span></span>
 
       
 
@@ -526,7 +534,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
   
 
 
-<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true">Apr 24<span>th</span>, 2014</time>
+<time datetime="2014-04-24T01:27:00+08:00" pubdate data-updated="true"></time>
       
 
 
@@ -594,7 +602,7 @@ b7689000   1356K r-x--  /lib/tls/i686/cmov/libc-2.11.1.so
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - zshen -
+  Copyright &copy; 2016 - Shen Zhang -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

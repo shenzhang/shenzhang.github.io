@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: AngularJS | Keep going]]></title>
+  <title><![CDATA[Category: angularjs | Keep going]]></title>
   <link href="http://shenzhang.github.io/blog/categories/angularjs/atom.xml" rel="self"/>
   <link href="http://shenzhang.github.io/"/>
-  <updated>2014-12-03T23:23:52+08:00</updated>
+  <updated>2016-12-18T22:13:41+08:00</updated>
   <id>http://shenzhang.github.io/</id>
   <author>
-    <name><![CDATA[zshen]]></name>
+    <name><![CDATA[Shen Zhang]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
